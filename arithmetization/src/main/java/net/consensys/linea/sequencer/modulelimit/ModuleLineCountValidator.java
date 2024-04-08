@@ -14,11 +14,20 @@
  */
 package net.consensys.linea.sequencer.modulelimit;
 
+import java.io.File;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+import com.google.common.io.Resources;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.consensys.linea.config.LineaTracerConfiguration;
+import org.apache.tuweni.toml.Toml;
+import org.apache.tuweni.toml.TomlParseResult;
+import org.apache.tuweni.toml.TomlTable;
 
 /**
  * Accumulates and verifies line counts for modules based on provided limits. It supports verifying
@@ -70,7 +79,7 @@ public class ModuleLineCountValidator {
         return ModuleLimitsValidationResult.blockModuleLineCountFull(moduleName);
       }
     }
-    return ModuleLimitsValidationResult.ok();
+    return ModuleLimitsValidationResult.valid();
   }
 
   /**
@@ -89,5 +98,28 @@ public class ModuleLineCountValidator {
     TX_MODULE_LINE_COUNT_OVERFLOW,
     BLOCK_MODULE_LINE_COUNT_FULL,
     MODULE_NOT_DEFINED
+  }
+
+  public static Map<String, Integer> createLimitModules(
+      LineaTracerConfiguration lineaTracerConfiguration) {
+    try {
+      URL url = new File(lineaTracerConfiguration.moduleLimitsFilePath()).toURI().toURL();
+      final String tomlString = Resources.toString(url, StandardCharsets.UTF_8);
+      TomlParseResult result = Toml.parse(tomlString);
+      final TomlTable table = result.getTable("traces-limits");
+      final Map<String, Integer> limitsMap =
+          table.toMap().entrySet().stream()
+              .collect(
+                  Collectors.toUnmodifiableMap(
+                      Map.Entry::getKey, e -> Math.toIntExact((Long) e.getValue())));
+
+      return limitsMap;
+    } catch (final Exception e) {
+      final String errorMsg =
+          "Problem reading the toml file containing the limits for the modules: "
+              + lineaTracerConfiguration.moduleLimitsFilePath();
+      log.error(errorMsg);
+      throw new RuntimeException(errorMsg, e);
+    }
   }
 }

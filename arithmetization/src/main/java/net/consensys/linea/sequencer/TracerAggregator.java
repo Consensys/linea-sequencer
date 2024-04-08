@@ -54,23 +54,6 @@ public class TracerAggregator implements OperationTracer {
   }
 
   /**
-   * Retrieves a registered tracer by its class type.
-   *
-   * @param clazz the class of the tracer to retrieve
-   * @param <T> the type of the tracer
-   * @return the registered tracer of the specified type
-   * @throws IllegalArgumentException if no tracer of the specified class is registered
-   */
-  public <T extends OperationTracer> T getTracer(Class<T> clazz) {
-    for (OperationTracer tracer : tracers) {
-      if (clazz.isInstance(tracer)) {
-        return clazz.cast(tracer);
-      }
-    }
-    throw new IllegalArgumentException("No tracer found for class: " + clazz.getName());
-  }
-
-  /**
    * Creates a {@link TracerAggregator} instance and registers the provided tracers.
    *
    * @param tracers the tracers to register with the aggregator

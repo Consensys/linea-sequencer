@@ -29,7 +29,7 @@ public class ModuleLimitsValidationResult {
     this.moduleName = moduleName;
   }
 
-  public static ModuleLimitsValidationResult ok() {
+  public static ModuleLimitsValidationResult valid() {
     return new ModuleLimitsValidationResult(
         ModuleLineCountValidator.ModuleLineCountResult.VALID, null);
   }

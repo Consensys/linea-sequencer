@@ -15,7 +15,7 @@
 
 package net.consensys.linea.rpc.linea;
 
-import static net.consensys.linea.sequencer.modulelimit.LimitModuleHelper.createLimitModules;
+import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.createLimitModules;
 
 import com.google.auto.service.AutoService;
 import lombok.extern.slf4j.Slf4j;

@@ -15,7 +15,7 @@
 
 package net.consensys.linea.sequencer.txselection;
 
-import static net.consensys.linea.sequencer.modulelimit.LimitModuleHelper.createLimitModules;
+import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.createLimitModules;
 
 import java.util.Optional;
 
