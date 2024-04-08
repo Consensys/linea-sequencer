@@ -15,8 +15,8 @@
 
 package net.consensys.linea.rpc.linea;
 
-import static net.consensys.linea.sequencer.txselection.selectors.ModuleLineCountAccumulator.ModuleLineCountResult.MODULE_NOT_DEFINED;
-import static net.consensys.linea.sequencer.txselection.selectors.ModuleLineCountAccumulator.ModuleLineCountResult.TX_MODULE_LINE_COUNT_OVERFLOW;
+import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.MODULE_NOT_DEFINED;
+import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.TX_MODULE_LINE_COUNT_OVERFLOW;
 import static org.hyperledger.besu.ethereum.api.jsonrpc.internal.results.Quantity.create;
 
 import java.math.BigDecimal;
@@ -34,7 +34,8 @@ import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaRpcConfiguration;
 import net.consensys.linea.config.LineaTransactionPoolValidatorConfiguration;
 import net.consensys.linea.sequencer.TracerAggregator;
-import net.consensys.linea.sequencer.txselection.selectors.ModuleLineCountAccumulator;
+import net.consensys.linea.sequencer.modulelimit.ModuleLimitsValidationResult;
+import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator;
 import net.consensys.linea.zktracer.ZkTracer;
 import org.apache.tuweni.bytes.Bytes;
 import org.bouncycastle.asn1.sec.SECNamedCurves;
@@ -84,8 +85,9 @@ public class LineaEstimateGas {
   private LineaTransactionPoolValidatorConfiguration txValidatorConf;
   private LineaProfitabilityConfiguration profitabilityConf;
   private TransactionProfitabilityCalculator txProfitabilityCalculator;
-  private Map<String, Integer> limitsMap;
   private LineaL1L2BridgeConfiguration l1L2BridgeConfiguration;
+
+  private ModuleLineCountValidator moduleLineCountValidator;
 
   public LineaEstimateGas(
       final BesuConfiguration besuConfiguration,
@@ -106,8 +108,8 @@ public class LineaEstimateGas {
     this.txValidatorConf = transactionValidatorConfiguration;
     this.profitabilityConf = profitabilityConf;
     this.txProfitabilityCalculator = new TransactionProfitabilityCalculator(profitabilityConf);
-    this.limitsMap = limitsMap;
     this.l1L2BridgeConfiguration = l1L2BridgeConfiguration;
+    this.moduleLineCountValidator = new ModuleLineCountValidator(limitsMap);
   }
 
   public String getNamespace() {
@@ -202,8 +204,8 @@ public class LineaEstimateGas {
       final Wei minGasPrice) {
 
     if (l1L2BridgeConfiguration.isEmpty()) {
-      log.error("L1L2 bridge settings have not been defined.");
-      System.exit(1);
+      throw new PluginRpcEndpointException(
+          RpcErrorType.PLUGIN_INTERNAL_ERROR, "L1L2 bridge settings have not been defined");
     }
 
     final var estimateGasOperationTracer = new EstimateGasOperationTracer();
@@ -215,12 +217,10 @@ public class LineaEstimateGas {
     final var maybeSimulationResults =
         transactionSimulationService.simulate(transaction, chainHeadHash, tracerAggregator, true);
 
-    ModuleLineCountAccumulator accumulator = new ModuleLineCountAccumulator(limitsMap);
+    ModuleLimitsValidationResult moduleLimit =
+        moduleLineCountValidator.validate(zkTracer.getModulesLineCount());
 
-    ModuleLineCountAccumulator.VerificationResult moduleLimit =
-        accumulator.verify(zkTracer.getModulesLineCount());
-
-    if (moduleLimit.getResult() != ModuleLineCountAccumulator.ModuleLineCountResult.VALID) {
+    if (moduleLimit.getResult() != ModuleLineCountValidator.ModuleLineCountResult.VALID) {
       handleModuleOverLimit(moduleLimit);
     }
 
@@ -423,8 +423,7 @@ public class LineaEstimateGas {
     return zkTracer;
   }
 
-  private void handleModuleOverLimit(
-      ModuleLineCountAccumulator.VerificationResult moduleLimitResult) {
+  private void handleModuleOverLimit(ModuleLimitsValidationResult moduleLimitResult) {
     // Throw specific exceptions based on the type of limit exceeded
     if (moduleLimitResult.getResult() == MODULE_NOT_DEFINED) {
       String moduleNotDefinedMsg =

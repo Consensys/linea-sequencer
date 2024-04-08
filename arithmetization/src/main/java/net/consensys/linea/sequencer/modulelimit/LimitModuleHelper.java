@@ -12,7 +12,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.consensys.linea.sequencer;
+package net.consensys.linea.sequencer.modulelimit;
 
 import java.io.File;
 import java.net.URL;

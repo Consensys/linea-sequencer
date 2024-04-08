@@ -17,7 +17,6 @@ package net.consensys.linea.sequencer.txselection.selectors;
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.BLOCK_MODULE_LINE_COUNT_FULL;
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_MODULE_LINE_COUNT_OVERFLOW;
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_MODULE_LINE_COUNT_OVERFLOW_CACHED;
-import static net.consensys.linea.sequencer.txselection.selectors.ModuleLineCountAccumulator.ModuleLineCountResult.MODULE_NOT_DEFINED;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 
 import java.util.LinkedHashSet;
@@ -30,6 +29,8 @@ import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.config.LineaL1L2BridgeConfiguration;
 import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
+import net.consensys.linea.sequencer.modulelimit.ModuleLimitsValidationResult;
+import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator;
 import net.consensys.linea.zktracer.ZkTracer;
 import net.consensys.linea.zktracer.module.Module;
 import org.hyperledger.besu.datatypes.Hash;
@@ -58,7 +59,7 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
   private final String limitFilePath;
   private final Map<String, Integer> moduleLimits;
   private final int overLimitCacheSize;
-  private final ModuleLineCountAccumulator moduleLineCountAccumulator;
+  private final ModuleLineCountValidator moduleLineCountAccumulator;
   private Map<String, Integer> currCumulatedLineCount;
 
   public TraceLineLimitTransactionSelector(
@@ -83,7 +84,7 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
       }
     }
     zkTracer.traceStartConflation(1L);
-    moduleLineCountAccumulator = new ModuleLineCountAccumulator(moduleLimits);
+    moduleLineCountAccumulator = new ModuleLineCountValidator(moduleLimits);
   }
 
   /**
@@ -144,8 +145,8 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
         .addArgument(this::logTxLineCount)
         .log();
 
-    ModuleLineCountAccumulator.VerificationResult result =
-        moduleLineCountAccumulator.verify(currCumulatedLineCount);
+    ModuleLimitsValidationResult result =
+        moduleLineCountAccumulator.validate(currCumulatedLineCount);
 
     switch (result.getResult()) {
       case MODULE_NOT_DEFINED:

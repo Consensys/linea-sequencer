@@ -12,7 +12,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.consensys.linea.sequencer.txselection.selectors;
+package net.consensys.linea.sequencer.modulelimit;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -25,7 +25,7 @@ import lombok.extern.slf4j.Slf4j;
  * if current transactions exceed these limits and updates the accumulated counts.
  */
 @Slf4j
-public class ModuleLineCountAccumulator {
+public class ModuleLineCountValidator {
   private final Map<String, Integer> moduleLineCountLimits;
 
   @Getter private final Map<String, Integer> accumulatedLineCountsPerModule = new HashMap<>();
@@ -35,7 +35,7 @@ public class ModuleLineCountAccumulator {
    *
    * @param moduleLineCountLimits A map of module names to their respective line count limits.
    */
-  public ModuleLineCountAccumulator(Map<String, Integer> moduleLineCountLimits) {
+  public ModuleLineCountValidator(Map<String, Integer> moduleLineCountLimits) {
     this.moduleLineCountLimits = new HashMap<>(moduleLineCountLimits);
   }
 
@@ -44,9 +44,9 @@ public class ModuleLineCountAccumulator {
    *
    * @param currentAccumulatedLineCounts A map of module names to their current accumulated line
    *     counts.
-   * @return A {@link VerificationResult} indicating the outcome of the verification.
+   * @return A {@link ModuleLimitsValidationResult} indicating the outcome of the verification.
    */
-  public VerificationResult verify(Map<String, Integer> currentAccumulatedLineCounts) {
+  public ModuleLimitsValidationResult validate(Map<String, Integer> currentAccumulatedLineCounts) {
     for (Map.Entry<String, Integer> moduleEntry : currentAccumulatedLineCounts.entrySet()) {
       String moduleName = moduleEntry.getKey();
       Integer currentTotalLineCountForModule = moduleEntry.getValue();
@@ -54,7 +54,7 @@ public class ModuleLineCountAccumulator {
 
       if (lineCountLimitForModule == null) {
         log.error("Module '{}' is not defined in the line count limits.", moduleName);
-        return VerificationResult.moduleNotDefined(moduleName);
+        return ModuleLimitsValidationResult.moduleNotDefined(moduleName);
       }
 
       int previouslyAccumulatedLineCount =
@@ -63,14 +63,14 @@ public class ModuleLineCountAccumulator {
           currentTotalLineCountForModule - previouslyAccumulatedLineCount;
 
       if (lineCountAddedByCurrentTx > lineCountLimitForModule) {
-        return VerificationResult.txModuleLineCountOverflow(moduleName);
+        return ModuleLimitsValidationResult.txModuleLineCountOverflow(moduleName);
       }
 
       if (currentTotalLineCountForModule > lineCountLimitForModule) {
-        return VerificationResult.blockModuleLineCountFull(moduleName);
+        return ModuleLimitsValidationResult.blockModuleLineCountFull(moduleName);
       }
     }
-    return VerificationResult.ok();
+    return ModuleLimitsValidationResult.ok();
   }
 
   /**
@@ -81,36 +81,6 @@ public class ModuleLineCountAccumulator {
   public void updateAccumulatedLineCounts(Map<String, Integer> newAccumulatedLineCounts) {
     accumulatedLineCountsPerModule.clear();
     accumulatedLineCountsPerModule.putAll(newAccumulatedLineCounts);
-  }
-
-  /** Represents the result of verifying module line counts against their limits. */
-  @Getter
-  public static class VerificationResult {
-    // Getters for verificationOutcome and affectedModuleName
-    private final ModuleLineCountResult result;
-    private final String moduleName;
-
-    private VerificationResult(ModuleLineCountResult result, String moduleName) {
-      this.result = result;
-      this.moduleName = moduleName;
-    }
-
-    public static VerificationResult ok() {
-      return new VerificationResult(ModuleLineCountResult.VALID, null);
-    }
-
-    public static VerificationResult moduleNotDefined(String moduleName) {
-      return new VerificationResult(ModuleLineCountResult.MODULE_NOT_DEFINED, moduleName);
-    }
-
-    public static VerificationResult txModuleLineCountOverflow(String moduleName) {
-      return new VerificationResult(
-          ModuleLineCountResult.TX_MODULE_LINE_COUNT_OVERFLOW, moduleName);
-    }
-
-    public static VerificationResult blockModuleLineCountFull(String moduleName) {
-      return new VerificationResult(ModuleLineCountResult.BLOCK_MODULE_LINE_COUNT_FULL, moduleName);
-    }
   }
 
   /** Enumerates possible outcomes of verifying module line counts against their limits. */
