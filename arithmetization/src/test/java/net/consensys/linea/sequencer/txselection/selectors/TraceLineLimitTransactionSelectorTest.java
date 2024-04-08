@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import net.consensys.linea.config.LineaL1L2BridgeConfiguration;
+import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
@@ -227,13 +228,13 @@ public class TraceLineLimitTransactionSelectorTest {
       super(
           moduleLimits,
           LineaTransactionSelectorConfiguration.builder()
-              .moduleLimitsFilePath(limitFilePath)
               .overLinesLimitCacheSize(overLimitCacheSize)
               .build(),
           LineaL1L2BridgeConfiguration.builder()
               .contract(Address.fromHexString("0xDEADBEEF"))
               .topic(Bytes.fromHexString("0x012345"))
-              .build());
+              .build(),
+          LineaTracerConfiguration.builder().moduleLimitsFilePath(limitFilePath).build());
     }
 
     void reset() {

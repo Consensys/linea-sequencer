@@ -48,14 +48,6 @@ public class LineaTransactionSelectorCliOptions {
       description = "Maximum size for the calldata of a block (default: ${DEFAULT-VALUE})")
   private int maxBlockCallDataSize = DEFAULT_MAX_BLOCK_CALLDATA_SIZE;
 
-  @CommandLine.Option(
-      names = {MODULE_LIMIT_FILE_PATH},
-      hidden = true,
-      paramLabel = "<STRING>",
-      description =
-          "Path to the toml file containing the module limits (default: ${DEFAULT-VALUE})")
-  private String moduleLimitFilePath = DEFAULT_MODULE_LIMIT_FILE_PATH;
-
   @Positive
   @CommandLine.Option(
       names = {OVER_LINE_COUNT_LIMIT_CACHE_SIZE},
@@ -112,7 +104,6 @@ public class LineaTransactionSelectorCliOptions {
       final LineaTransactionSelectorConfiguration config) {
     final LineaTransactionSelectorCliOptions options = create();
     options.maxBlockCallDataSize = config.maxBlockCallDataSize();
-    options.moduleLimitFilePath = config.moduleLimitsFilePath();
     options.overLineCountLimitCacheSize = config.overLinesLimitCacheSize();
     options.maxGasPerBlock = config.maxGasPerBlock();
     options.unprofitableCacheSize = config.unprofitableCacheSize();
@@ -128,7 +119,6 @@ public class LineaTransactionSelectorCliOptions {
   public LineaTransactionSelectorConfiguration toDomainObject() {
     return LineaTransactionSelectorConfiguration.builder()
         .maxBlockCallDataSize(maxBlockCallDataSize)
-        .moduleLimitsFilePath(moduleLimitFilePath)
         .overLinesLimitCacheSize(overLineCountLimitCacheSize)
         .maxGasPerBlock(maxGasPerBlock)
         .unprofitableCacheSize(unprofitableCacheSize)
@@ -140,7 +130,6 @@ public class LineaTransactionSelectorCliOptions {
   public String toString() {
     return MoreObjects.toStringHelper(this)
         .add(MAX_BLOCK_CALLDATA_SIZE, maxBlockCallDataSize)
-        .add(MODULE_LIMIT_FILE_PATH, moduleLimitFilePath)
         .add(OVER_LINE_COUNT_LIMIT_CACHE_SIZE, overLineCountLimitCacheSize)
         .add(MAX_GAS_PER_BLOCK, maxGasPerBlock)
         .add(UNPROFITABLE_CACHE_SIZE, unprofitableCacheSize)

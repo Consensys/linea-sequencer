@@ -19,9 +19,4 @@ import lombok.Builder;
 
 /** The Linea transaction selectors configuration. */
 @Builder(toBuilder = true)
-public record LineaTransactionSelectorConfiguration(
-    int maxBlockCallDataSize,
-    int overLinesLimitCacheSize,
-    long maxGasPerBlock,
-    int unprofitableCacheSize,
-    int unprofitableRetryLimit) {}
+public record LineaTracerConfiguration(String moduleLimitsFilePath) {}
