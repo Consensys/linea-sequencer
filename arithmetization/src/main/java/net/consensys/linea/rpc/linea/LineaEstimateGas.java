@@ -287,7 +287,8 @@ public class LineaEstimateGas {
 
                           // else do a binary search to find the right estimation
                           int iterations = 0;
-                          var high = highGasEstimation(lr.getGasEstimate(), tracerAggregator);
+                          var high =
+                              highGasEstimation(lr.getGasEstimate(), estimateGasOperationTracer);
                           var mid = high;
                           var low = lowGasEstimation;
                           while (low + 1 < high) {
@@ -383,14 +384,14 @@ public class LineaEstimateGas {
    * @param operationTracer estimate gas operation tracer
    * @return estimate gas
    */
-  private long highGasEstimation(final long gasEstimation, final TracerAggregator operationTracer) {
-    var estimateGasTracer = operationTracer.getTracer(EstimateGasOperationTracer.class);
+  private long highGasEstimation(
+      final long gasEstimation, final EstimateGasOperationTracer operationTracer) {
 
     // no more than 63/64s of the remaining gas can be passed to the sub calls
     final double subCallMultiplier =
-        Math.pow(SUB_CALL_REMAINING_GAS_RATIO, estimateGasTracer.getMaxDepth());
+        Math.pow(SUB_CALL_REMAINING_GAS_RATIO, operationTracer.getMaxDepth());
     // and minimum gas remaining is necessary for some operation (additionalStipend)
-    final long gasStipend = estimateGasTracer.getStipendNeeded();
+    final long gasStipend = operationTracer.getStipendNeeded();
     return ((long) ((gasEstimation + gasStipend) * subCallMultiplier));
   }
 
