@@ -92,6 +92,7 @@ public class LineaEndpointServicePlugin extends AbstractLineaRequiredPlugin {
         rpcConfiguration,
         transactionPoolValidatorConfiguration,
         profitabilityConfiguration,
-        createLimitModules(tracerConfiguration));
+        createLimitModules(tracerConfiguration),
+        l1L2BridgeConfiguration);
   }
 }

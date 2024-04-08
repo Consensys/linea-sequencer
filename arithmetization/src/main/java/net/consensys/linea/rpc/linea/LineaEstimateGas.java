@@ -29,6 +29,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
+import net.consensys.linea.config.LineaL1L2BridgeConfiguration;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaRpcConfiguration;
 import net.consensys.linea.config.LineaTransactionPoolValidatorConfiguration;
@@ -84,6 +85,7 @@ public class LineaEstimateGas {
   private LineaProfitabilityConfiguration profitabilityConf;
   private TransactionProfitabilityCalculator txProfitabilityCalculator;
   private Map<String, Integer> limitsMap;
+  private LineaL1L2BridgeConfiguration l1L2BridgeConfiguration;
 
   public LineaEstimateGas(
       final BesuConfiguration besuConfiguration,
@@ -98,12 +100,14 @@ public class LineaEstimateGas {
       LineaRpcConfiguration rpcConfiguration,
       final LineaTransactionPoolValidatorConfiguration transactionValidatorConfiguration,
       final LineaProfitabilityConfiguration profitabilityConf,
-      final Map<String, Integer> limitsMap) {
+      final Map<String, Integer> limitsMap,
+      final LineaL1L2BridgeConfiguration l1L2BridgeConfiguration) {
     this.rpcConfiguration = rpcConfiguration;
     this.txValidatorConf = transactionValidatorConfiguration;
     this.profitabilityConf = profitabilityConf;
     this.txProfitabilityCalculator = new TransactionProfitabilityCalculator(profitabilityConf);
     this.limitsMap = limitsMap;
+    this.l1L2BridgeConfiguration = l1L2BridgeConfiguration;
   }
 
   public String getNamespace() {
@@ -197,8 +201,13 @@ public class LineaEstimateGas {
       final Transaction transaction,
       final Wei minGasPrice) {
 
-    var estimateGasOperationTracer = new EstimateGasOperationTracer();
-    var zkTracer = new ZkTracer();
+    if (l1L2BridgeConfiguration.isEmpty()) {
+      log.error("L1L2 bridge settings have not been defined.");
+      System.exit(1);
+    }
+
+    final var estimateGasOperationTracer = new EstimateGasOperationTracer();
+    final var zkTracer = createZkTracer();
     TracerAggregator tracerAggregator =
         TracerAggregator.create(estimateGasOperationTracer, zkTracer);
 
@@ -405,6 +414,13 @@ public class LineaEstimateGas {
     callParameters.getAccessList().ifPresent(txBuilder::accessList);
 
     return txBuilder.build();
+  }
+
+  private ZkTracer createZkTracer() {
+    var zkTracer = new ZkTracer(l1L2BridgeConfiguration);
+    zkTracer.traceStartConflation(1L);
+    zkTracer.traceStartBlock(blockchainService.getChainHeadHeader());
+    return zkTracer;
   }
 
   private void handleModuleOverLimit(

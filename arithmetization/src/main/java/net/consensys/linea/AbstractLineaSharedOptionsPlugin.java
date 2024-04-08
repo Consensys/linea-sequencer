@@ -53,7 +53,7 @@ public abstract class AbstractLineaSharedOptionsPlugin implements BesuPlugin {
 
   static {
     // force the initialization of the gnark compress native library to fail fast in case of issues
-   // LibCompress.CompressedSize(new byte[0], 0);
+    LibCompress.CompressedSize(new byte[0], 0);
   }
 
   @Override
