@@ -436,8 +436,10 @@ public class LineaEstimateGas {
     if (moduleLimitResult.getResult() == TX_MODULE_LINE_COUNT_OVERFLOW) {
       String txOverflowMsg =
           String.format(
-              "Transaction line count for module %s is above the limit",
-              moduleLimitResult.getModuleName());
+              "Transaction line count for module %s=%s is above the limit %s",
+              moduleLimitResult.getModuleName(),
+              moduleLimitResult.getModuleLineCount(),
+              moduleLimitResult.getModuleLineLimit());
       log.warn(txOverflowMsg);
       throw new PluginRpcEndpointException(new TransactionSimulationError(txOverflowMsg));
     }

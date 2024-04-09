@@ -154,22 +154,22 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
         throw new RuntimeException(
             "Module " + result.getModuleName() + " does not exist in the limits file.");
       case TX_MODULE_LINE_COUNT_OVERFLOW:
-        /*        log.warn(
-        "Tx {} line count for module {}={} is above the limit {}, removing from the txpool",
-        transaction.getHash(),
-        result.getModuleName(),
-        txModuleLineCount,
-        moduleLineCountLimit);*/
+        log.warn(
+            "Tx {} line count for module {}={} is above the limit {}, removing from the txpool",
+            transaction.getHash(),
+            result.getModuleName(),
+            result.getModuleLineCount(),
+            result.getModuleLineCount());
         rememberOverLineCountLimitTransaction(transaction);
         return TX_MODULE_LINE_COUNT_OVERFLOW;
       case BLOCK_MODULE_LINE_COUNT_FULL:
-        /*        log.atTrace()
-        .setMessage(
-          "Cumulated line count for module {}={} is above the limit {}, stopping selection")
-        .addArgument(result.getModuleName())
-        .addArgument(cumulatedModuleLineCount)
-        .addArgument(moduleLineCountLimit)
-        .log();*/
+        log.atTrace()
+            .setMessage(
+                "Cumulated line count for module {}={} is above the limit {}, stopping selection")
+            .addArgument(result.getModuleName())
+            .addArgument(result.getCumulativeModuleLineCount())
+            .addArgument(result.getCumulativeModuleLineLimit())
+            .log();
         return BLOCK_MODULE_LINE_COUNT_FULL;
       default:
         break;

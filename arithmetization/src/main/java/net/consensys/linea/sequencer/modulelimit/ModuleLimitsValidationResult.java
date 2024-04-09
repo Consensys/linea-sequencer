@@ -19,31 +19,70 @@ import lombok.Getter;
 /** Represents the result of verifying module line counts against their limits. */
 @Getter
 public class ModuleLimitsValidationResult {
-  // Getters for verificationOutcome and affectedModuleName
   private final ModuleLineCountValidator.ModuleLineCountResult result;
   private final String moduleName;
+  private final Integer moduleLineCount;
+  private final Integer moduleLineLimit;
+  private final Integer cumulativeModuleLineCount;
+  private final Integer cumulativeModuleLineLimit;
 
   public static ModuleLimitsValidationResult VALID =
-      new ModuleLimitsValidationResult(ModuleLineCountValidator.ModuleLineCountResult.VALID, null);
+      new ModuleLimitsValidationResult(
+          ModuleLineCountValidator.ModuleLineCountResult.VALID, null, null, null, null, null);
 
   private ModuleLimitsValidationResult(
-      ModuleLineCountValidator.ModuleLineCountResult result, String moduleName) {
+      final ModuleLineCountValidator.ModuleLineCountResult result,
+      final String moduleName,
+      final Integer moduleLineCount,
+      final Integer moduleLineLimit,
+      final Integer cumulativeModuleLineCount,
+      final Integer cumulativeModuleLineLimit) {
     this.result = result;
     this.moduleName = moduleName;
+    this.moduleLineCount = moduleLineCount;
+    this.moduleLineLimit = moduleLineLimit;
+    this.cumulativeModuleLineCount = cumulativeModuleLineCount;
+    this.cumulativeModuleLineLimit = cumulativeModuleLineLimit;
   }
 
-  public static ModuleLimitsValidationResult moduleNotDefined(String moduleName) {
+  public static ModuleLimitsValidationResult moduleNotDefined(final String moduleName) {
     return new ModuleLimitsValidationResult(
-        ModuleLineCountValidator.ModuleLineCountResult.MODULE_NOT_DEFINED, moduleName);
+        ModuleLineCountValidator.ModuleLineCountResult.MODULE_NOT_DEFINED,
+        moduleName,
+        null,
+        null,
+        null,
+        null);
   }
 
-  public static ModuleLimitsValidationResult txModuleLineCountOverflow(String moduleName) {
+  public static ModuleLimitsValidationResult txModuleLineCountOverflow(
+      final String moduleName,
+      final Integer moduleLineCount,
+      final Integer moduleLineLimit,
+      final Integer cumulativeModuleLineCount,
+      final Integer cumulativeModuleLineLimit) {
     return new ModuleLimitsValidationResult(
-        ModuleLineCountValidator.ModuleLineCountResult.TX_MODULE_LINE_COUNT_OVERFLOW, moduleName);
+        ModuleLineCountValidator.ModuleLineCountResult.TX_MODULE_LINE_COUNT_OVERFLOW,
+        moduleName,
+        moduleLineCount,
+        moduleLineLimit,
+        cumulativeModuleLineCount,
+        cumulativeModuleLineLimit);
   }
 
-  public static ModuleLimitsValidationResult blockModuleLineCountFull(String moduleName) {
+  public static ModuleLimitsValidationResult blockModuleLineCountFull(
+      final String moduleName,
+      final Integer moduleLineCount,
+      final Integer moduleLineLimit,
+      final Integer cumulativeModuleLineCount,
+      final Integer cumulativeModuleLineLimit) {
+
     return new ModuleLimitsValidationResult(
-        ModuleLineCountValidator.ModuleLineCountResult.BLOCK_MODULE_LINE_COUNT_FULL, moduleName);
+        ModuleLineCountValidator.ModuleLineCountResult.BLOCK_MODULE_LINE_COUNT_FULL,
+        moduleName,
+        moduleLineCount,
+        moduleLineLimit,
+        cumulativeModuleLineCount,
+        cumulativeModuleLineLimit);
   }
 }

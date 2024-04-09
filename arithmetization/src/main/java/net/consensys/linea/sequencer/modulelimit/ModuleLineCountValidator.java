@@ -72,11 +72,21 @@ public class ModuleLineCountValidator {
           currentTotalLineCountForModule - previouslyAccumulatedLineCount;
 
       if (lineCountAddedByCurrentTx > lineCountLimitForModule) {
-        return ModuleLimitsValidationResult.txModuleLineCountOverflow(moduleName);
+        return ModuleLimitsValidationResult.txModuleLineCountOverflow(
+            moduleName,
+            lineCountAddedByCurrentTx,
+            lineCountLimitForModule,
+            currentTotalLineCountForModule,
+            lineCountLimitForModule);
       }
 
       if (currentTotalLineCountForModule > lineCountLimitForModule) {
-        return ModuleLimitsValidationResult.blockModuleLineCountFull(moduleName);
+        return ModuleLimitsValidationResult.blockModuleLineCountFull(
+            moduleName,
+            lineCountAddedByCurrentTx,
+            lineCountLimitForModule,
+            currentTotalLineCountForModule,
+            lineCountLimitForModule);
       }
     }
     return ModuleLimitsValidationResult.VALID;
