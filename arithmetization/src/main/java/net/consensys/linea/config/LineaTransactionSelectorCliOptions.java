@@ -23,10 +23,6 @@ import picocli.CommandLine;
 public class LineaTransactionSelectorCliOptions {
   public static final String MAX_BLOCK_CALLDATA_SIZE = "--plugin-linea-max-block-calldata-size";
   public static final int DEFAULT_MAX_BLOCK_CALLDATA_SIZE = 70_000;
-
-  public static final String MODULE_LIMIT_FILE_PATH = "--plugin-linea-module-limit-file-path";
-  public static final String DEFAULT_MODULE_LIMIT_FILE_PATH = "moduleLimitFile.toml";
-
   public static final String OVER_LINE_COUNT_LIMIT_CACHE_SIZE =
       "--plugin-linea-over-line-count-limit-cache-size";
   public static final int DEFAULT_OVER_LINE_COUNT_LIMIT_CACHE_SIZE = 10_000;

@@ -23,15 +23,13 @@ public class ModuleLimitsValidationResult {
   private final ModuleLineCountValidator.ModuleLineCountResult result;
   private final String moduleName;
 
+  public static ModuleLimitsValidationResult VALID =
+      new ModuleLimitsValidationResult(ModuleLineCountValidator.ModuleLineCountResult.VALID, null);
+
   private ModuleLimitsValidationResult(
       ModuleLineCountValidator.ModuleLineCountResult result, String moduleName) {
     this.result = result;
     this.moduleName = moduleName;
-  }
-
-  public static ModuleLimitsValidationResult valid() {
-    return new ModuleLimitsValidationResult(
-        ModuleLineCountValidator.ModuleLineCountResult.VALID, null);
   }
 
   public static ModuleLimitsValidationResult moduleNotDefined(String moduleName) {

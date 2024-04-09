@@ -79,7 +79,7 @@ public class ModuleLineCountValidator {
         return ModuleLimitsValidationResult.blockModuleLineCountFull(moduleName);
       }
     }
-    return ModuleLimitsValidationResult.valid();
+    return ModuleLimitsValidationResult.VALID;
   }
 
   /**

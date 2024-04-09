@@ -110,6 +110,11 @@ public class LineaEstimateGas {
     this.txProfitabilityCalculator = new TransactionProfitabilityCalculator(profitabilityConf);
     this.l1L2BridgeConfiguration = l1L2BridgeConfiguration;
     this.moduleLineCountValidator = new ModuleLineCountValidator(limitsMap);
+
+    if (l1L2BridgeConfiguration.isEmpty()) {
+      log.error("L1L2 bridge settings have not been defined.");
+      System.exit(1);
+    }
   }
 
   public String getNamespace() {
@@ -202,11 +207,6 @@ public class LineaEstimateGas {
       final JsonCallParameter callParameters,
       final Transaction transaction,
       final Wei minGasPrice) {
-
-    if (l1L2BridgeConfiguration.isEmpty()) {
-      throw new PluginRpcEndpointException(
-          RpcErrorType.PLUGIN_INTERNAL_ERROR, "L1L2 bridge settings have not been defined");
-    }
 
     final var estimateGasOperationTracer = new EstimateGasOperationTracer();
     final var zkTracer = createZkTracer();

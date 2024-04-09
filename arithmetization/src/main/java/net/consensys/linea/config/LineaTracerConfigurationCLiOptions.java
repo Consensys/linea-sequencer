@@ -14,13 +14,13 @@
  */
 package net.consensys.linea.config;
 
-import static net.consensys.linea.config.LineaTransactionSelectorCliOptions.DEFAULT_MODULE_LIMIT_FILE_PATH;
-import static net.consensys.linea.config.LineaTransactionSelectorCliOptions.MODULE_LIMIT_FILE_PATH;
-
 import com.google.common.base.MoreObjects;
 import picocli.CommandLine;
 
 public class LineaTracerConfigurationCLiOptions {
+
+  public static final String MODULE_LIMIT_FILE_PATH = "--plugin-linea-module-limit-file-path";
+  public static final String DEFAULT_MODULE_LIMIT_FILE_PATH = "moduleLimitFile.toml";
 
   @CommandLine.Option(
       names = {MODULE_LIMIT_FILE_PATH},

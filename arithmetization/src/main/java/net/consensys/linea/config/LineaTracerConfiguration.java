@@ -17,6 +17,6 @@ package net.consensys.linea.config;
 
 import lombok.Builder;
 
-/** The Linea transaction selectors configuration. */
+/** The Linea tracer configuration. */
 @Builder(toBuilder = true)
 public record LineaTracerConfiguration(String moduleLimitsFilePath) {}
