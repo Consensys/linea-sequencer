@@ -23,16 +23,20 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import linea.plugin.acc.test.tests.web3j.generated.SimpleStorage;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
+import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.eth.transactions.ImmutableTransactionPoolConfiguration;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPoolConfiguration;
+import org.hyperledger.besu.ethereum.rlp.BytesValueRLPInput;
 import org.hyperledger.besu.tests.acceptance.dsl.AcceptanceTestBase;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Accounts;
 import org.hyperledger.besu.tests.acceptance.dsl.condition.txpool.TxPoolConditions;
@@ -198,6 +202,10 @@ public class LineaPluginTestBase extends AcceptanceTestBase {
             .notInTransactionPool(Hash.fromHexString(hash)));
   }
 
+  protected List<Map<String, String>> getTxPoolContent() {
+    return minerNode.execute(new TxPoolTransactions().getTxPoolContents());
+  }
+
   private TransactionReceiptProcessor createReceiptProcessor(Web3j web3j) {
     return new PollingTransactionReceiptProcessor(
         web3j,
@@ -218,5 +226,11 @@ public class LineaPluginTestBase extends AcceptanceTestBase {
             RandomStringUtils.randomAlphabetic(num),
             BigInteger.ZERO)
         .getTransactionHash();
+  }
+
+  protected Hash getTransactionHashFromRLP(final byte[] signedTxContractInteraction) {
+    return Transaction.readFrom(
+            new BytesValueRLPInput(Bytes.wrap(signedTxContractInteraction), false))
+        .getHash();
   }
 }
