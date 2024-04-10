@@ -57,8 +57,11 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
   public Optional<String> validateTransaction(
       final Transaction transaction, final boolean isLocal, final boolean hasPriority) {
 
-    if ((isLocal && txPoolValidatorConf.txPoolSimulationCheckApiEnabled())
-        || (!isLocal && txPoolValidatorConf.txPoolSimulationCheckP2pEnabled())) {
+    final boolean isLocalAndApiEnabled =
+        isLocal && txPoolValidatorConf.txPoolSimulationCheckApiEnabled();
+    final boolean isRemoteAndP2pEnabled =
+        !isLocal && txPoolValidatorConf.txPoolSimulationCheckP2pEnabled();
+    if (isRemoteAndP2pEnabled || isLocalAndApiEnabled) {
 
       final ModuleLineCountValidator moduleLineCountValidator =
           new ModuleLineCountValidator(moduleLineLimitsMap);
