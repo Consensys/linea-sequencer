@@ -68,6 +68,9 @@ dependencies {
   testImplementation "${besuArtifactGroup}.internal:core:${besuVersion}"
   testImplementation "${besuArtifactGroup}.internal:rlp:${besuVersion}"
   testImplementation "${besuArtifactGroup}.internal:core:${besuVersion}"
+
+  // TODO This is temporary until linea-arithmetization has a release process
+  implementation files("${buildDir}/linea-arithmetization.jar")
 }
 
 configurations {
@@ -78,3 +81,13 @@ configurations {
 
 apply from: rootProject.file("gradle/dist.gradle")
 apply from: rootProject.file("gradle/publishing.gradle")
+
+// TODO This is temporary until linea-arithmetization has a release process
+import de.undercouch.gradle.tasks.download.Download
+tasks.register('downloadLineaArithmetization', Download) {
+  src 'https://github.com/Consensys/linea-arithmetization/releases/download/v0.1.4-test24/besu-sequencer-plugins-v0.1.4-test24.jar'
+  dest new File(buildDir, 'linea-arithmetization.jar')
+  onlyIfModified true
+}
+compileJava.dependsOn(downloadLineaArithmetization)
+// TODO This is temporary until linea-arithmetization has a release process
