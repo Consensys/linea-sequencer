@@ -63,8 +63,6 @@ test {
   useJUnitPlatform()
 }
 
-tasks.test.dependsOn(buildZkevmBin)
-
 tasks.register('unitTests', Test) {
   description = 'Runs unit tests.'
 

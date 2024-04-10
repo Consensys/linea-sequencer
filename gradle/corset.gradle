@@ -23,15 +23,3 @@ tasks.register('corsetExists') {
         }
     }
 }
-
-tasks.register('buildZkevmBin', Exec) {
-    dependsOn corsetExists
-    workingDir "${project.rootDir}/zkevm-constraints/"
-    commandLine 'make', 'zkevm.bin'
-
-    //store the output instead of printing to the console
-    standardOutput = new ByteArrayOutputStream()
-    ext.output = {
-        return standardOutput.toString()
-    }
-}
