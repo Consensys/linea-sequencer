@@ -26,7 +26,7 @@ public class ModuleLimitsValidationResult {
   private final Integer cumulativeModuleLineCount;
   private final Integer cumulativeModuleLineLimit;
 
-  public static ModuleLimitsValidationResult VALID =
+  public static final ModuleLimitsValidationResult VALID =
       new ModuleLimitsValidationResult(
           ModuleLineCountValidator.ModuleLineCountResult.VALID, null, null, null, null, null);
 
