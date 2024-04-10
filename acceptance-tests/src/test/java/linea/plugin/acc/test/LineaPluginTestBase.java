@@ -30,13 +30,10 @@ import java.util.stream.Collectors;
 
 import linea.plugin.acc.test.tests.web3j.generated.SimpleStorage;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
-import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.eth.transactions.ImmutableTransactionPoolConfiguration;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPoolConfiguration;
-import org.hyperledger.besu.ethereum.rlp.BytesValueRLPInput;
 import org.hyperledger.besu.tests.acceptance.dsl.AcceptanceTestBase;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Accounts;
 import org.hyperledger.besu.tests.acceptance.dsl.condition.txpool.TxPoolConditions;
@@ -226,11 +223,5 @@ public class LineaPluginTestBase extends AcceptanceTestBase {
             RandomStringUtils.randomAlphabetic(num),
             BigInteger.ZERO)
         .getTransactionHash();
-  }
-
-  protected Hash getTransactionHashFromRLP(final byte[] signedTxContractInteraction) {
-    return Transaction.readFrom(
-            new BytesValueRLPInput(Bytes.wrap(signedTxContractInteraction), false))
-        .getHash();
   }
 }
