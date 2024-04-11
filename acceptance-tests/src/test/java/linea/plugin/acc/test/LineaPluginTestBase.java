@@ -150,7 +150,8 @@ public class LineaPluginTestBase extends AcceptanceTestBase {
   protected SimpleStorage deploySimpleStorage() throws Exception {
     final Web3j web3j = minerNode.nodeRequests().eth();
     final Credentials credentials = Credentials.create(Accounts.GENESIS_ACCOUNT_ONE_PRIVATE_KEY);
-    TransactionManager txManager = new RawTransactionManager(web3j, credentials, CHAIN_ID);
+    TransactionManager txManager =
+        new RawTransactionManager(web3j, credentials, CHAIN_ID, createReceiptProcessor(web3j));
 
     final RemoteCall<SimpleStorage> deploy =
         SimpleStorage.deploy(web3j, txManager, new DefaultGasProvider());
@@ -206,8 +207,8 @@ public class LineaPluginTestBase extends AcceptanceTestBase {
   private TransactionReceiptProcessor createReceiptProcessor(Web3j web3j) {
     return new PollingTransactionReceiptProcessor(
         web3j,
-        TransactionManager.DEFAULT_POLLING_FREQUENCY,
-        TransactionManager.DEFAULT_POLLING_ATTEMPTS_PER_TX_HASH);
+        Math.max(1000, LINEA_CLIQUE_OPTIONS.blockPeriodSeconds() * 1000 / 5),
+        LINEA_CLIQUE_OPTIONS.blockPeriodSeconds() * 3);
   }
 
   protected String sendTransactionWithGivenLengthPayload(
