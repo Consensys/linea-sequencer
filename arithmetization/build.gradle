@@ -26,7 +26,6 @@ version = rootProject.version
 apply from: rootProject.file("gradle/java.gradle")
 apply from: rootProject.file("gradle/dependency-management.gradle")
 apply from: rootProject.file('gradle/common-dependencies.gradle')
-apply from: rootProject.file("gradle/corset.gradle")
 apply from: rootProject.file("gradle/tests.gradle")
 apply from: rootProject.file("gradle/build-aliases.gradle")
 apply from: rootProject.file("gradle/check-licenses.gradle")
@@ -69,7 +68,7 @@ dependencies {
   testImplementation "${besuArtifactGroup}.internal:core:${besuVersion}"
 
   // TODO This is temporary until linea-arithmetization has a release process
-  implementation files("${buildDir}/linea-arithmetization.jar")
+  implementation files("/Users/gtrintinalia/Development/zktrace/besu-sequencer-plugins/arithmetization/build/libs/besu-sequencer-plugins-0.1.4-SNAPSHOT.jar")
 }
 
 configurations {
@@ -80,17 +79,17 @@ configurations {
 
 apply from: rootProject.file("gradle/dist.gradle")
 apply from: rootProject.file("gradle/publishing.gradle")
-
-// TODO This is temporary until linea-arithmetization has a release process
-import de.undercouch.gradle.tasks.download.Download
-tasks.register('downloadLineaArithmetization', Download) {
-  src 'https://github.com/Consensys/linea-arithmetization/releases/download/v0.1.4-test24/besu-sequencer-plugins-v0.1.4-test24.jar'
-  dest new File(buildDir, 'linea-arithmetization.jar')
-  onlyIfModified true
-}
-compileJava.dependsOn(downloadLineaArithmetization)
-// TODO This is temporary until linea-arithmetization has a release process
-
+/*
+ // TODO This is temporary until linea-arithmetization has a release process
+ import de.undercouch.gradle.tasks.download.Download
+ tasks.register('downloadLineaArithmetization', Download) {
+ src 'https://github.com/Consensys/linea-arithmetization/releases/download/v0.1.4-test24/besu-sequencer-plugins-v0.1.4-test24.jar'
+ dest new File(buildDir, 'linea-arithmetization.jar')
+ onlyIfModified true
+ }
+ compileJava.dependsOn(downloadLineaArithmetization)
+ // TODO This is temporary until linea-arithmetization has a release process
+ */
 jar {
   zip64 true
 }

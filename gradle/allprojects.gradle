@@ -17,7 +17,6 @@ allprojects {
   group = 'net.consensys.linea.besu.plugin'
   version = rootProject.version
 
-  apply from: rootProject.file("gradle/corset.gradle")
   apply from: rootProject.file("gradle/java.gradle")
   apply from: rootProject.file("gradle/dependency-management.gradle")
   apply from: rootProject.file("gradle/check-licenses.gradle")

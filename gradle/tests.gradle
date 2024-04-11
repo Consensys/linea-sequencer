@@ -63,7 +63,6 @@ test {
   useJUnitPlatform()
 }
 
-//tasks.test.dependsOn(buildZkevmBin)
 
 tasks.register('unitTests', Test) {
   description = 'Runs unit tests.'
@@ -79,5 +78,4 @@ tasks.register('unitTests', Test) {
 
 test {
   exclude('**/**ReferenceTest*')
-  exclude '**/net/consensys/linea/zktracer/**'
 }
