@@ -16,7 +16,9 @@
 repositories {
   maven {
     url "https://artifacts.consensys.net/public/linea-besu/maven/"
-    content { includeGroupByRegex('io\\.consensys\\..*') }
+    content {
+      includeGroupByRegex('io\\.consensys\\..*')
+    }
   }
   maven {
     url 'https://hyperledger.jfrog.io/hyperledger/besu-maven'
@@ -24,7 +26,15 @@ repositories {
   }
   maven {
     url 'https://artifacts.consensys.net/public/maven/maven/'
-    content { includeGroupByRegex('tech\\.pegasys(\\..*)?') }
+    content {
+      includeGroupByRegex('tech\\.pegasys(\\..*)?')
+    }
+  }
+  maven {
+    url "https://artifacts.consensys.net/public/linea-arithmetization/maven/"
+    content {
+      includeGroupByRegex('net\\.consensys\\.linea\\..*?')
+    }
   }
   maven {
     url 'https://splunk.jfrog.io/splunk/ext-releases-local'
@@ -48,6 +58,7 @@ dependencyManagement {
   }
 
   dependencies {
+    dependency 'net.consensys.linea.zktracer:arithmetization:0.1.4-20240421.234102-3'
     dependencySet(group: 'io.tmio', version: '2.4.2') {
       entry 'tuweni-bytes'
       entry 'tuweni-net'
