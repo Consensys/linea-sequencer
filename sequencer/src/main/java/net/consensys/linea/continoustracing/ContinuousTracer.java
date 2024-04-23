@@ -53,7 +53,7 @@ public class ContinuousTracer {
     } catch (final Exception e) {
       throw new TraceVerificationException(blockHash, e.getMessage());
     } finally {
-      zkTracer.traceEndConflation();
+      // zkTracer.traceEndConflation();
     }
 
     for (final TransactionTraceResult transactionTraceResult :

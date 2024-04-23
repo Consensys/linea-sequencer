@@ -18,9 +18,9 @@ import java.io.IOException;
 
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.continoustracing.exception.InvalidTraceHandlerException;
+import net.consensys.linea.corset.CorsetValidator;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.plugin.data.BlockHeader;
-
 
 @Slf4j
 public class TraceFailureHandler {

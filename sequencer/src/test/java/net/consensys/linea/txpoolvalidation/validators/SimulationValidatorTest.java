@@ -33,7 +33,7 @@ import net.consensys.linea.config.LineaL1L2BridgeConfiguration;
 import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionPoolValidatorConfiguration;
 import net.consensys.linea.modulelimit.ModuleLineCountValidator;
-import net.consensys.linea.sequencer.txselection.selectors.TraceLineLimitTransactionSelectorTest;
+import net.consensys.linea.txselection.selectors.TraceLineLimitTransactionSelectorTest;
 import org.apache.tuweni.bytes.Bytes;
 import org.bouncycastle.asn1.sec.SECNamedCurves;
 import org.bouncycastle.asn1.x9.X9ECParameters;
