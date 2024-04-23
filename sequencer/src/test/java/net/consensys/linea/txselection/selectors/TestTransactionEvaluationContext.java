@@ -12,7 +12,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.consensys.linea.sequencer.txselection.selectors;
+package net.consensys.linea.txselection.selectors;
 
 import com.google.common.base.Stopwatch;
 import org.hyperledger.besu.datatypes.PendingTransaction;

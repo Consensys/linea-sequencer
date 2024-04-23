@@ -81,12 +81,13 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
         if (simulationResult.isInvalid()) {
           return Optional.of(
               "Invalid transaction"
-                  + simulationResult.getInvalidReason().map(ir -> ": " + ir).orElse(""));
+                  + simulationResult.result().getInvalidReason().map(ir -> ": " + ir).orElse(""));
         }
         if (!simulationResult.isSuccessful()) {
           return Optional.of(
               "Reverted transaction"
                   + simulationResult
+                      .result()
                       .getRevertReason()
                       .map(rr -> ": " + rr.toHexString())
                       .orElse(""));
