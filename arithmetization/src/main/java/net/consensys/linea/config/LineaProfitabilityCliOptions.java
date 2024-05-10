@@ -19,23 +19,15 @@ import java.math.BigDecimal;
 
 import com.google.common.base.MoreObjects;
 import jakarta.validation.constraints.Positive;
-import net.consensys.linea.config.converters.WeiConverter;
-import org.hyperledger.besu.datatypes.Wei;
 import picocli.CommandLine;
 
 /** The Linea profitability calculator CLI options. */
 public class LineaProfitabilityCliOptions {
-  public static final String VERIFICATION_GAS_COST = "--plugin-linea-verification-gas-cost";
-  public static final int DEFAULT_VERIFICATION_GAS_COST = 1_200_000;
+  public static final String FIXED_GAS_COST_KWEI = "--plugin-linea-fixed-gas-cost-kwei";
+  public static final long DEFAULT_FIXED_GAS_COST_KWEI = 1_200_000;
 
-  public static final String VERIFICATION_CAPACITY = "--plugin-linea-verification-capacity";
-  public static final int DEFAULT_VERIFICATION_CAPACITY = 90_000;
-
-  public static final String GAS_PRICE_RATIO = "--plugin-linea-gas-price-ratio";
-  public static final int DEFAULT_GAS_PRICE_RATIO = 15;
-
-  public static final String GAS_PRICE_ADJUSTMENT = "--plugin-linea-gas-price-adjustment";
-  public static final Wei DEFAULT_GAS_PRICE_ADJUSTMENT = Wei.ZERO;
+  public static final String VARIABLE_GAS_COST_KWEI = "--plugin-linea-variable-gas-cost-kwei";
+  public static final long DEFAULT_VARIABLE_GAS_COST_KWEI = 90_000;
 
   public static final String MIN_MARGIN = "--plugin-linea-min-margin";
   public static final BigDecimal DEFAULT_MIN_MARGIN = BigDecimal.ONE;
@@ -56,36 +48,19 @@ public class LineaProfitabilityCliOptions {
 
   @Positive
   @CommandLine.Option(
-      names = {VERIFICATION_GAS_COST},
+      names = {FIXED_GAS_COST_KWEI},
       hidden = true,
       paramLabel = "<INTEGER>",
-      description = "L1 verification gas cost (default: ${DEFAULT-VALUE})")
-  private int verificationGasCost = DEFAULT_VERIFICATION_GAS_COST;
+      description = "Fixed gas cost in KWei (default: ${DEFAULT-VALUE})")
+  private long fixedGasCostKwei = DEFAULT_FIXED_GAS_COST_KWEI;
 
   @Positive
   @CommandLine.Option(
-      names = {VERIFICATION_CAPACITY},
+      names = {VARIABLE_GAS_COST_KWEI},
       hidden = true,
       paramLabel = "<INTEGER>",
-      description = "L1 verification capacity (default: ${DEFAULT-VALUE})")
-  private int verificationCapacity = DEFAULT_VERIFICATION_CAPACITY;
-
-  @Positive
-  @CommandLine.Option(
-      names = {GAS_PRICE_RATIO},
-      hidden = true,
-      paramLabel = "<INTEGER>",
-      description = "L1/L2 gas price ratio (default: ${DEFAULT-VALUE})")
-  private int gasPriceRatio = DEFAULT_GAS_PRICE_RATIO;
-
-  @CommandLine.Option(
-      names = {GAS_PRICE_ADJUSTMENT},
-      hidden = true,
-      converter = WeiConverter.class,
-      paramLabel = "<WEI>",
-      description =
-          "Amount to add to the calculated profitable gas price (default: ${DEFAULT-VALUE})")
-  private Wei gasPriceAdjustment = DEFAULT_GAS_PRICE_ADJUSTMENT;
+      description = "Variable gas cost in KWei (default: ${DEFAULT-VALUE})")
+  private long variableGasCostKwei = DEFAULT_VARIABLE_GAS_COST_KWEI;
 
   @Positive
   @CommandLine.Option(
@@ -151,10 +126,8 @@ public class LineaProfitabilityCliOptions {
   public static LineaProfitabilityCliOptions fromConfig(
       final LineaProfitabilityConfiguration config) {
     final LineaProfitabilityCliOptions options = create();
-    options.verificationGasCost = config.verificationGasCost();
-    options.verificationCapacity = config.verificationCapacity();
-    options.gasPriceRatio = config.gasPriceRatio();
-    options.gasPriceAdjustment = config.gasPriceAdjustment();
+    options.fixedGasCostKwei = config.fixedCostKWei();
+    options.variableGasCostKwei = config.variableCostKWei();
     options.minMargin = BigDecimal.valueOf(config.minMargin());
     options.estimageGasMinMargin = BigDecimal.valueOf(config.estimateGasMinMargin());
     options.txPoolMinMargin = BigDecimal.valueOf(config.txPoolMinMargin());
@@ -170,10 +143,8 @@ public class LineaProfitabilityCliOptions {
    */
   public LineaProfitabilityConfiguration toDomainObject() {
     return LineaProfitabilityConfiguration.builder()
-        .verificationGasCost(verificationGasCost)
-        .verificationCapacity(verificationCapacity)
-        .gasPriceRatio(gasPriceRatio)
-        .gasPriceAdjustment(gasPriceAdjustment)
+        .fixedCostKWei(fixedGasCostKwei)
+        .variableCostKWei(variableGasCostKwei)
         .minMargin(minMargin.doubleValue())
         .estimateGasMinMargin(estimageGasMinMargin.doubleValue())
         .txPoolMinMargin(txPoolMinMargin.doubleValue())
@@ -185,10 +156,8 @@ public class LineaProfitabilityCliOptions {
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
-        .add(VERIFICATION_GAS_COST, verificationGasCost)
-        .add(VERIFICATION_CAPACITY, verificationCapacity)
-        .add(GAS_PRICE_RATIO, gasPriceRatio)
-        .add(GAS_PRICE_ADJUSTMENT, gasPriceAdjustment)
+        .add(FIXED_GAS_COST_KWEI, fixedGasCostKwei)
+        .add(VARIABLE_GAS_COST_KWEI, variableGasCostKwei)
         .add(MIN_MARGIN, minMargin)
         .add(ESTIMATE_GAS_MIN_MARGIN, estimageGasMinMargin)
         .add(TX_POOL_MIN_MARGIN, txPoolMinMargin)

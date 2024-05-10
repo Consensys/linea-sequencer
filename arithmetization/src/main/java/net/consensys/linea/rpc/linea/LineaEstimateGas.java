@@ -188,7 +188,7 @@ public class LineaEstimateGas {
 
     final Wei profitablePriorityFee =
         txProfitabilityCalculator.profitablePriorityFeePerGas(
-            transaction, profitabilityConf.estimateGasMinMargin(), minGasPrice, estimatedGasUsed);
+            transaction, profitabilityConf.estimateGasMinMargin(), estimatedGasUsed);
 
     if (profitablePriorityFee.greaterOrEqualThan(priorityFeeLowerBound)) {
       return profitablePriorityFee;

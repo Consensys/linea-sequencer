@@ -48,6 +48,6 @@ public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
   @Override
   public void beforeExternalServices() {
     super.beforeExternalServices();
-    besuEventsService.addBlockAddedListener(new LineaExtraDataHandler());
+    besuEventsService.addBlockAddedListener(new LineaExtraDataHandler(profitabilityConfiguration));
   }
 }

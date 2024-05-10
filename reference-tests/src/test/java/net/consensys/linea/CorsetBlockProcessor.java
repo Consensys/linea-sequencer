@@ -126,7 +126,6 @@ public class CorsetBlockProcessor extends MainnetBlockProcessor {
       zkTracer.traceStartBlock(blockHeader, blockBody);
       final TransactionProcessingResult result =
           transactionProcessor.processTransaction(
-              blockchain,
               worldStateUpdater,
               blockHeader,
               transaction,

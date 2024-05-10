@@ -16,17 +16,22 @@
 package net.consensys.linea.config;
 
 import lombok.Builder;
-import org.hyperledger.besu.datatypes.Wei;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+import lombok.experimental.Accessors;
 
 /** The Linea profitability calculator configuration. */
 @Builder(toBuilder = true)
-public record LineaProfitabilityConfiguration(
-    int verificationGasCost,
-    int verificationCapacity,
-    int gasPriceRatio,
-    Wei gasPriceAdjustment,
-    double minMargin,
-    double estimateGasMinMargin,
-    double txPoolMinMargin,
-    boolean txPoolCheckApiEnabled,
-    boolean txPoolCheckP2pEnabled) {}
+@Accessors(fluent = true)
+@Getter
+@ToString
+public class LineaProfitabilityConfiguration {
+  @Setter private volatile long fixedCostKWei;
+  @Setter private volatile long variableCostKWei;
+  double minMargin;
+  double estimateGasMinMargin;
+  double txPoolMinMargin;
+  boolean txPoolCheckApiEnabled;
+  boolean txPoolCheckP2pEnabled;
+}

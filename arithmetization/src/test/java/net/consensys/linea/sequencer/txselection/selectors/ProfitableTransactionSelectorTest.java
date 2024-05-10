@@ -41,9 +41,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class ProfitableTransactionSelectorTest {
-  private static final int VERIFICATION_GAS_COST = 1_200_000;
-  private static final int VERIFICATION_CAPACITY = 90_000;
-  private static final int GAS_PRICE_RATIO = 15;
+  private static final int FIXED_GAS_COST_KWEI = 1_200_000;
+  private static final int VARIABLE_GAS_COST_KWEI = 90_000;
   private static final double MIN_MARGIN = 1.0;
   private static final int UNPROFITABLE_CACHE_SIZE = 2;
   private static final int UNPROFITABLE_RETRY_LIMIT = 1;
@@ -54,10 +53,9 @@ public class ProfitableTransactionSelectorTest {
           .build();
   private final LineaProfitabilityConfiguration profitabilityConf =
       LineaProfitabilityCliOptions.create().toDomainObject().toBuilder()
-          .gasPriceRatio(GAS_PRICE_RATIO)
           .minMargin(MIN_MARGIN)
-          .verificationCapacity(VERIFICATION_CAPACITY)
-          .verificationGasCost(VERIFICATION_GAS_COST)
+          .fixedCostKWei(FIXED_GAS_COST_KWEI)
+          .variableCostKWei(VARIABLE_GAS_COST_KWEI)
           .build();
   private TestableProfitableTransactionSelector transactionSelector;
 
