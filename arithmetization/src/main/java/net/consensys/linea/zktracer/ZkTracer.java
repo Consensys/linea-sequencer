@@ -32,7 +32,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.config.LineaL1L2BridgeConfiguration;
 import net.consensys.linea.zktracer.module.Module;
 import net.consensys.linea.zktracer.module.hub.Hub;
-import net.consensys.linea.zktracer.opcode.OpCodes;
 import net.consensys.linea.zktracer.types.Utils;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Hash;
@@ -57,11 +56,12 @@ public class ZkTracer implements ConflationAwareOperationTracer {
 
   static {
     try {
-      // Load opcodes configured in src/main/resources/opcodes.yml.
-      OpCodes.load();
       // Load spillings configured in src/main/resources/spillings.toml.
       spillings = Utils.computeSpillings();
     } catch (final Exception e) {
+      final String errorMsg =
+          "A problem happened during spillings initialization, cause " + e.getCause();
+      log.error(errorMsg);
       throw new RuntimeException(e);
     }
   }

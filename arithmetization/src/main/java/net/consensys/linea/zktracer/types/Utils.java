@@ -17,8 +17,8 @@ package net.consensys.linea.zktracer.types;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.common.base.Preconditions;
 import org.apache.tuweni.bytes.Bytes;
@@ -90,7 +90,7 @@ public class Utils {
   }
 
   public static Map<String, Integer> computeSpillings() throws IOException {
-    final Map<String, Integer> spillings = new ConcurrentHashMap<>();
+    final Map<String, Integer> spillings = new HashMap<>();
 
     final TomlTable table =
         Toml.parse(Utils.class.getClassLoader().getResourceAsStream("spillings.toml"))

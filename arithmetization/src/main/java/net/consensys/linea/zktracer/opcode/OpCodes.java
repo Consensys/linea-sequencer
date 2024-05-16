@@ -20,7 +20,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -33,29 +32,31 @@ import net.consensys.linea.zktracer.json.JsonConverter;
 public class OpCodes {
   private static final JsonConverter YAML_CONVERTER = JsonConverter.builder().enableYaml().build();
 
-  private static Map<Integer, OpCodeData> valueToOpCodeDataMap = new ConcurrentHashMap<>();
-  private static Map<OpCode, OpCodeData> opCodeToOpCodeDataMap = new ConcurrentHashMap<>();
+  private static Map<Integer, OpCodeData> valueToOpCodeDataMap;
+  private static Map<OpCode, OpCodeData> opCodeToOpCodeDataMap;
 
-  /** Loads all opcode metadata from src/main/resources/opcodes.yml. */
+  static {
+    /** Loads all opcode metadata from src/main/resources/opcodes.yml. */
+    init();
+  }
+
   @SneakyThrows(IOException.class)
-  public static void load() {
-    if (valueToOpCodeDataMap.isEmpty() || opCodeToOpCodeDataMap.isEmpty()) {
-      JsonNode rootNode =
-          YAML_CONVERTER
-              .getObjectMapper()
-              .readTree(OpCodes.class.getClassLoader().getResourceAsStream("opcodes.yml"))
-              .get("opcodes");
+  private static void init() {
+    JsonNode rootNode =
+        YAML_CONVERTER
+            .getObjectMapper()
+            .readTree(OpCodes.class.getClassLoader().getResourceAsStream("opcodes.yml"))
+            .get("opcodes");
 
-      CollectionType typeReference =
-          TypeFactory.defaultInstance().constructCollectionType(List.class, OpCodeData.class);
+    CollectionType typeReference =
+        TypeFactory.defaultInstance().constructCollectionType(List.class, OpCodeData.class);
 
-      List<OpCodeData> opCodes =
-          YAML_CONVERTER.getObjectMapper().treeToValue(rootNode, typeReference);
+    List<OpCodeData> opCodes =
+        YAML_CONVERTER.getObjectMapper().treeToValue(rootNode, typeReference);
 
-      valueToOpCodeDataMap = opCodes.stream().collect(Collectors.toMap(OpCodeData::value, e -> e));
-      opCodeToOpCodeDataMap =
-          opCodes.stream().collect(Collectors.toMap(OpCodeData::mnemonic, e -> e));
-    }
+    valueToOpCodeDataMap = opCodes.stream().collect(Collectors.toMap(OpCodeData::value, e -> e));
+    opCodeToOpCodeDataMap =
+        opCodes.stream().collect(Collectors.toMap(OpCodeData::mnemonic, e -> e));
   }
 
   /**
