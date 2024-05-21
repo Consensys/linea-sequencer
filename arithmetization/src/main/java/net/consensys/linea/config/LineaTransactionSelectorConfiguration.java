@@ -21,14 +21,7 @@ import lombok.Builder;
 @Builder(toBuilder = true)
 public record LineaTransactionSelectorConfiguration(
     int maxBlockCallDataSize,
-    String moduleLimitsFilePath,
     int overLinesLimitCacheSize,
     long maxGasPerBlock,
-    int verificationGasCost,
-    int verificationCapacity,
-    int gasPriceRatio,
-    double minMargin,
-    double estimateGasMinMargin,
     int unprofitableCacheSize,
     int unprofitableRetryLimit) {}
-;
