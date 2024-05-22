@@ -17,7 +17,6 @@ package net.consensys.linea.config;
 
 import lombok.Builder;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
@@ -27,11 +26,31 @@ import lombok.experimental.Accessors;
 @Getter
 @ToString
 public class LineaProfitabilityConfiguration {
-  @Setter private volatile long fixedCostKWei;
-  @Setter private volatile long variableCostKWei;
-  double minMargin;
-  double estimateGasMinMargin;
-  double txPoolMinMargin;
-  boolean txPoolCheckApiEnabled;
-  boolean txPoolCheckP2pEnabled;
+  private long fixedCostKWei;
+  private long variableCostKWei;
+  private double minMargin;
+  private double estimateGasMinMargin;
+  private double txPoolMinMargin;
+  private boolean txPoolCheckApiEnabled;
+  private boolean txPoolCheckP2pEnabled;
+
+  /**
+   * These 2 parameters must be atomically updated
+   *
+   * @param fixedCostKWei fixed cost in KWei
+   * @param variableCostKWei variable cost in KWei
+   */
+  public synchronized void updateFixedAndVariableCost(
+      final long fixedCostKWei, final long variableCostKWei) {
+    this.fixedCostKWei = fixedCostKWei;
+    this.variableCostKWei = variableCostKWei;
+  }
+
+  public synchronized long fixedCostKWei() {
+    return fixedCostKWei;
+  }
+
+  public synchronized long variableCostKWei() {
+    return variableCostKWei;
+  }
 }

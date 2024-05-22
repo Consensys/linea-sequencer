@@ -20,6 +20,7 @@ import java.util.function.Function;
 
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
+import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt32;
 import org.hyperledger.besu.datatypes.Wei;
@@ -69,16 +70,20 @@ public class LineaExtraDataHandler implements BesuEvents.BlockAddedListener {
 
   @SuppressWarnings("rawtypes")
   private class Version1Parser implements ExtraDataParser {
-
+    private final LineaProfitabilityConfiguration profitabilityConf;
     private final FieldConsumer[] fieldsSequence;
+    private final MutableLong currFixedCostKWei = new MutableLong();
+    private final MutableLong currVariableCostKWei = new MutableLong();
 
     public Version1Parser(final LineaProfitabilityConfiguration profitabilityConf) {
+      this.profitabilityConf = profitabilityConf;
+
       final FieldConsumer fixedGasCostField =
           new FieldConsumer<>(
-              "fixedGasCost", 4, ExtraDataParser::toLong, profitabilityConf::fixedCostKWei);
+              "fixedGasCost", 4, ExtraDataParser::toLong, currFixedCostKWei::setValue);
       final FieldConsumer variableGasCostField =
           new FieldConsumer<>(
-              "variableGasCost", 4, ExtraDataParser::toLong, profitabilityConf::variableCostKWei);
+              "variableGasCost", 4, ExtraDataParser::toLong, currVariableCostKWei::setValue);
       final FieldConsumer minGasPriceField =
           new FieldConsumer<>("minGasPrice", 4, ExtraDataParser::toLong, this::updateMinGasPrice);
 
@@ -90,13 +95,16 @@ public class LineaExtraDataHandler implements BesuEvents.BlockAddedListener {
       return rawExtraData.get(0) == (byte) 1;
     }
 
-    public void parse(final Bytes extraData) {
+    public synchronized void parse(final Bytes extraData) {
       log.info("Parsing extra data version 1: {}", extraData.toHexString());
       int startIndex = 0;
       for (final FieldConsumer fieldConsumer : fieldsSequence) {
         fieldConsumer.accept(extraData.slice(startIndex, fieldConsumer.length));
         startIndex += fieldConsumer.length;
       }
+
+      profitabilityConf.updateFixedAndVariableCost(
+          currFixedCostKWei.longValue(), currVariableCostKWei.longValue());
     }
 
     void updateMinGasPrice(final Long minGasPriceKWei) {
