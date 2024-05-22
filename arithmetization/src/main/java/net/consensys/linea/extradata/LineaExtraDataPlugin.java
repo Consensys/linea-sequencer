@@ -23,6 +23,7 @@ import net.consensys.linea.AbstractLineaRequiredPlugin;
 import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.services.BesuEvents;
+import org.hyperledger.besu.plugin.services.RpcEndpointService;
 
 /** This plugin registers handlers that are activated when new blocks are imported */
 @Slf4j
@@ -30,6 +31,7 @@ import org.hyperledger.besu.plugin.services.BesuEvents;
 public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
   public static final String NAME = "linea";
   private BesuEvents besuEventsService;
+  private RpcEndpointService rpcEndpointService;
 
   @Override
   public Optional<String> getName() {
@@ -43,11 +45,19 @@ public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
             .getService(BesuEvents.class)
             .orElseThrow(
                 () -> new RuntimeException("Failed to obtain BesuEvents from the BesuContext."));
+    rpcEndpointService =
+        context
+            .getService(RpcEndpointService.class)
+            .orElseThrow(
+                () ->
+                    new RuntimeException(
+                        "Failed to obtain RpcEndpointService from the BesuContext."));
   }
 
   @Override
-  public void beforeExternalServices() {
-    super.beforeExternalServices();
-    besuEventsService.addBlockAddedListener(new LineaExtraDataHandler(profitabilityConfiguration));
+  public void start() {
+    super.start();
+    besuEventsService.addBlockAddedListener(
+        new LineaExtraDataHandler(rpcEndpointService, profitabilityConfiguration));
   }
 }

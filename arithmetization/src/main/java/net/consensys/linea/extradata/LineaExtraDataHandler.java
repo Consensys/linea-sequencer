@@ -22,14 +22,21 @@ import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt32;
+import org.hyperledger.besu.datatypes.Wei;
+import org.hyperledger.besu.datatypes.rpc.JsonRpcResponseType;
 import org.hyperledger.besu.plugin.data.AddedBlockContext;
 import org.hyperledger.besu.plugin.services.BesuEvents;
+import org.hyperledger.besu.plugin.services.RpcEndpointService;
 
 @Slf4j
 public class LineaExtraDataHandler implements BesuEvents.BlockAddedListener {
+  private final RpcEndpointService rpcEndpointService;
   private final ExtraDataParser[] extraDataParsers;
 
-  public LineaExtraDataHandler(final LineaProfitabilityConfiguration profitabilityConf) {
+  public LineaExtraDataHandler(
+      final RpcEndpointService rpcEndpointService,
+      final LineaProfitabilityConfiguration profitabilityConf) {
+    this.rpcEndpointService = rpcEndpointService;
     extraDataParsers = new ExtraDataParser[] {new Version1Parser(profitabilityConf)};
   }
 
@@ -61,7 +68,7 @@ public class LineaExtraDataHandler implements BesuEvents.BlockAddedListener {
   }
 
   @SuppressWarnings("rawtypes")
-  private static class Version1Parser implements ExtraDataParser {
+  private class Version1Parser implements ExtraDataParser {
 
     private final FieldConsumer[] fieldsSequence;
 
@@ -73,7 +80,7 @@ public class LineaExtraDataHandler implements BesuEvents.BlockAddedListener {
           new FieldConsumer<>(
               "variableGasCost", 4, ExtraDataParser::toLong, profitabilityConf::variableCostKWei);
       final FieldConsumer minGasPriceField =
-          new FieldConsumer<>("minGasPrice", 4, ExtraDataParser::toLong, this::toDo);
+          new FieldConsumer<>("minGasPrice", 4, ExtraDataParser::toLong, this::updateMinGasPrice);
 
       this.fieldsSequence =
           new FieldConsumer[] {fixedGasCostField, variableGasCostField, minGasPriceField};
@@ -92,8 +99,14 @@ public class LineaExtraDataHandler implements BesuEvents.BlockAddedListener {
       }
     }
 
-    void toDo(final Long minGasPriceKWei) {
-      log.info("ToDo: call setMinGasPrice to {} kwei", minGasPriceKWei);
+    void updateMinGasPrice(final Long minGasPriceKWei) {
+      final var minGasPriceWei = Wei.of(minGasPriceKWei).multiply(1000);
+      final var resp =
+          rpcEndpointService.call(
+              "miner_setMinGasPrice", new Object[] {minGasPriceWei.toShortHexString()});
+      if (!resp.getType().equals(JsonRpcResponseType.SUCCESS)) {
+        log.error("setMinGasPrice failed: {}", resp);
+      }
     }
   }
 
