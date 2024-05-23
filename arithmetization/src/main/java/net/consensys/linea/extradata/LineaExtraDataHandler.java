@@ -20,13 +20,16 @@ import java.util.function.Function;
 
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
+import net.consensys.linea.config.LineaRpcConfiguration;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt32;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.datatypes.rpc.JsonRpcResponseType;
 import org.hyperledger.besu.plugin.data.AddedBlockContext;
+import org.hyperledger.besu.plugin.data.BlockHeader;
 import org.hyperledger.besu.plugin.services.BesuEvents;
+import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.RpcEndpointService;
 
 @Slf4j
@@ -36,14 +39,24 @@ public class LineaExtraDataHandler implements BesuEvents.BlockAddedListener {
 
   public LineaExtraDataHandler(
       final RpcEndpointService rpcEndpointService,
-      final LineaProfitabilityConfiguration profitabilityConf) {
+      final BlockchainService blockchainService,
+      final LineaProfitabilityConfiguration profitabilityConf,
+      final LineaRpcConfiguration rpcConf) {
     this.rpcEndpointService = rpcEndpointService;
-    extraDataParsers = new ExtraDataParser[] {new Version1Parser(profitabilityConf)};
+    extraDataParsers = new ExtraDataParser[] {new Version1Parser(profitabilityConf, rpcConf)};
+    onStartup(blockchainService);
+  }
+
+  private void onStartup(final BlockchainService blockchainService) {
+    consumeExtraData(blockchainService.getChainHeadHeader());
   }
 
   @Override
   public void onBlockAdded(final AddedBlockContext addedBlockContext) {
-    final var blockHeader = addedBlockContext.getBlockHeader();
+    consumeExtraData(addedBlockContext.getBlockHeader());
+  }
+
+  private void consumeExtraData(final BlockHeader blockHeader) {
     final var rawExtraData = blockHeader.getExtraData();
 
     if (!Bytes.EMPTY.equals(rawExtraData)) {
@@ -71,12 +84,16 @@ public class LineaExtraDataHandler implements BesuEvents.BlockAddedListener {
   @SuppressWarnings("rawtypes")
   private class Version1Parser implements ExtraDataParser {
     private final LineaProfitabilityConfiguration profitabilityConf;
+    private final LineaRpcConfiguration rpcConf;
     private final FieldConsumer[] fieldsSequence;
     private final MutableLong currFixedCostKWei = new MutableLong();
     private final MutableLong currVariableCostKWei = new MutableLong();
 
-    public Version1Parser(final LineaProfitabilityConfiguration profitabilityConf) {
+    public Version1Parser(
+        final LineaProfitabilityConfiguration profitabilityConf,
+        final LineaRpcConfiguration rpcConf) {
       this.profitabilityConf = profitabilityConf;
+      this.rpcConf = rpcConf;
 
       final FieldConsumer fixedGasCostField =
           new FieldConsumer<>(
@@ -105,6 +122,7 @@ public class LineaExtraDataHandler implements BesuEvents.BlockAddedListener {
 
       profitabilityConf.updateFixedAndVariableCost(
           currFixedCostKWei.longValue(), currVariableCostKWei.longValue());
+      rpcConf.estimateGasCompatibilityModeEnabled(false);
     }
 
     void updateMinGasPrice(final Long minGasPriceKWei) {
