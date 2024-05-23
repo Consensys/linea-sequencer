@@ -66,8 +66,10 @@ public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
   @Override
   public void start() {
     super.start();
-    besuEventsService.addBlockAddedListener(
-        new LineaExtraDataHandler(
-            rpcEndpointService, blockchainService, profitabilityConfiguration, rpcConfiguration));
+    if (profitabilityConfiguration.extraDataPricingEnabled()) {
+      besuEventsService.addBlockAddedListener(
+          new LineaExtraDataHandler(
+              rpcEndpointService, blockchainService, profitabilityConfiguration));
+    }
   }
 }

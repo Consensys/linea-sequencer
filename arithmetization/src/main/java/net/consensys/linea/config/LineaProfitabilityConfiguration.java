@@ -33,6 +33,7 @@ public class LineaProfitabilityConfiguration {
   private double txPoolMinMargin;
   private boolean txPoolCheckApiEnabled;
   private boolean txPoolCheckP2pEnabled;
+  private boolean extraDataPricingEnabled;
 
   /**
    * These 2 parameters must be atomically updated

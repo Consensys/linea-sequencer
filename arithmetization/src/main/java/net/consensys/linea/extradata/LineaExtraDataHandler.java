@@ -20,7 +20,6 @@ import java.util.function.Function;
 
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
-import net.consensys.linea.config.LineaRpcConfiguration;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt32;
@@ -40,10 +39,9 @@ public class LineaExtraDataHandler implements BesuEvents.BlockAddedListener {
   public LineaExtraDataHandler(
       final RpcEndpointService rpcEndpointService,
       final BlockchainService blockchainService,
-      final LineaProfitabilityConfiguration profitabilityConf,
-      final LineaRpcConfiguration rpcConf) {
+      final LineaProfitabilityConfiguration profitabilityConf) {
     this.rpcEndpointService = rpcEndpointService;
-    extraDataParsers = new ExtraDataParser[] {new Version1Parser(profitabilityConf, rpcConf)};
+    extraDataParsers = new ExtraDataParser[] {new Version1Parser(profitabilityConf)};
     onStartup(blockchainService);
   }
 
@@ -84,16 +82,12 @@ public class LineaExtraDataHandler implements BesuEvents.BlockAddedListener {
   @SuppressWarnings("rawtypes")
   private class Version1Parser implements ExtraDataParser {
     private final LineaProfitabilityConfiguration profitabilityConf;
-    private final LineaRpcConfiguration rpcConf;
     private final FieldConsumer[] fieldsSequence;
     private final MutableLong currFixedCostKWei = new MutableLong();
     private final MutableLong currVariableCostKWei = new MutableLong();
 
-    public Version1Parser(
-        final LineaProfitabilityConfiguration profitabilityConf,
-        final LineaRpcConfiguration rpcConf) {
+    public Version1Parser(final LineaProfitabilityConfiguration profitabilityConf) {
       this.profitabilityConf = profitabilityConf;
-      this.rpcConf = rpcConf;
 
       final FieldConsumer fixedGasCostField =
           new FieldConsumer<>(
@@ -122,7 +116,6 @@ public class LineaExtraDataHandler implements BesuEvents.BlockAddedListener {
 
       profitabilityConf.updateFixedAndVariableCost(
           currFixedCostKWei.longValue(), currVariableCostKWei.longValue());
-      rpcConf.estimateGasCompatibilityModeEnabled(false);
     }
 
     void updateMinGasPrice(final Long minGasPriceKWei) {

@@ -46,6 +46,10 @@ public class LineaProfitabilityCliOptions {
       "--plugin-linea-tx-pool-profitability-check-p2p-enabled";
   public static final boolean DEFAULT_TX_POOL_ENABLE_CHECK_P2P = false;
 
+  public static final String EXTRA_DATA_PRICING_ENABLED =
+      "--plugin-linea-extra-dataPricing-enabled";
+  public static final boolean DEFAULT_EXTRA_DATA_PRICING_ENABLED = false;
+
   @Positive
   @CommandLine.Option(
       names = {FIXED_GAS_COST_KWEI},
@@ -106,6 +110,15 @@ public class LineaProfitabilityCliOptions {
           "Enable the profitability check for txs received via p2p? (default: ${DEFAULT-VALUE})")
   private boolean txPoolCheckP2pEnabled = DEFAULT_TX_POOL_ENABLE_CHECK_P2P;
 
+  @CommandLine.Option(
+      names = {EXTRA_DATA_PRICING_ENABLED},
+      arity = "0..1",
+      hidden = true,
+      paramLabel = "<BOOLEAN>",
+      description =
+          "Enable setting pricing parameters via extra data field (default: ${DEFAULT-VALUE})")
+  private boolean extraDataPricingEnabled = DEFAULT_EXTRA_DATA_PRICING_ENABLED;
+
   private LineaProfitabilityCliOptions() {}
 
   /**
@@ -133,6 +146,7 @@ public class LineaProfitabilityCliOptions {
     options.txPoolMinMargin = BigDecimal.valueOf(config.txPoolMinMargin());
     options.txPoolCheckApiEnabled = config.txPoolCheckApiEnabled();
     options.txPoolCheckP2pEnabled = config.txPoolCheckP2pEnabled();
+    options.extraDataPricingEnabled = config.extraDataPricingEnabled();
     return options;
   }
 
@@ -150,6 +164,7 @@ public class LineaProfitabilityCliOptions {
         .txPoolMinMargin(txPoolMinMargin.doubleValue())
         .txPoolCheckApiEnabled(txPoolCheckApiEnabled)
         .txPoolCheckP2pEnabled(txPoolCheckP2pEnabled)
+        .extraDataPricingEnabled(extraDataPricingEnabled)
         .build();
   }
 
@@ -163,6 +178,7 @@ public class LineaProfitabilityCliOptions {
         .add(TX_POOL_MIN_MARGIN, txPoolMinMargin)
         .add(TX_POOL_ENABLE_CHECK_API, txPoolCheckApiEnabled)
         .add(TX_POOL_ENABLE_CHECK_P2P, txPoolCheckP2pEnabled)
+        .add(EXTRA_DATA_PRICING_ENABLED, extraDataPricingEnabled)
         .toString();
   }
 }
