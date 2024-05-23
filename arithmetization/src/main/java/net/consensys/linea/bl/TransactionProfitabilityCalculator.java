@@ -15,7 +15,6 @@
 package net.consensys.linea.bl;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.compress.LibCompress;
@@ -26,7 +25,7 @@ import org.slf4j.spi.LoggingEventBuilder;
 
 @Slf4j
 public class TransactionProfitabilityCalculator {
-  private static final BigInteger TO_WEI_MULTIPLIER = BigInteger.valueOf(1000);
+  private static final long TO_WEI_MULTIPLIER = 1_000;
   private final LineaProfitabilityConfiguration profitabilityConf;
 
   public TransactionProfitabilityCalculator(
@@ -35,16 +34,22 @@ public class TransactionProfitabilityCalculator {
   }
 
   public Wei profitablePriorityFeePerGas(
-      final Transaction transaction, final double minMargin, final long gas) {
+      final Transaction transaction,
+      final double minMargin,
+      final long gas,
+      final Wei minGasPrice) {
     final int compressedTxSize = getCompressedTxSize(transaction);
 
+    final long variableCostKWei =
+        profitabilityConf.extraDataPricingEnabled()
+            ? profitabilityConf.variableCostKWei()
+            : minGasPrice.divide(TO_WEI_MULTIPLIER).toLong();
+
     final var profitAtKWei =
-        minMargin
-            * (profitabilityConf.variableCostKWei() * compressedTxSize / gas
-                + profitabilityConf.fixedCostKWei());
+        minMargin * (variableCostKWei * compressedTxSize / gas + profitabilityConf.fixedCostKWei());
 
     final var profitAtWei =
-        Wei.ofNumber(BigDecimal.valueOf(profitAtKWei).toBigInteger().multiply(TO_WEI_MULTIPLIER));
+        Wei.ofNumber(BigDecimal.valueOf(profitAtKWei).toBigInteger()).multiply(TO_WEI_MULTIPLIER);
 
     log.atDebug()
         .setMessage(
@@ -53,7 +58,7 @@ public class TransactionProfitabilityCalculator {
         .addArgument(profitAtWei::toHumanReadableString)
         .addArgument(minMargin)
         .addArgument(profitabilityConf.fixedCostKWei())
-        .addArgument(profitabilityConf.variableCostKWei())
+        .addArgument(variableCostKWei)
         .addArgument(gas)
         .addArgument(transaction::getSize)
         .addArgument(compressedTxSize)
@@ -67,9 +72,11 @@ public class TransactionProfitabilityCalculator {
       final Transaction transaction,
       final double minMargin,
       final Wei effectiveGasPrice,
-      final long gas) {
+      final long gas,
+      final Wei minGasPrice) {
 
-    final Wei profitablePriorityFee = profitablePriorityFeePerGas(transaction, minMargin, gas);
+    final Wei profitablePriorityFee =
+        profitablePriorityFeePerGas(transaction, minMargin, gas, minGasPrice);
 
     if (effectiveGasPrice.lessThan(profitablePriorityFee)) {
       log(
@@ -79,7 +86,8 @@ public class TransactionProfitabilityCalculator {
           minMargin,
           effectiveGasPrice,
           profitablePriorityFee,
-          gas);
+          gas,
+          minGasPrice);
       return false;
     }
 
@@ -90,7 +98,8 @@ public class TransactionProfitabilityCalculator {
         minMargin,
         effectiveGasPrice,
         profitablePriorityFee,
-        gas);
+        gas,
+        minGasPrice);
     return true;
   }
 
@@ -106,7 +115,9 @@ public class TransactionProfitabilityCalculator {
       final double minMargin,
       final Wei effectiveGasPrice,
       final Wei profitableGasPrice,
-      final long gasUsed) {
+      final long gasUsed,
+      final Wei minGasPrice) {
+
     leb.setMessage(
             "Context {}. Transaction {} has a margin of {}, minMargin={}, effectiveGasPrice={},"
                 + " profitableGasPrice={}, fixedCostKWei={}, variableCostKWei={}, "
@@ -121,7 +132,11 @@ public class TransactionProfitabilityCalculator {
         .addArgument(effectiveGasPrice::toHumanReadableString)
         .addArgument(profitableGasPrice::toHumanReadableString)
         .addArgument(profitabilityConf.fixedCostKWei())
-        .addArgument(profitabilityConf.variableCostKWei())
+        .addArgument(
+            () ->
+                profitabilityConf.extraDataPricingEnabled()
+                    ? profitabilityConf.variableCostKWei()
+                    : minGasPrice.divide(TO_WEI_MULTIPLIER).toLong())
         .addArgument(gasUsed)
         .log();
   }

@@ -158,7 +158,7 @@ public class EstimateGasTest extends LineaPluginTestBase {
 
     final var profitablePriorityFee =
         profitabilityCalculator.profitablePriorityFeePerGas(
-            tx, profitabilityConf.txPoolMinMargin(), estimatedGasLimit);
+            tx, profitabilityConf.txPoolMinMargin(), estimatedGasLimit, minGasPrice);
 
     assertThat(profitablePriorityFee.greaterThan(minGasPrice)).isTrue();
 
@@ -168,7 +168,8 @@ public class EstimateGasTest extends LineaPluginTestBase {
                 tx,
                 profitabilityConf.txPoolMinMargin(),
                 estimatedMaxGasPrice,
-                estimatedGasLimit))
+                estimatedGasLimit,
+                minGasPrice))
         .isTrue();
   }
 

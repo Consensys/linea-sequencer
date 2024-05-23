@@ -81,7 +81,8 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
           transaction,
           profitabilityConf.minMargin(),
           evaluationContext.getTransactionGasPrice(),
-          gasLimit)) {
+          gasLimit,
+          minGasPrice)) {
         return TX_UNPROFITABLE_UPFRONT;
       }
 
@@ -133,7 +134,8 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
           transaction,
           profitabilityConf.minMargin(),
           evaluationContext.getTransactionGasPrice(),
-          gasUsed)) {
+          gasUsed,
+          evaluationContext.getMinGasPrice())) {
         rememberUnprofitable(transaction);
         return TX_UNPROFITABLE;
       }
