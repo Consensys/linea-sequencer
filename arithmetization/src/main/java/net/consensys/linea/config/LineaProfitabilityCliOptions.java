@@ -24,10 +24,10 @@ import picocli.CommandLine;
 /** The Linea profitability calculator CLI options. */
 public class LineaProfitabilityCliOptions {
   public static final String FIXED_GAS_COST_KWEI = "--plugin-linea-fixed-gas-cost-kwei";
-  public static final long DEFAULT_FIXED_GAS_COST_KWEI = 1_200_000;
+  public static final long DEFAULT_FIXED_GAS_COST_KWEI = 0;
 
   public static final String VARIABLE_GAS_COST_KWEI = "--plugin-linea-variable-gas-cost-kwei";
-  public static final long DEFAULT_VARIABLE_GAS_COST_KWEI = 90_000;
+  public static final long DEFAULT_VARIABLE_GAS_COST_KWEI = 1_000_000;
 
   public static final String MIN_MARGIN = "--plugin-linea-min-margin";
   public static final BigDecimal DEFAULT_MIN_MARGIN = BigDecimal.ONE;

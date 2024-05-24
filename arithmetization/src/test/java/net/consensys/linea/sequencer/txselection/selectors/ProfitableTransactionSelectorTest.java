@@ -41,8 +41,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class ProfitableTransactionSelectorTest {
-  private static final int FIXED_GAS_COST_KWEI = 1_200_000;
-  private static final int VARIABLE_GAS_COST_KWEI = 90_000;
+  private static final int FIXED_GAS_COST_KWEI = 0;
+  private static final int VARIABLE_GAS_COST_KWEI = 1_000_000;
   private static final double MIN_MARGIN = 1.0;
   private static final int UNPROFITABLE_CACHE_SIZE = 2;
   private static final int UNPROFITABLE_RETRY_LIMIT = 1;
