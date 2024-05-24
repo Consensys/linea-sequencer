@@ -14,8 +14,6 @@
  */
 package net.consensys.linea.bl;
 
-import static net.consensys.linea.config.LineaProfitabilityConfiguration.WEI_IN_KWEI;
-
 import java.math.BigDecimal;
 
 import lombok.extern.slf4j.Slf4j;
@@ -41,25 +39,24 @@ public class TransactionProfitabilityCalculator {
       final Wei minGasPriceWei) {
     final int compressedTxSize = getCompressedTxSize(transaction);
 
-    final long variableCostKWei =
+    final long variableCostWei =
         profitabilityConf.extraDataPricingEnabled()
-            ? profitabilityConf.variableCostKWei()
-            : minGasPriceWei.divide(WEI_IN_KWEI).toLong();
+            ? profitabilityConf.variableCostWei()
+            : minGasPriceWei.toLong();
 
-    final var profitAtKWei =
-        minMargin * (variableCostKWei * compressedTxSize / gas + profitabilityConf.fixedCostKWei());
+    final var profitAt =
+        minMargin * (variableCostWei * compressedTxSize / gas + profitabilityConf.fixedCostWei());
 
-    final var profitAtWei =
-        Wei.ofNumber(BigDecimal.valueOf(profitAtKWei).toBigInteger()).multiply(WEI_IN_KWEI);
+    final var profitAtWei = Wei.ofNumber(BigDecimal.valueOf(profitAt).toBigInteger());
 
     log.atDebug()
         .setMessage(
-            "Estimated profitable priorityFeePerGas: {}; minMargin={}, fixedCostKWei={}, "
-                + "variableCostKWei={}, gas={}, txSize={}, compressedTxSize={}")
+            "Estimated profitable priorityFeePerGas: {}; minMargin={}, fixedCostWei={}, "
+                + "variableCostWei={}, gas={}, txSize={}, compressedTxSize={}")
         .addArgument(profitAtWei::toHumanReadableString)
         .addArgument(minMargin)
-        .addArgument(profitabilityConf.fixedCostKWei())
-        .addArgument(variableCostKWei)
+        .addArgument(profitabilityConf.fixedCostWei())
+        .addArgument(variableCostWei)
         .addArgument(gas)
         .addArgument(transaction::getSize)
         .addArgument(compressedTxSize)
@@ -121,7 +118,7 @@ public class TransactionProfitabilityCalculator {
 
     leb.setMessage(
             "Context {}. Transaction {} has a margin of {}, minMargin={}, effectiveGasPrice={},"
-                + " profitableGasPrice={}, fixedCostKWei={}, variableCostKWei={}, "
+                + " profitableGasPrice={}, fixedCostWei={}, variableCostWei={}, "
                 + " gasUsed={}")
         .addArgument(context)
         .addArgument(transaction::getHash)
@@ -132,12 +129,12 @@ public class TransactionProfitabilityCalculator {
         .addArgument(minMargin)
         .addArgument(effectiveGasPrice::toHumanReadableString)
         .addArgument(profitableGasPrice::toHumanReadableString)
-        .addArgument(profitabilityConf.fixedCostKWei())
+        .addArgument(profitabilityConf.fixedCostWei())
         .addArgument(
             () ->
                 profitabilityConf.extraDataPricingEnabled()
-                    ? profitabilityConf.variableCostKWei()
-                    : minGasPriceWei.divide(WEI_IN_KWEI).toLong())
+                    ? profitabilityConf.variableCostWei()
+                    : minGasPriceWei.toLong())
         .addArgument(gasUsed)
         .log();
   }

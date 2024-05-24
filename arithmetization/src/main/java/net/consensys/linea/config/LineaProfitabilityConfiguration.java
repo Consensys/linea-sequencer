@@ -26,10 +26,11 @@ import lombok.experimental.Accessors;
 @Getter
 @ToString
 public class LineaProfitabilityConfiguration {
-  public static final int WEI_IN_KWEI = 1_000;
+  /** It is safe to keep this as long, since it will store value <= max_int * 1000 */
+  private long fixedCostWei;
+  /** It is safe to keep this as long, since it will store value <= max_int * 1000 */
+  private long variableCostWei;
 
-  private long fixedCostKWei;
-  private long variableCostKWei;
   private double minMargin;
   private double estimateGasMinMargin;
   private double txPoolMinMargin;
@@ -40,20 +41,20 @@ public class LineaProfitabilityConfiguration {
   /**
    * These 2 parameters must be atomically updated
    *
-   * @param fixedCostKWei fixed cost in KWei
-   * @param variableCostKWei variable cost in KWei
+   * @param fixedCostWei fixed cost in Wei
+   * @param variableCostWei variable cost in Wei
    */
   public synchronized void updateFixedAndVariableCost(
-      final long fixedCostKWei, final long variableCostKWei) {
-    this.fixedCostKWei = fixedCostKWei;
-    this.variableCostKWei = variableCostKWei;
+      final long fixedCostWei, final long variableCostWei) {
+    this.fixedCostWei = fixedCostWei;
+    this.variableCostWei = variableCostWei;
   }
 
-  public synchronized long fixedCostKWei() {
-    return fixedCostKWei;
+  public synchronized long fixedCostWei() {
+    return fixedCostWei;
   }
 
-  public synchronized long variableCostKWei() {
-    return variableCostKWei;
+  public synchronized long variableCostWei() {
+    return variableCostWei;
   }
 }

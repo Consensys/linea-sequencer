@@ -15,8 +15,6 @@
 
 package net.consensys.linea.extradata;
 
-import static net.consensys.linea.config.LineaProfitabilityConfiguration.WEI_IN_KWEI;
-
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -83,6 +81,7 @@ public class LineaExtraDataHandler implements BesuEvents.BlockAddedListener {
 
   @SuppressWarnings("rawtypes")
   private class Version1Parser implements ExtraDataParser {
+    private static final int WEI_IN_KWEI = 1_000;
     private final LineaProfitabilityConfiguration profitabilityConf;
     private final FieldConsumer[] fieldsSequence;
     private final MutableLong currFixedCostKWei = new MutableLong();
@@ -117,7 +116,8 @@ public class LineaExtraDataHandler implements BesuEvents.BlockAddedListener {
       }
 
       profitabilityConf.updateFixedAndVariableCost(
-          currFixedCostKWei.longValue(), currVariableCostKWei.longValue());
+          currFixedCostKWei.longValue() * WEI_IN_KWEI,
+          currVariableCostKWei.longValue() * WEI_IN_KWEI);
     }
 
     void updateMinGasPrice(final Long minGasPriceKWei) {

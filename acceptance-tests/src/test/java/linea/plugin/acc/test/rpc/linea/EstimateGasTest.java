@@ -45,12 +45,11 @@ import org.hyperledger.besu.tests.acceptance.dsl.transaction.Transaction;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.web3j.protocol.core.Request;
-import org.web3j.protocol.core.Response;
 import org.web3j.protocol.http.HttpService;
 
 public class EstimateGasTest extends LineaPluginTestBase {
-  protected static final int FIXED_GAS_COST_KWEI = 1_200_000;
-  protected static final int VARIABLE_GAS_COST_KWEI = 90_000;
+  protected static final int FIXED_GAS_COST_WEI = 0;
+  protected static final int VARIABLE_GAS_COST_WEI = 1_000_000_000;
   protected static final double MIN_MARGIN = 1.0;
   protected static final double ESTIMATE_GAS_MIN_MARGIN = 1.0;
   protected static final Wei MIN_GAS_PRICE = Wei.of(1_000_000_000);
@@ -64,8 +63,8 @@ public class EstimateGasTest extends LineaPluginTestBase {
 
   protected TestCommandLineOptionsBuilder getTestCommandLineOptionsBuilder() {
     return new TestCommandLineOptionsBuilder()
-        .set("--plugin-linea-fixed-gas-cost-kwei=", String.valueOf(FIXED_GAS_COST_KWEI))
-        .set("--plugin-linea-variable-gas-cost-kwei=", String.valueOf(VARIABLE_GAS_COST_KWEI))
+        .set("--plugin-linea-fixed-gas-cost-wei=", String.valueOf(FIXED_GAS_COST_WEI))
+        .set("--plugin-linea-variable-gas-cost-wei=", String.valueOf(VARIABLE_GAS_COST_WEI))
         .set("--plugin-linea-min-margin=", String.valueOf(MIN_MARGIN))
         .set("--plugin-linea-estimate-gas-min-margin=", String.valueOf(ESTIMATE_GAS_MIN_MARGIN))
         .set("--plugin-linea-max-tx-gas-limit=", String.valueOf(MAX_TRANSACTION_GAS_LIMIT));
@@ -80,8 +79,8 @@ public class EstimateGasTest extends LineaPluginTestBase {
   public void createDefaultConfigurations() {
     profitabilityConf =
         LineaProfitabilityCliOptions.create().toDomainObject().toBuilder()
-            .fixedCostKWei(FIXED_GAS_COST_KWEI)
-            .variableCostKWei(VARIABLE_GAS_COST_KWEI)
+            .fixedCostWei(FIXED_GAS_COST_WEI)
+            .variableCostWei(VARIABLE_GAS_COST_WEI)
             .minMargin(MIN_MARGIN)
             .estimateGasMinMargin(ESTIMATE_GAS_MIN_MARGIN)
             .build();

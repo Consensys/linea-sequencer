@@ -23,11 +23,11 @@ import picocli.CommandLine;
 
 /** The Linea profitability calculator CLI options. */
 public class LineaProfitabilityCliOptions {
-  public static final String FIXED_GAS_COST_KWEI = "--plugin-linea-fixed-gas-cost-kwei";
-  public static final long DEFAULT_FIXED_GAS_COST_KWEI = 0;
+  public static final String FIXED_GAS_COST_WEI = "--plugin-linea-fixed-gas-cost-wei";
+  public static final long DEFAULT_FIXED_GAS_COST_WEI = 0;
 
-  public static final String VARIABLE_GAS_COST_KWEI = "--plugin-linea-variable-gas-cost-kwei";
-  public static final long DEFAULT_VARIABLE_GAS_COST_KWEI = 1_000_000;
+  public static final String VARIABLE_GAS_COST_WEI = "--plugin-linea-variable-gas-cost-wei";
+  public static final long DEFAULT_VARIABLE_GAS_COST_WEI = 1_000_000_000;
 
   public static final String MIN_MARGIN = "--plugin-linea-min-margin";
   public static final BigDecimal DEFAULT_MIN_MARGIN = BigDecimal.ONE;
@@ -52,19 +52,19 @@ public class LineaProfitabilityCliOptions {
 
   @Positive
   @CommandLine.Option(
-      names = {FIXED_GAS_COST_KWEI},
+      names = {FIXED_GAS_COST_WEI},
       hidden = true,
       paramLabel = "<INTEGER>",
-      description = "Fixed gas cost in KWei (default: ${DEFAULT-VALUE})")
-  private long fixedGasCostKwei = DEFAULT_FIXED_GAS_COST_KWEI;
+      description = "Fixed gas cost in Wei (default: ${DEFAULT-VALUE})")
+  private long fixedGasCostWei = DEFAULT_FIXED_GAS_COST_WEI;
 
   @Positive
   @CommandLine.Option(
-      names = {VARIABLE_GAS_COST_KWEI},
+      names = {VARIABLE_GAS_COST_WEI},
       hidden = true,
       paramLabel = "<INTEGER>",
-      description = "Variable gas cost in KWei (default: ${DEFAULT-VALUE})")
-  private long variableGasCostKwei = DEFAULT_VARIABLE_GAS_COST_KWEI;
+      description = "Variable gas cost in Wei (default: ${DEFAULT-VALUE})")
+  private long variableGasCostWei = DEFAULT_VARIABLE_GAS_COST_WEI;
 
   @Positive
   @CommandLine.Option(
@@ -139,8 +139,8 @@ public class LineaProfitabilityCliOptions {
   public static LineaProfitabilityCliOptions fromConfig(
       final LineaProfitabilityConfiguration config) {
     final LineaProfitabilityCliOptions options = create();
-    options.fixedGasCostKwei = config.fixedCostKWei();
-    options.variableGasCostKwei = config.variableCostKWei();
+    options.fixedGasCostWei = config.fixedCostWei();
+    options.variableGasCostWei = config.variableCostWei();
     options.minMargin = BigDecimal.valueOf(config.minMargin());
     options.estimageGasMinMargin = BigDecimal.valueOf(config.estimateGasMinMargin());
     options.txPoolMinMargin = BigDecimal.valueOf(config.txPoolMinMargin());
@@ -157,8 +157,8 @@ public class LineaProfitabilityCliOptions {
    */
   public LineaProfitabilityConfiguration toDomainObject() {
     return LineaProfitabilityConfiguration.builder()
-        .fixedCostKWei(fixedGasCostKwei)
-        .variableCostKWei(variableGasCostKwei)
+        .fixedCostWei(fixedGasCostWei)
+        .variableCostWei(variableGasCostWei)
         .minMargin(minMargin.doubleValue())
         .estimateGasMinMargin(estimageGasMinMargin.doubleValue())
         .txPoolMinMargin(txPoolMinMargin.doubleValue())
@@ -171,8 +171,8 @@ public class LineaProfitabilityCliOptions {
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
-        .add(FIXED_GAS_COST_KWEI, fixedGasCostKwei)
-        .add(VARIABLE_GAS_COST_KWEI, variableGasCostKwei)
+        .add(FIXED_GAS_COST_WEI, fixedGasCostWei)
+        .add(VARIABLE_GAS_COST_WEI, variableGasCostWei)
         .add(MIN_MARGIN, minMargin)
         .add(ESTIMATE_GAS_MIN_MARGIN, estimageGasMinMargin)
         .add(TX_POOL_MIN_MARGIN, txPoolMinMargin)
