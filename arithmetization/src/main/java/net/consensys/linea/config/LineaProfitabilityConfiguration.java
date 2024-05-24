@@ -26,6 +26,8 @@ import lombok.experimental.Accessors;
 @Getter
 @ToString
 public class LineaProfitabilityConfiguration {
+  public static final int WEI_IN_KWEI = 1_000;
+
   private long fixedCostKWei;
   private long variableCostKWei;
   private double minMargin;

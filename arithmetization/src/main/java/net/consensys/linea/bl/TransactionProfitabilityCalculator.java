@@ -14,6 +14,8 @@
  */
 package net.consensys.linea.bl;
 
+import static net.consensys.linea.config.LineaProfitabilityConfiguration.WEI_IN_KWEI;
+
 import java.math.BigDecimal;
 
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +27,6 @@ import org.slf4j.spi.LoggingEventBuilder;
 
 @Slf4j
 public class TransactionProfitabilityCalculator {
-  private static final long TO_WEI_MULTIPLIER = 1_000;
   private final LineaProfitabilityConfiguration profitabilityConf;
 
   public TransactionProfitabilityCalculator(
@@ -37,19 +38,19 @@ public class TransactionProfitabilityCalculator {
       final Transaction transaction,
       final double minMargin,
       final long gas,
-      final Wei minGasPrice) {
+      final Wei minGasPriceWei) {
     final int compressedTxSize = getCompressedTxSize(transaction);
 
     final long variableCostKWei =
         profitabilityConf.extraDataPricingEnabled()
             ? profitabilityConf.variableCostKWei()
-            : minGasPrice.divide(TO_WEI_MULTIPLIER).toLong();
+            : minGasPriceWei.divide(WEI_IN_KWEI).toLong();
 
     final var profitAtKWei =
         minMargin * (variableCostKWei * compressedTxSize / gas + profitabilityConf.fixedCostKWei());
 
     final var profitAtWei =
-        Wei.ofNumber(BigDecimal.valueOf(profitAtKWei).toBigInteger()).multiply(TO_WEI_MULTIPLIER);
+        Wei.ofNumber(BigDecimal.valueOf(profitAtKWei).toBigInteger()).multiply(WEI_IN_KWEI);
 
     log.atDebug()
         .setMessage(
@@ -73,10 +74,10 @@ public class TransactionProfitabilityCalculator {
       final double minMargin,
       final Wei effectiveGasPrice,
       final long gas,
-      final Wei minGasPrice) {
+      final Wei minGasPriceWei) {
 
     final Wei profitablePriorityFee =
-        profitablePriorityFeePerGas(transaction, minMargin, gas, minGasPrice);
+        profitablePriorityFeePerGas(transaction, minMargin, gas, minGasPriceWei);
 
     if (effectiveGasPrice.lessThan(profitablePriorityFee)) {
       log(
@@ -87,7 +88,7 @@ public class TransactionProfitabilityCalculator {
           effectiveGasPrice,
           profitablePriorityFee,
           gas,
-          minGasPrice);
+          minGasPriceWei);
       return false;
     }
 
@@ -99,7 +100,7 @@ public class TransactionProfitabilityCalculator {
         effectiveGasPrice,
         profitablePriorityFee,
         gas,
-        minGasPrice);
+        minGasPriceWei);
     return true;
   }
 
@@ -116,7 +117,7 @@ public class TransactionProfitabilityCalculator {
       final Wei effectiveGasPrice,
       final Wei profitableGasPrice,
       final long gasUsed,
-      final Wei minGasPrice) {
+      final Wei minGasPriceWei) {
 
     leb.setMessage(
             "Context {}. Transaction {} has a margin of {}, minMargin={}, effectiveGasPrice={},"
@@ -136,7 +137,7 @@ public class TransactionProfitabilityCalculator {
             () ->
                 profitabilityConf.extraDataPricingEnabled()
                     ? profitabilityConf.variableCostKWei()
-                    : minGasPrice.divide(TO_WEI_MULTIPLIER).toLong())
+                    : minGasPriceWei.divide(WEI_IN_KWEI).toLong())
         .addArgument(gasUsed)
         .log();
   }

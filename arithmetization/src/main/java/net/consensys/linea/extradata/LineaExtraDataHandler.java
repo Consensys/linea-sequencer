@@ -15,6 +15,8 @@
 
 package net.consensys.linea.extradata;
 
+import static net.consensys.linea.config.LineaProfitabilityConfiguration.WEI_IN_KWEI;
+
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -119,7 +121,7 @@ public class LineaExtraDataHandler implements BesuEvents.BlockAddedListener {
     }
 
     void updateMinGasPrice(final Long minGasPriceKWei) {
-      final var minGasPriceWei = Wei.of(minGasPriceKWei).multiply(1000);
+      final var minGasPriceWei = Wei.of(minGasPriceKWei).multiply(WEI_IN_KWEI);
       final var resp =
           rpcEndpointService.call(
               "miner_setMinGasPrice", new Object[] {minGasPriceWei.toShortHexString()});
