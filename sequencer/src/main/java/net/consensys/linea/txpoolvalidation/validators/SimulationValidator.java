@@ -14,6 +14,9 @@
  */
 package net.consensys.linea.txpoolvalidation.validators;
 
+import static net.consensys.linea.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.MODULE_NOT_DEFINED;
+import static net.consensys.linea.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.TX_MODULE_LINE_COUNT_OVERFLOW;
+
 import java.util.Map;
 import java.util.Optional;
 
@@ -25,6 +28,7 @@ import net.consensys.linea.modulelimit.ModuleLineCountValidator;
 import net.consensys.linea.zktracer.ZkTracer;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.plugin.data.BlockHeader;
+import org.hyperledger.besu.plugin.data.TransactionSimulationResult;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.TransactionSimulationService;
 import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolValidator;
@@ -59,6 +63,13 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
     final boolean isRemoteAndP2pEnabled =
         !isLocal && txPoolValidatorConf.txPoolSimulationCheckP2pEnabled();
     if (isRemoteAndP2pEnabled || isLocalAndApiEnabled) {
+      log.atTrace()
+          .setMessage(
+              "Starting simulation validation for tx with hash={}, isLocal={}, hasPriority={}")
+          .addArgument(transaction::getHash)
+          .addArgument(isLocal)
+          .addArgument(hasPriority)
+          .log();
 
       final ModuleLineCountValidator moduleLineCountValidator =
           new ModuleLineCountValidator(moduleLineLimitsMap);
@@ -69,33 +80,63 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
           transactionSimulationService.simulate(
               transaction, chainHeadHeader.getBlockHash(), zkTracer, true);
 
-      ModuleLimitsValidationResult moduleLimit =
+      ModuleLimitsValidationResult moduleLimitResult =
           moduleLineCountValidator.validate(zkTracer.getModulesLineCount());
 
-      if (moduleLimit.getResult() != ModuleLineCountValidator.ModuleLineCountResult.VALID) {
-        return Optional.of(handleModuleOverLimit(moduleLimit));
+      logSimulationResult(
+          transaction, isLocal, hasPriority, maybeSimulationResults, moduleLimitResult);
+
+      if (moduleLimitResult.getResult() != ModuleLineCountValidator.ModuleLineCountResult.VALID) {
+        return Optional.of(handleModuleOverLimit(moduleLimitResult));
       }
 
       if (maybeSimulationResults.isPresent()) {
         final var simulationResult = maybeSimulationResults.get();
         if (simulationResult.isInvalid()) {
-          return Optional.of(
+          final String errMsg =
               "Invalid transaction"
-                  + simulationResult.result().getInvalidReason().map(ir -> ": " + ir).orElse(""));
+                  + simulationResult.getInvalidReason().map(ir -> ": " + ir).orElse("");
+          log.debug(errMsg);
+          return Optional.of(errMsg);
         }
         if (!simulationResult.isSuccessful()) {
-          return Optional.of(
+          final String errMsg =
               "Reverted transaction"
                   + simulationResult
-                      .result()
                       .getRevertReason()
                       .map(rr -> ": " + rr.toHexString())
-                      .orElse(""));
+                      .orElse("");
+          log.debug(errMsg);
+          return Optional.of(errMsg);
         }
       }
     }
+    log.atTrace()
+        .setMessage(
+            "Simulation validation not enabled for tx with hash={}, isLocal={}, hasPriority={}")
+        .addArgument(transaction::getHash)
+        .addArgument(isLocal)
+        .addArgument(hasPriority)
+        .log();
 
     return Optional.empty();
+  }
+
+  private void logSimulationResult(
+      final Transaction transaction,
+      final boolean isLocal,
+      final boolean hasPriority,
+      final Optional<TransactionSimulationResult> maybeSimulationResults,
+      final ModuleLimitsValidationResult moduleLimitResult) {
+    log.atTrace()
+        .setMessage(
+            "Result of simulation validation for tx with hash={}, isLocal={}, hasPriority={}, is {}, module line counts {}")
+        .addArgument(transaction::getHash)
+        .addArgument(isLocal)
+        .addArgument(hasPriority)
+        .addArgument(maybeSimulationResults)
+        .addArgument(moduleLimitResult)
+        .log();
   }
 
   private ZkTracer createZkTracer(final BlockHeader chainHeadHeader) {
@@ -106,16 +147,14 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
   }
 
   private String handleModuleOverLimit(ModuleLimitsValidationResult moduleLimitResult) {
-    if (moduleLimitResult.getResult()
-        == ModuleLineCountValidator.ModuleLineCountResult.MODULE_NOT_DEFINED) {
+    if (moduleLimitResult.getResult() == MODULE_NOT_DEFINED) {
       String moduleNotDefinedMsg =
           String.format(
               "Module %s does not exist in the limits file.", moduleLimitResult.getModuleName());
       log.error(moduleNotDefinedMsg);
       return moduleNotDefinedMsg;
     }
-    if (moduleLimitResult.getResult()
-        == ModuleLineCountValidator.ModuleLineCountResult.TX_MODULE_LINE_COUNT_OVERFLOW) {
+    if (moduleLimitResult.getResult() == TX_MODULE_LINE_COUNT_OVERFLOW) {
       String txOverflowMsg =
           String.format(
               "Transaction line count for module %s=%s is above the limit %s",

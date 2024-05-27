@@ -15,12 +15,13 @@
 
 package net.consensys.linea.txselection;
 
+import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.createLimitModules;
+
 import java.util.Optional;
 
 import com.google.auto.service.AutoService;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
-import net.consensys.linea.modulelimit.ModuleLineCountValidator;
 import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.services.TransactionSelectionService;
@@ -61,6 +62,6 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
             l1L2BridgeConfiguration,
             profitabilityConfiguration,
             tracerConfiguration,
-            ModuleLineCountValidator.createLimitModules(tracerConfiguration)));
+            createLimitModules(tracerConfiguration)));
   }
 }

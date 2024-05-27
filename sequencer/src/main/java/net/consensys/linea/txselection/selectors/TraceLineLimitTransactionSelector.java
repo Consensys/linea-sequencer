@@ -14,6 +14,9 @@
  */
 package net.consensys.linea.txselection.selectors;
 
+import static net.consensys.linea.txselection.LineaTransactionSelectionResult.BLOCK_MODULE_LINE_COUNT_FULL;
+import static net.consensys.linea.txselection.LineaTransactionSelectionResult.TX_MODULE_LINE_COUNT_OVERFLOW;
+import static net.consensys.linea.txselection.LineaTransactionSelectionResult.TX_MODULE_LINE_COUNT_OVERFLOW_CACHED;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 
 import java.util.LinkedHashSet;
@@ -28,7 +31,6 @@ import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.modulelimit.ModuleLimitsValidationResult;
 import net.consensys.linea.modulelimit.ModuleLineCountValidator;
-import net.consensys.linea.txselection.LineaTransactionSelectionResult;
 import net.consensys.linea.zktracer.ZkTracer;
 import net.consensys.linea.zktracer.module.Module;
 import org.hyperledger.besu.datatypes.Hash;
@@ -101,7 +103,7 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
               "Transaction {} was already identified to go over line count limit, dropping it")
           .addArgument(evaluationContext.getPendingTransaction().getTransaction()::getHash)
           .log();
-      return LineaTransactionSelectionResult.TX_MODULE_LINE_COUNT_OVERFLOW_CACHED;
+      return TX_MODULE_LINE_COUNT_OVERFLOW_CACHED;
     }
     return SELECTED;
   }
@@ -159,7 +161,7 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
             result.getModuleLineCount(),
             result.getModuleLineCount());
         rememberOverLineCountLimitTransaction(transaction);
-        return LineaTransactionSelectionResult.TX_MODULE_LINE_COUNT_OVERFLOW;
+        return TX_MODULE_LINE_COUNT_OVERFLOW;
       case BLOCK_MODULE_LINE_COUNT_FULL:
         log.atTrace()
             .setMessage(
@@ -168,7 +170,7 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
             .addArgument(result.getCumulativeModuleLineCount())
             .addArgument(result.getCumulativeModuleLineLimit())
             .log();
-        return LineaTransactionSelectionResult.BLOCK_MODULE_LINE_COUNT_FULL;
+        return BLOCK_MODULE_LINE_COUNT_FULL;
       default:
         break;
     }

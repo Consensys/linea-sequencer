@@ -15,6 +15,8 @@
 
 package net.consensys.linea.txpoolvalidation;
 
+import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.createLimitModules;
+
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,7 +28,6 @@ import java.util.stream.Stream;
 import com.google.auto.service.AutoService;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
-import net.consensys.linea.modulelimit.ModuleLineCountValidator;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
@@ -107,7 +108,7 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
               transactionPoolValidatorConfiguration,
               profitabilityConfiguration,
               deniedAddresses,
-              ModuleLineCountValidator.createLimitModules(tracerConfiguration),
+              createLimitModules(tracerConfiguration),
               l1L2BridgeConfiguration));
 
     } catch (Exception e) {

@@ -14,11 +14,12 @@
  */
 package net.consensys.linea.txselection.selectors;
 
+import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_GAS_EXCEEDS_USER_MAX_BLOCK_GAS;
+import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_TOO_LARGE_FOR_REMAINING_USER_GAS;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.consensys.linea.txselection.LineaTransactionSelectionResult;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
@@ -50,7 +51,7 @@ public class MaxBlockGasTransactionSelector implements PluginTransactionSelector
           .addArgument(gasUsedByTransaction)
           .addArgument(maxGasPerBlock)
           .log();
-      return LineaTransactionSelectionResult.TX_GAS_EXCEEDS_USER_MAX_BLOCK_GAS;
+      return TX_GAS_EXCEEDS_USER_MAX_BLOCK_GAS;
     }
 
     if (isTransactionExceedingMaxBlockGasLimit(gasUsedByTransaction)) {
@@ -62,7 +63,7 @@ public class MaxBlockGasTransactionSelector implements PluginTransactionSelector
           .addArgument(cumulativeBlockGasUsed)
           .addArgument(maxGasPerBlock)
           .log();
-      return LineaTransactionSelectionResult.TX_TOO_LARGE_FOR_REMAINING_USER_GAS;
+      return TX_TOO_LARGE_FOR_REMAINING_USER_GAS;
     }
     return SELECTED;
   }

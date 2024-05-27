@@ -14,11 +14,11 @@
  */
 package net.consensys.linea.txselection.selectors;
 
+import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.BLOCK_CALLDATA_OVERFLOW;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.consensys.linea.txselection.LineaTransactionSelectionResult;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
@@ -61,7 +61,7 @@ public class MaxBlockCallDataTransactionSelector implements PluginTransactionSel
           .addArgument(() -> cumulativeBlockCallDataSize + transactionCallDataSize)
           .addArgument(maxBlockCallDataSize)
           .log();
-      return LineaTransactionSelectionResult.BLOCK_CALLDATA_OVERFLOW;
+      return BLOCK_CALLDATA_OVERFLOW;
     }
 
     log.atTrace()

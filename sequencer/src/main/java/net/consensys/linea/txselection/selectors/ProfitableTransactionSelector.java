@@ -14,6 +14,10 @@
  */
 package net.consensys.linea.txselection.selectors;
 
+import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_UNPROFITABLE;
+import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_UNPROFITABLE_MIN_GAS_PRICE_NOT_DECREASED;
+import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_UNPROFITABLE_RETRY_LIMIT;
+import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_UNPROFITABLE_UPFRONT;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 
 import java.util.LinkedHashSet;
@@ -24,7 +28,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
-import net.consensys.linea.txselection.LineaTransactionSelectionResult;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
@@ -80,7 +83,7 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
           minGasPrice,
           evaluationContext.getTransactionGasPrice(),
           gasLimit)) {
-        return LineaTransactionSelectionResult.TX_UNPROFITABLE_UPFRONT;
+        return TX_UNPROFITABLE_UPFRONT;
       }
 
       if (unprofitableCache.contains(transaction.getHash())) {
@@ -92,7 +95,7 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
                 .setMessage("Limit of unprofitable tx retries reached: {}/{}")
                 .addArgument(unprofitableRetries)
                 .addArgument(txSelectorConf.unprofitableRetryLimit());
-            return LineaTransactionSelectionResult.TX_UNPROFITABLE_RETRY_LIMIT;
+            return TX_UNPROFITABLE_RETRY_LIMIT;
           }
 
           log.atTrace()
@@ -109,7 +112,7 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
               .addArgument(minGasPrice::toHumanReadableString)
               .addArgument(prevMinGasPrice::toHumanReadableString)
               .log();
-          return LineaTransactionSelectionResult.TX_UNPROFITABLE_MIN_GAS_PRICE_NOT_DECREASED;
+          return TX_UNPROFITABLE_MIN_GAS_PRICE_NOT_DECREASED;
         }
       }
     }
@@ -134,7 +137,7 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
           evaluationContext.getTransactionGasPrice(),
           gasUsed)) {
         rememberUnprofitable(transaction);
-        return LineaTransactionSelectionResult.TX_UNPROFITABLE;
+        return TX_UNPROFITABLE;
       }
     }
     return SELECTED;
