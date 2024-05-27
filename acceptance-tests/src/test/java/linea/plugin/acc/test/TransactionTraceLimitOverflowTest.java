@@ -43,6 +43,7 @@ public class TransactionTraceLimitOverflowTest extends LineaPluginTestBase {
         .set(
             "--plugin-linea-module-limit-file-path=",
             getResourcePath("/txOverflowModuleLimits.toml"))
+        .set("--plugin-linea-tx-pool-simulation-check-api-enabled=", "false")
         .build();
   }
 

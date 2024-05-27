@@ -13,19 +13,20 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.consensys.linea;
+package net.consensys.linea.config;
 
-import net.consensys.linea.zktracer.opcode.OpCodes;
-import org.junit.jupiter.api.extension.BeforeAllCallback;
-import org.junit.jupiter.api.extension.ExtensionContext;
+import lombok.Builder;
+import org.hyperledger.besu.datatypes.Wei;
 
-/**
- * A JUnit {@link org.junit.jupiter.api.extension.Extension} handling the test lifecycle for EVM
- * tests.
- */
-public class EvmExtension implements BeforeAllCallback {
-  @Override
-  public void beforeAll(ExtensionContext context) {
-    OpCodes.load();
-  }
-}
+/** The Linea profitability calculator configuration. */
+@Builder(toBuilder = true)
+public record LineaProfitabilityConfiguration(
+    int verificationGasCost,
+    int verificationCapacity,
+    int gasPriceRatio,
+    Wei gasPriceAdjustment,
+    double minMargin,
+    double estimateGasMinMargin,
+    double txPoolMinMargin,
+    boolean txPoolCheckApiEnabled,
+    boolean txPoolCheckP2pEnabled) {}

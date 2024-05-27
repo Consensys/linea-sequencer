@@ -13,19 +13,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.consensys.linea.zktracer.testing;
+package net.consensys.linea.config;
 
-import net.consensys.linea.zktracer.opcode.OpCodes;
-import org.junit.jupiter.api.extension.BeforeAllCallback;
-import org.junit.jupiter.api.extension.ExtensionContext;
+import java.math.BigDecimal;
 
-/**
- * A JUnit {@link org.junit.jupiter.api.extension.Extension} handling the test lifecycle for EVM
- * tests.
- */
-public class EvmExtension implements BeforeAllCallback {
-  @Override
-  public void beforeAll(ExtensionContext context) {
-    OpCodes.load();
-  }
-}
+import lombok.Builder;
+
+/** The Linea RPC configuration. */
+@Builder(toBuilder = true)
+public record LineaRpcConfiguration(
+    boolean estimateGasCompatibilityModeEnabled, BigDecimal estimateGasCompatibilityMultiplier) {}
