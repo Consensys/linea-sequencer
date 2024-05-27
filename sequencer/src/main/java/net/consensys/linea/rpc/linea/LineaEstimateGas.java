@@ -15,8 +15,8 @@
 
 package net.consensys.linea.rpc.linea;
 
-import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.MODULE_NOT_DEFINED;
-import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.TX_MODULE_LINE_COUNT_OVERFLOW;
+import static net.consensys.linea.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.MODULE_NOT_DEFINED;
+import static net.consensys.linea.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.TX_MODULE_LINE_COUNT_OVERFLOW;
 import static org.hyperledger.besu.ethereum.api.jsonrpc.internal.results.Quantity.create;
 
 import java.math.BigDecimal;
@@ -28,14 +28,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import lombok.extern.slf4j.Slf4j;
+import net.consensys.linea.TracerAggregator;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaL1L2BridgeConfiguration;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaRpcConfiguration;
 import net.consensys.linea.config.LineaTransactionPoolValidatorConfiguration;
-import net.consensys.linea.sequencer.TracerAggregator;
-import net.consensys.linea.sequencer.modulelimit.ModuleLimitsValidationResult;
-import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator;
+import net.consensys.linea.modulelimit.ModuleLimitsValidationResult;
+import net.consensys.linea.modulelimit.ModuleLineCountValidator;
 import net.consensys.linea.zktracer.ZkTracer;
 import org.apache.tuweni.bytes.Bytes;
 import org.bouncycastle.asn1.sec.SECNamedCurves;

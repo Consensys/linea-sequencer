@@ -14,7 +14,7 @@
  */
 package net.consensys.linea.txselection.selectors;
 
-import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.BLOCK_CALLDATA_OVERFLOW;
+import static net.consensys.linea.txselection.LineaTransactionSelectionResult.BLOCK_CALLDATA_OVERFLOW;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 
 import lombok.RequiredArgsConstructor;
@@ -87,8 +87,6 @@ public class MaxBlockCallDataTransactionSelector implements PluginTransactionSel
 
   /**
    * Updates the total call data size of all transactions in a block when a transaction is selected.
-   *
-   * @param pendingTransaction The selected transaction.
    */
   @Override
   public void onTransactionSelected(
