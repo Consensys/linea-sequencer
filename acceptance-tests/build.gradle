@@ -41,7 +41,7 @@ tasks.register('acceptanceTests', Test) {
   description = 'Runs acceptance tests.'
 
   dependsOn(project(":native:compress").compileJava)
-  dependsOn(project(":arithmetization").copyPluginJar)
+  dependsOn(project(":sequencer").copyPluginJar)
 
   inputs.property("integration.date", LocalTime.now()) // so it runs on every invocation
 
