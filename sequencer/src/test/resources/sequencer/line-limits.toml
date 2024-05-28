@@ -34,6 +34,9 @@ LOG_DATA            = 16384
 LOG_INFO            = 16384
 RLP_ADDR            = 504
 
+BLOCKDATA = 123
+BLOCKHASH = 1
+
 #
 # These do not exist yet
 #
