@@ -53,7 +53,10 @@ public class ContinuousTracer {
     } catch (final Exception e) {
       throw new TraceVerificationException(blockHash, e.getMessage());
     } finally {
-      // zkTracer.traceEndConflation();
+      // TODO: After consulting with the Arithmetization team, it is ok to pass the world state as
+      // null for now, but it
+      //  should be fixed at some point.
+      zkTracer.traceEndConflation(null);
     }
 
     for (final TransactionTraceResult transactionTraceResult :
