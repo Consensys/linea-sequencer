@@ -141,13 +141,12 @@ public class EstimateGasTest extends LineaPluginTestBase {
             .signature(LineaEstimateGas.FAKE_SIGNATURE_FOR_SIZE_CALCULATION)
             .build();
 
-    assertIsProfitable(tx, baseFee, estimatedPriorityFee, estimatedMaxGasPrice, estimatedGasLimit);
+    assertIsProfitable(tx, baseFee, estimatedMaxGasPrice, estimatedGasLimit);
   }
 
   protected void assertIsProfitable(
       final org.hyperledger.besu.ethereum.core.Transaction tx,
       final Wei baseFee,
-      final Wei estimatedPriorityFee,
       final Wei estimatedMaxGasPrice,
       final long estimatedGasLimit) {
 
@@ -155,17 +154,13 @@ public class EstimateGasTest extends LineaPluginTestBase {
 
     final var profitabilityCalculator = new TransactionProfitabilityCalculator(profitabilityConf);
 
-    final var profitablePriorityFee =
-        profitabilityCalculator.profitablePriorityFeePerGas(
-            tx, profitabilityConf.txPoolMinMargin(), estimatedGasLimit, minGasPrice);
-
-    assertThat(profitablePriorityFee.greaterThan(minGasPrice)).isTrue();
+    assertThat(estimatedMaxGasPrice.greaterOrEqualThan(minGasPrice)).isTrue();
 
     assertThat(
             profitabilityCalculator.isProfitable(
                 "Test",
                 tx,
-                profitabilityConf.txPoolMinMargin(),
+                profitabilityConf.estimateGasMinMargin(),
                 estimatedMaxGasPrice,
                 estimatedGasLimit,
                 minGasPrice))
