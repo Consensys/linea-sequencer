@@ -47,7 +47,7 @@ public class LineaProfitabilityCliOptions {
   public static final boolean DEFAULT_TX_POOL_ENABLE_CHECK_P2P = false;
 
   public static final String EXTRA_DATA_PRICING_ENABLED =
-      "--plugin-linea-extra-dataPricing-enabled";
+      "--plugin-linea-extra-data-pricing-enabled";
   public static final boolean DEFAULT_EXTRA_DATA_PRICING_ENABLED = false;
 
   @Positive
