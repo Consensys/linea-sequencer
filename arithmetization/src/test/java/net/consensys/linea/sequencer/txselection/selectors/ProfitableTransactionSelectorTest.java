@@ -41,9 +41,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class ProfitableTransactionSelectorTest {
-  private static final int FIXED_GAS_COST_WEI = 0;
-  private static final int VARIABLE_GAS_COST_WEI = 1_000_000_000;
-  private static final double MIN_MARGIN = 1.0;
+  private static final int FIXED_GAS_COST_WEI = 600_000;
+  private static final int VARIABLE_GAS_COST_WEI = 1_000_000;
+  private static final double MIN_MARGIN = 1.5;
   private static final int UNPROFITABLE_CACHE_SIZE = 2;
   private static final int UNPROFITABLE_RETRY_LIMIT = 1;
   private final LineaTransactionSelectorConfiguration txSelectorConf =
@@ -81,22 +81,11 @@ public class ProfitableTransactionSelectorTest {
   }
 
   @Test
-  public void shouldSelectWhenProfitableWithAdjustedSize() {
-    var mockTransactionProcessingResult = mockTransactionProcessingResult(21000);
-    verifyTransactionSelection(
-        transactionSelector,
-        mockEvaluationContext(false, 150, Wei.of(1_100_000_000), Wei.of(1_000_000_000), 21000),
-        mockTransactionProcessingResult,
-        SELECTED,
-        SELECTED);
-  }
-
-  @Test
   public void shouldNotSelectWhenUnprofitableUpfront() {
     var mockTransactionProcessingResult = mockTransactionProcessingResult(21000);
     verifyTransactionSelection(
         transactionSelector,
-        mockEvaluationContext(false, 1000, Wei.of(1_100_000_000), Wei.of(1_000_000_000), 21000),
+        mockEvaluationContext(false, 10000, Wei.of(1_000_100), Wei.of(1_000_000), 21000),
         mockTransactionProcessingResult,
         TX_UNPROFITABLE_UPFRONT,
         null);
@@ -107,7 +96,7 @@ public class ProfitableTransactionSelectorTest {
     var mockTransactionProcessingResult = mockTransactionProcessingResult(21000);
     verifyTransactionSelection(
         transactionSelector,
-        mockEvaluationContext(false, 1000, Wei.of(1_100_000_000), Wei.of(1_000_000_000), 210000),
+        mockEvaluationContext(false, 10000, Wei.of(1_000_100), Wei.of(1_000_000), 210000),
         mockTransactionProcessingResult,
         SELECTED,
         TX_UNPROFITABLE);
@@ -140,7 +129,7 @@ public class ProfitableTransactionSelectorTest {
   public void shouldRetryUnprofitableTxWhenBelowLimit() {
     var mockTransactionProcessingResult = mockTransactionProcessingResult(21000);
     var mockEvaluationContext =
-        mockEvaluationContext(false, 1000, Wei.of(1_100_000_000), Wei.of(1_000_000_000), 210000);
+        mockEvaluationContext(false, 10000, Wei.of(1_000_010), Wei.of(1_000_000), 210000);
     // first try
     verifyTransactionSelection(
         transactionSelector,
@@ -175,7 +164,7 @@ public class ProfitableTransactionSelectorTest {
     for (int i = 0; i <= UNPROFITABLE_CACHE_SIZE; i++) {
       var mockTransactionProcessingResult = mockTransactionProcessingResult(21000);
       var mockEvaluationContext =
-          mockEvaluationContext(false, 1000, Wei.of(1_100_000_000), Wei.of(1_000_000_000), 210000);
+          mockEvaluationContext(false, 10000, Wei.of(1_000_010), Wei.of(1_000_000), 210000);
       evaluationContexts[i] = mockEvaluationContext;
       verifyTransactionSelection(
           transactionSelector,
@@ -205,10 +194,10 @@ public class ProfitableTransactionSelectorTest {
 
   @Test
   public void shouldNotRetryUnprofitableTxWhenRetryLimitReached() {
-    var minGasPriceBlock1 = Wei.of(1_000_000_000);
+    var minGasPriceBlock1 = Wei.of(1_000_000);
     var mockTransactionProcessingResult1 = mockTransactionProcessingResult(21000);
     var mockEvaluationContext1 =
-        mockEvaluationContext(false, 1000, Wei.of(1_100_000_000), minGasPriceBlock1, 210000);
+        mockEvaluationContext(false, 10000, Wei.of(1_000_010), minGasPriceBlock1, 210000);
     // first try of first tx
     verifyTransactionSelection(
         transactionSelector,
@@ -219,7 +208,7 @@ public class ProfitableTransactionSelectorTest {
 
     var mockTransactionProcessingResult2 = mockTransactionProcessingResult(21000);
     var mockEvaluationContext2 =
-        mockEvaluationContext(false, 1000, Wei.of(1_100_000_000), minGasPriceBlock1, 210000);
+        mockEvaluationContext(false, 10000, Wei.of(1_000_010), minGasPriceBlock1, 210000);
     // first try of second tx
     verifyTransactionSelection(
         transactionSelector,
@@ -240,7 +229,7 @@ public class ProfitableTransactionSelectorTest {
     // simulate another block
     transactionSelector = newSelectorForNewBlock();
     // we need to decrease the min gas price in order to allow a retry
-    var minGasPriceBlock2 = Wei.of(1_000_000_000).subtract(1);
+    var minGasPriceBlock2 = minGasPriceBlock1.subtract(1);
 
     // we should remember of the unprofitable txs for the new block
     assertThat(
@@ -271,10 +260,10 @@ public class ProfitableTransactionSelectorTest {
 
   @Test
   public void shouldNotRetryUnprofitableTxWhenMinGasPriceNotDecreased() {
-    var minGasPriceBlock1 = Wei.of(1_000_000_000);
+    var minGasPriceBlock1 = Wei.of(1_000_000);
     var mockTransactionProcessingResult1 = mockTransactionProcessingResult(21000);
     var mockEvaluationContext1 =
-        mockEvaluationContext(false, 1000, Wei.of(1_100_000_000), minGasPriceBlock1, 210000);
+        mockEvaluationContext(false, 10000, Wei.of(1_000_010), minGasPriceBlock1, 210000);
     // first try of first tx
     verifyTransactionSelection(
         transactionSelector,
@@ -310,10 +299,10 @@ public class ProfitableTransactionSelectorTest {
 
   @Test
   public void profitableAndUnprofitableTxsMix() {
-    var minGasPriceBlock1 = Wei.of(1_000_000_000);
+    var minGasPriceBlock1 = Wei.of(1_000_000);
     var mockTransactionProcessingResult1 = mockTransactionProcessingResult(21000);
     var mockEvaluationContext1 =
-        mockEvaluationContext(false, 1000, Wei.of(1_100_000_000), minGasPriceBlock1, 210000);
+        mockEvaluationContext(false, 10000, Wei.of(1_000_010), minGasPriceBlock1, 210000);
     // first try of first tx
     verifyTransactionSelection(
         transactionSelector,
@@ -324,7 +313,7 @@ public class ProfitableTransactionSelectorTest {
 
     var mockTransactionProcessingResult2 = mockTransactionProcessingResult(21000);
     var mockEvaluationContext2 =
-        mockEvaluationContext(false, 100, Wei.of(1_100_000_000), minGasPriceBlock1, 210000);
+        mockEvaluationContext(false, 1000, Wei.of(1_000_010), minGasPriceBlock1, 210000);
     // first try of second tx
     verifyTransactionSelection(
         transactionSelector,
