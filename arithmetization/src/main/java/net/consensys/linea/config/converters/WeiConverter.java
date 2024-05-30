@@ -12,18 +12,17 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+package net.consensys.linea.config.converters;
 
-package net.consensys.linea.config;
+import java.math.BigInteger;
 
-import lombok.Builder;
+import org.apache.tuweni.bytes.Bytes;
+import org.hyperledger.besu.datatypes.Wei;
+import picocli.CommandLine;
 
-/**
- * The Linea configuration.
- *
- * @param denyListPath the path to the file containing the addresses that are denied.
- * @param maxTxGasLimit the maximum gas limit allowed for transactions
- * @param maxTxCalldataSize the maximum size of calldata allowed for transactions
- */
-@Builder(toBuilder = true)
-public record LineaTransactionValidatorConfiguration(
-    String denyListPath, int maxTxGasLimit, int maxTxCalldataSize) {}
+public class WeiConverter implements CommandLine.ITypeConverter<Bytes> {
+  @Override
+  public Bytes convert(final String s) throws Exception {
+    return Wei.of(new BigInteger(s));
+  }
+}

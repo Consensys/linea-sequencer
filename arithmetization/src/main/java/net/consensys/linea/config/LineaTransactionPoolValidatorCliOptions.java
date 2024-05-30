@@ -19,7 +19,7 @@ import com.google.common.base.MoreObjects;
 import picocli.CommandLine;
 
 /** The Linea CLI options. */
-public class LineaTransactionValidatorCliOptions {
+public class LineaTransactionPoolValidatorCliOptions {
 
   public static final String DENY_LIST_PATH = "--plugin-linea-deny-list-path";
   public static final String DEFAULT_DENY_LIST_PATH = "lineaDenyList.txt";
@@ -29,6 +29,14 @@ public class LineaTransactionValidatorCliOptions {
 
   public static final String MAX_TX_CALLDATA_SIZE = "--plugin-linea-max-tx-calldata-size";
   public static final int DEFAULT_MAX_TX_CALLDATA_SIZE = 60_000;
+
+  public static final String TX_POOL_ENABLE_SIMULATION_CHECK_API =
+      "--plugin-linea-tx-pool-simulation-check-api-enabled";
+  public static final boolean DEFAULT_TX_POOL_ENABLE_SIMULATION_CHECK_API = true;
+
+  public static final String TX_POOL_ENABLE_SIMULATION_CHECK_P2P =
+      "--plugin-linea-tx-pool-simulation-check-p2p-enabled";
+  public static final boolean DEFAULT_TX_POOL_ENABLE_SIMULATION_CHECK_P2P = false;
 
   @CommandLine.Option(
       names = {DENY_LIST_PATH},
@@ -58,15 +66,33 @@ public class LineaTransactionValidatorCliOptions {
               + ")")
   private int maxTxCallDataSize = DEFAULT_MAX_TX_CALLDATA_SIZE;
 
-  private LineaTransactionValidatorCliOptions() {}
+  @CommandLine.Option(
+      names = {TX_POOL_ENABLE_SIMULATION_CHECK_API},
+      arity = "0..1",
+      hidden = true,
+      paramLabel = "<BOOLEAN>",
+      description =
+          "Enable the simulation check for txs received via API? (default: ${DEFAULT-VALUE})")
+  private boolean txPoolSimulationCheckApiEnabled = DEFAULT_TX_POOL_ENABLE_SIMULATION_CHECK_API;
+
+  @CommandLine.Option(
+      names = {TX_POOL_ENABLE_SIMULATION_CHECK_P2P},
+      arity = "0..1",
+      hidden = true,
+      paramLabel = "<BOOLEAN>",
+      description =
+          "Enable the simulation check for txs received via p2p? (default: ${DEFAULT-VALUE})")
+  private boolean txPoolSimulationCheckP2pEnabled = DEFAULT_TX_POOL_ENABLE_SIMULATION_CHECK_P2P;
+
+  private LineaTransactionPoolValidatorCliOptions() {}
 
   /**
    * Create Linea cli options.
    *
    * @return the Linea cli options
    */
-  public static LineaTransactionValidatorCliOptions create() {
-    return new LineaTransactionValidatorCliOptions();
+  public static LineaTransactionPoolValidatorCliOptions create() {
+    return new LineaTransactionPoolValidatorCliOptions();
   }
 
   /**
@@ -75,12 +101,14 @@ public class LineaTransactionValidatorCliOptions {
    * @param config the config
    * @return the cli options
    */
-  public static LineaTransactionValidatorCliOptions fromConfig(
-      final LineaTransactionValidatorConfiguration config) {
-    final LineaTransactionValidatorCliOptions options = create();
+  public static LineaTransactionPoolValidatorCliOptions fromConfig(
+      final LineaTransactionPoolValidatorConfiguration config) {
+    final LineaTransactionPoolValidatorCliOptions options = create();
     options.denyListPath = config.denyListPath();
     options.maxTxGasLimit = config.maxTxGasLimit();
-
+    options.maxTxCallDataSize = config.maxTxCalldataSize();
+    options.txPoolSimulationCheckApiEnabled = config.txPoolSimulationCheckApiEnabled();
+    options.txPoolSimulationCheckP2pEnabled = config.txPoolSimulationCheckP2pEnabled();
     return options;
   }
 
@@ -89,9 +117,13 @@ public class LineaTransactionValidatorCliOptions {
    *
    * @return the Linea factory configuration
    */
-  public LineaTransactionValidatorConfiguration toDomainObject() {
-    return new LineaTransactionValidatorConfiguration(
-        denyListPath, maxTxGasLimit, maxTxCallDataSize);
+  public LineaTransactionPoolValidatorConfiguration toDomainObject() {
+    return new LineaTransactionPoolValidatorConfiguration(
+        denyListPath,
+        maxTxGasLimit,
+        maxTxCallDataSize,
+        txPoolSimulationCheckApiEnabled,
+        txPoolSimulationCheckP2pEnabled);
   }
 
   @Override
@@ -99,6 +131,9 @@ public class LineaTransactionValidatorCliOptions {
     return MoreObjects.toStringHelper(this)
         .add(DENY_LIST_PATH, denyListPath)
         .add(MAX_TX_GAS_LIMIT_OPTION, maxTxGasLimit)
+        .add(MAX_TX_CALLDATA_SIZE, maxTxCallDataSize)
+        .add(TX_POOL_ENABLE_SIMULATION_CHECK_API, txPoolSimulationCheckApiEnabled)
+        .add(TX_POOL_ENABLE_SIMULATION_CHECK_P2P, txPoolSimulationCheckP2pEnabled)
         .toString();
   }
 }

@@ -18,48 +18,46 @@ import java.math.BigDecimal;
 
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.compress.LibCompress;
-import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
+import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.datatypes.Wei;
 import org.slf4j.spi.LoggingEventBuilder;
 
 @Slf4j
 public class TransactionProfitabilityCalculator {
+  private final LineaProfitabilityConfiguration profitabilityConf;
 
-  private final LineaTransactionSelectorConfiguration conf;
-  private final double preComputedValue;
-
-  public TransactionProfitabilityCalculator(final LineaTransactionSelectorConfiguration conf) {
-    this.conf = conf;
-    this.preComputedValue =
-        conf.estimateGasMinMargin() * conf.gasPriceRatio() * conf.verificationGasCost();
+  public TransactionProfitabilityCalculator(
+      final LineaProfitabilityConfiguration profitabilityConf) {
+    this.profitabilityConf = profitabilityConf;
   }
 
   public Wei profitablePriorityFeePerGas(
-      final Transaction transaction, final Wei minGasPrice, final long gas) {
-    final double compressedTxSize = getCompressedTxSize(transaction);
+      final Transaction transaction,
+      final double minMargin,
+      final long gas,
+      final Wei minGasPriceWei) {
+    final int compressedTxSize = getCompressedTxSize(transaction);
+
+    final long variableCostWei =
+        profitabilityConf.extraDataPricingEnabled()
+            ? profitabilityConf.variableCostWei()
+            : minGasPriceWei.toLong();
 
     final var profitAt =
-        preComputedValue
-            * compressedTxSize
-            * minGasPrice.getAsBigInteger().doubleValue()
-            / (gas * conf.verificationCapacity());
+        minMargin * (variableCostWei * compressedTxSize / gas + profitabilityConf.fixedCostWei());
 
     final var profitAtWei = Wei.ofNumber(BigDecimal.valueOf(profitAt).toBigInteger());
 
     log.atDebug()
         .setMessage(
-            "Estimated profitable priorityFeePerGas: {}; estimateGasMinMargin={}, verificationCapacity={}, "
-                + "verificationGasCost={}, gasPriceRatio={}, gas={}, minGasPrice={}, "
-                + "l1GasPrice={}, txSize={}, compressedTxSize={}")
+            "Estimated profitable priorityFeePerGas: {}; minMargin={}, fixedCostWei={}, "
+                + "variableCostWei={}, gas={}, txSize={}, compressedTxSize={}")
         .addArgument(profitAtWei::toHumanReadableString)
-        .addArgument(conf.estimateGasMinMargin())
-        .addArgument(conf.verificationCapacity())
-        .addArgument(conf.verificationGasCost())
-        .addArgument(conf.gasPriceRatio())
+        .addArgument(minMargin)
+        .addArgument(profitabilityConf.fixedCostWei())
+        .addArgument(variableCostWei)
         .addArgument(gas)
-        .addArgument(minGasPrice::toHumanReadableString)
-        .addArgument(() -> minGasPrice.multiply(conf.gasPriceRatio()).toHumanReadableString())
         .addArgument(transaction::getSize)
         .addArgument(compressedTxSize)
         .log();
@@ -68,49 +66,42 @@ public class TransactionProfitabilityCalculator {
   }
 
   public boolean isProfitable(
-      final String step,
+      final String context,
       final Transaction transaction,
-      final double minGasPrice,
-      final double effectiveGasPrice,
-      final long gas) {
-    final double revenue = effectiveGasPrice * gas;
+      final double minMargin,
+      final Wei effectiveGasPrice,
+      final long gas,
+      final Wei minGasPriceWei) {
 
-    final double l1GasPrice = minGasPrice * conf.gasPriceRatio();
-    final double compressedTxSize = getCompressedTxSize(transaction);
-    final double verificationGasCostSlice =
-        (compressedTxSize / conf.verificationCapacity()) * conf.verificationGasCost();
-    final double cost = l1GasPrice * verificationGasCostSlice;
+    final Wei profitablePriorityFee =
+        profitablePriorityFeePerGas(transaction, minMargin, gas, minGasPriceWei);
 
-    final double margin = revenue / cost;
-
-    if (margin < conf.minMargin()) {
+    if (effectiveGasPrice.lessThan(profitablePriorityFee)) {
       log(
           log.atDebug(),
-          step,
+          context,
           transaction,
-          margin,
+          minMargin,
           effectiveGasPrice,
+          profitablePriorityFee,
           gas,
-          minGasPrice,
-          l1GasPrice,
-          compressedTxSize);
+          minGasPriceWei);
       return false;
-    } else {
-      log(
-          log.atTrace(),
-          step,
-          transaction,
-          margin,
-          effectiveGasPrice,
-          gas,
-          minGasPrice,
-          l1GasPrice,
-          compressedTxSize);
-      return true;
     }
+
+    log(
+        log.atTrace(),
+        context,
+        transaction,
+        minMargin,
+        effectiveGasPrice,
+        profitablePriorityFee,
+        gas,
+        minGasPriceWei);
+    return true;
   }
 
-  private double getCompressedTxSize(final Transaction transaction) {
+  private int getCompressedTxSize(final Transaction transaction) {
     final byte[] bytes = transaction.encoded().toArrayUnsafe();
     return LibCompress.CompressedSize(bytes, bytes.length);
   }
@@ -119,29 +110,32 @@ public class TransactionProfitabilityCalculator {
       final LoggingEventBuilder leb,
       final String context,
       final Transaction transaction,
-      final double margin,
-      final double effectiveGasPrice,
+      final double minMargin,
+      final Wei effectiveGasPrice,
+      final Wei profitableGasPrice,
       final long gasUsed,
-      final double minGasPrice,
-      final double l1GasPrice,
-      final double compressedTxSize) {
+      final Wei minGasPriceWei) {
+
     leb.setMessage(
-            "Context {}. Transaction {} has a margin of {}, minMargin={}, verificationCapacity={}, "
-                + "verificationGasCost={}, gasPriceRatio={}, effectiveGasPrice={}, gasUsed={}, minGasPrice={}, "
-                + "l1GasPrice={}, txSize={}, compressedTxSize={}")
+            "Context {}. Transaction {} has a margin of {}, minMargin={}, effectiveGasPrice={},"
+                + " profitableGasPrice={}, fixedCostWei={}, variableCostWei={}, "
+                + " gasUsed={}")
         .addArgument(context)
         .addArgument(transaction::getHash)
-        .addArgument(margin)
-        .addArgument(conf.minMargin())
-        .addArgument(conf.verificationCapacity())
-        .addArgument(conf.verificationGasCost())
-        .addArgument(conf.gasPriceRatio())
-        .addArgument(effectiveGasPrice)
+        .addArgument(
+            () ->
+                effectiveGasPrice.toBigInteger().doubleValue()
+                    / profitableGasPrice.toBigInteger().doubleValue())
+        .addArgument(minMargin)
+        .addArgument(effectiveGasPrice::toHumanReadableString)
+        .addArgument(profitableGasPrice::toHumanReadableString)
+        .addArgument(profitabilityConf.fixedCostWei())
+        .addArgument(
+            () ->
+                profitabilityConf.extraDataPricingEnabled()
+                    ? profitabilityConf.variableCostWei()
+                    : minGasPriceWei.toLong())
         .addArgument(gasUsed)
-        .addArgument(minGasPrice)
-        .addArgument(l1GasPrice)
-        .addArgument(transaction::getSize)
-        .addArgument(compressedTxSize)
         .log();
   }
 }
