@@ -24,7 +24,7 @@ import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt32;
 import org.hyperledger.besu.datatypes.Wei;
-import org.hyperledger.besu.datatypes.rpc.JsonRpcResponseType;
+import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcResponseType;
 import org.hyperledger.besu.plugin.data.AddedBlockContext;
 import org.hyperledger.besu.plugin.data.BlockHeader;
 import org.hyperledger.besu.plugin.services.BesuEvents;

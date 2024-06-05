@@ -13,7 +13,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.consensys.linea.rpc.linea;
+package net.consensys.linea.rpc;
 
 import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.createLimitModules;
 

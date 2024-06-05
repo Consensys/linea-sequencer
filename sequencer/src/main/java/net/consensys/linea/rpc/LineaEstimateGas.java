@@ -13,7 +13,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.consensys.linea.rpc.linea;
+package net.consensys.linea.rpc;
 
 import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.MODULE_NOT_DEFINED;
 import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.TX_MODULE_LINE_COUNT_OVERFLOW;
@@ -43,7 +43,6 @@ import org.bouncycastle.asn1.x9.X9ECParameters;
 import org.bouncycastle.crypto.params.ECDomainParameters;
 import org.hyperledger.besu.crypto.SECPSignature;
 import org.hyperledger.besu.datatypes.Wei;
-import org.hyperledger.besu.datatypes.rpc.RpcMethodError;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.exception.InvalidJsonRpcParameters;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.JsonCallParameter;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.JsonRpcParameter;
@@ -56,6 +55,7 @@ import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.TransactionSimulationService;
 import org.hyperledger.besu.plugin.services.exception.PluginRpcEndpointException;
 import org.hyperledger.besu.plugin.services.rpc.PluginRpcRequest;
+import org.hyperledger.besu.plugin.services.rpc.RpcMethodError;
 
 @Slf4j
 public class LineaEstimateGas {

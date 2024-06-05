@@ -35,7 +35,7 @@ import org.hyperledger.besu.plugin.services.PicoCLIOptions;
 
 @Slf4j
 public abstract class AbstractLineaSharedOptionsPlugin implements BesuPlugin {
-  private static String CLI_OPTIONS_PREFIX = "linea";
+  private static final String CLI_OPTIONS_PREFIX = "linea";
   private static boolean cliOptionsRegistered = false;
   private static boolean configured = false;
   private static LineaTransactionSelectorCliOptions transactionSelectorCliOptions;
