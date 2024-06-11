@@ -35,6 +35,8 @@ web3j {
 solidity {
   resolvePackages = false
   optimizeRuns = 1
+  // TODO: remove the forced version, when DEV network is upgraded to support latest forks
+  version '0.8.19'
 }
 
 processTestResources.dependsOn(':acceptance-tests:generateTestContractWrappers')
