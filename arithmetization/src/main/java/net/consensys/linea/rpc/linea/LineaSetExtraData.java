@@ -35,12 +35,14 @@ public class LineaSetExtraData {
 
   private static final AtomicInteger LOG_SEQUENCE = new AtomicInteger();
   private final JsonRpcParameter parameterParser = new JsonRpcParameter();
-  private final LineaExtraDataHandler extraDataHandler;
   private final RpcEndpointService rpcEndpointService;
+  private LineaExtraDataHandler extraDataHandler;
 
-  public LineaSetExtraData(
-      final RpcEndpointService rpcEndpointService, final LineaExtraDataHandler extraDataHandler) {
+  public LineaSetExtraData(final RpcEndpointService rpcEndpointService) {
     this.rpcEndpointService = rpcEndpointService;
+  }
+
+  public void init(final LineaExtraDataHandler extraDataHandler) {
     this.extraDataHandler = extraDataHandler;
   }
 
@@ -68,8 +70,8 @@ public class LineaSetExtraData {
       updateStandardExtraData(extraData);
 
       return Boolean.TRUE;
-    } catch (final Exception e) {
-      throw new PluginRpcEndpointException(new ExtraDataPricingError(e.toString()));
+    } catch (final LineaExtraDataException lede) {
+      throw new PluginRpcEndpointException(new ExtraDataPricingError(lede));
     }
   }
 
@@ -108,15 +110,15 @@ public class LineaSetExtraData {
       @JsonProperty String baseFeePerGas,
       @JsonProperty String priorityFeePerGas) {}
 
-  private record ExtraDataPricingError(String errorReason) implements RpcMethodError {
+  private record ExtraDataPricingError(LineaExtraDataException ex) implements RpcMethodError {
     @Override
     public int getCode() {
-      return -32000;
+      return ex.getErrorType().getCode();
     }
 
     @Override
     public String getMessage() {
-      return errorReason;
+      return ex.getMessage();
     }
   }
 }

@@ -86,14 +86,11 @@ public class LineaEndpointServicePlugin extends AbstractLineaRequiredPlugin {
         lineaEstimateGasMethod.getName(),
         lineaEstimateGasMethod::execute);
 
-    lineaSetExtraDataMethod =
-        new LineaSetExtraData(
-            rpcEndpointService,
-            new LineaExtraDataHandler(rpcEndpointService, profitabilityConfiguration));
+    lineaSetExtraDataMethod = new LineaSetExtraData(rpcEndpointService);
     rpcEndpointService.registerRPCEndpoint(
         lineaSetExtraDataMethod.getNamespace(),
         lineaSetExtraDataMethod.getName(),
-        lineaEstimateGasMethod::execute);
+        lineaSetExtraDataMethod::execute);
   }
 
   @Override
@@ -105,5 +102,7 @@ public class LineaEndpointServicePlugin extends AbstractLineaRequiredPlugin {
         profitabilityConfiguration,
         createLimitModules(tracerConfiguration),
         l1L2BridgeConfiguration);
+    lineaSetExtraDataMethod.init(
+        new LineaExtraDataHandler(rpcEndpointService, profitabilityConfiguration));
   }
 }
