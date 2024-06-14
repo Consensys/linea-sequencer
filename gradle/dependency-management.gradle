@@ -59,13 +59,17 @@ dependencyManagement {
   }
 
   dependencies {
-    dependency 'net.consensys.linea.zktracer:arithmetization:0.1.4-SNAPSHOT'
+    dependencySet(group: "net.consensys.linea.zktracer", version: "${arithmetizationVersion}") {
+      entry "arithmetization"
+    }
+
 
     // Besu dependencies
     dependencySet(group: "${besuArtifactGroup}", version: "${besuVersion}") {
       entry "besu-datatypes"
       entry "evm"
       entry "plugin-api"
+      entry "internal"
     }
 
     dependency 'com.fasterxml.jackson.core:jackson-databind:2.16.1'

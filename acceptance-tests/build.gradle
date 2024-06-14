@@ -62,6 +62,9 @@ dependencies {
   testImplementation project(":native:compress")
   testImplementation project(":sequencer")
   testImplementation "${besuArtifactGroup}.internal:dsl:$besuVersion"
+  testImplementation "${besuArtifactGroup}.internal:api:${besuVersion}"
+  testImplementation "${besuArtifactGroup}:plugin-api"
+  testImplementation "${besuArtifactGroup}.internal:algorithms:${besuVersion}"
   testImplementation "${besuArtifactGroup}:besu-datatypes:$besuVersion"
   testImplementation "${besuArtifactGroup}.internal:eth:$besuVersion"
   testImplementation "${besuArtifactGroup}.internal:eth:$besuVersion:test-support"

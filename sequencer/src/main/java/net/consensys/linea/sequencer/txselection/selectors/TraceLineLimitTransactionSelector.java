@@ -159,7 +159,7 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
             transaction.getHash(),
             result.getModuleName(),
             result.getModuleLineCount(),
-            result.getModuleLineCount());
+            result.getModuleLineLimit());
         rememberOverLineCountLimitTransaction(transaction);
         return TX_MODULE_LINE_COUNT_OVERFLOW;
       case BLOCK_MODULE_LINE_COUNT_FULL:
