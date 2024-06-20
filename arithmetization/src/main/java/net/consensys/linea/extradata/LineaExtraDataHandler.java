@@ -36,7 +36,7 @@ public class LineaExtraDataHandler {
       final RpcEndpointService rpcEndpointService,
       final LineaProfitabilityConfiguration profitabilityConf) {
     this.rpcEndpointService = rpcEndpointService;
-    extraDataConsumers = new ExtraDataConsumer[] {new Version1Consumer(profitabilityConf)};
+    this.extraDataConsumers = new ExtraDataConsumer[] {new Version1Consumer(profitabilityConf)};
   }
 
   public void handle(final Bytes rawExtraData) throws LineaExtraDataException {
@@ -44,6 +44,7 @@ public class LineaExtraDataHandler {
     if (!Bytes.EMPTY.equals(rawExtraData)) {
       for (final ExtraDataConsumer extraDataConsumer : extraDataConsumers) {
         if (extraDataConsumer.canConsume(rawExtraData)) {
+          // strip first byte since it is the version already used to select the actual consumer
           final var extraData = rawExtraData.slice(1);
           extraDataConsumer.accept(extraData);
           return;
@@ -112,7 +113,7 @@ public class LineaExtraDataHandler {
       if (!resp.getType().equals(JsonRpcResponseType.SUCCESS)) {
         throw new LineaExtraDataException(
             LineaExtraDataException.ErrorType.FAILED_CALLING_SET_MIN_GAS_PRICE,
-            "miner_setMinGasPrice failed: " + resp);
+            "Internal setMinGasPrice method failed: " + resp);
       }
     }
   }

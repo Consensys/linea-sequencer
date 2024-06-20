@@ -82,7 +82,7 @@ public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
       }
       besuEventsService.addBlockAddedListener(
           addedBlockContext -> {
-            final var importedBlockHeader = blockchainService.getChainHeadHeader();
+            final var importedBlockHeader = addedBlockContext.getBlockHeader();
             final var latestExtraData = importedBlockHeader.getExtraData();
 
             try {

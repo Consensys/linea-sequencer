@@ -29,6 +29,7 @@ import linea.plugin.acc.test.LineaPluginTestBase;
 import linea.plugin.acc.test.TestCommandLineOptionsBuilder;
 import net.consensys.linea.config.LineaProfitabilityCliOptions;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
+import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.bouncycastle.crypto.digests.KeccakDigest;
 import org.hyperledger.besu.datatypes.Wei;
@@ -92,6 +93,24 @@ public class SetExtraDataTest extends LineaPluginTestBase {
     assertThat(respLinea.getMessage())
         .isEqualTo(
             "Unsupported extra data field 0x0000000000000000000000000000000000000000000000000000000000000000");
+  }
+
+  @Test
+  public void setTooLongExtraDataReturnsError() {
+    final var tooLongExtraData = Bytes.concatenate(Bytes.of(1), Bytes32.ZERO);
+
+    final var reqLinea = new FailingLineaSetExtraDataRequest(tooLongExtraData);
+    final var respLinea = reqLinea.execute(minerNode.nodeRequests());
+    assertThat(respLinea.getMessage()).isEqualTo("Expected 32 bytes but got 33");
+  }
+
+  @Test
+  public void setTooShortExtraDataReturnsError() {
+    final var tooShortExtraData = Bytes32.ZERO.slice(1);
+
+    final var reqLinea = new FailingLineaSetExtraDataRequest(tooShortExtraData);
+    final var respLinea = reqLinea.execute(minerNode.nodeRequests());
+    assertThat(respLinea.getMessage()).isEqualTo("Expected 32 bytes but got 31");
   }
 
   @Test
@@ -219,9 +238,9 @@ public class SetExtraDataTest extends LineaPluginTestBase {
 
   static class FailingLineaSetExtraDataRequest
       implements Transaction<org.web3j.protocol.core.Response.Error> {
-    private final Bytes32 extraData;
+    private final Bytes extraData;
 
-    public FailingLineaSetExtraDataRequest(final Bytes32 extraData) {
+    public FailingLineaSetExtraDataRequest(final Bytes extraData) {
       this.extraData = extraData;
     }
 

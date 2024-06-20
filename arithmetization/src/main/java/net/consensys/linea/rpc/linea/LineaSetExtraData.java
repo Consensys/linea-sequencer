@@ -15,6 +15,9 @@
 
 package net.consensys.linea.rpc.linea;
 
+import static net.consensys.linea.extradata.LineaExtraDataException.ErrorType.FAILED_CALLING_SET_EXTRA_DATA;
+import static net.consensys.linea.extradata.LineaExtraDataException.ErrorType.INVALID_ARGUMENT;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -62,9 +65,9 @@ public class LineaSetExtraData {
       LOG_SEQUENCE.incrementAndGet();
     }
 
-    final var extraData = parseRequest(request.getParams());
-
     try {
+      final var extraData = parseRequest(request.getParams());
+
       updatePricingConf(extraData);
 
       updateStandardExtraData(extraData);
@@ -80,8 +83,7 @@ public class LineaSetExtraData {
         rpcEndpointService.call("miner_setExtraData", new Object[] {extraData.toHexString()});
     if (!resp.getType().equals(JsonRpcResponseType.SUCCESS)) {
       throw new LineaExtraDataException(
-          LineaExtraDataException.ErrorType.FAILED_CALLING_SET_EXTRA_DATA,
-          "miner_setExtraData failed: " + resp);
+          FAILED_CALLING_SET_EXTRA_DATA, "Internal setExtraData method failed: " + resp);
     }
   }
 
@@ -94,15 +96,19 @@ public class LineaSetExtraData {
   }
 
   private Bytes32 parseRequest(final Object[] params) {
-    final var rawParam = parameterParser.required(params, 0, String.class);
-    final var extraData = Bytes32.wrap(Bytes.fromHexStringLenient(rawParam));
-    log.atDebug()
-        .setMessage("[{}] set extra data, raw=[{}] parsed=[{}]")
-        .addArgument(LOG_SEQUENCE::get)
-        .addArgument(rawParam)
-        .addArgument(extraData::toHexString)
-        .log();
-    return extraData;
+    try {
+      final var rawParam = parameterParser.required(params, 0, String.class);
+      final var extraData = Bytes32.wrap(Bytes.fromHexStringLenient(rawParam));
+      log.atDebug()
+          .setMessage("[{}] set extra data, raw=[{}] parsed=[{}]")
+          .addArgument(LOG_SEQUENCE::get)
+          .addArgument(rawParam)
+          .addArgument(extraData::toHexString)
+          .log();
+      return extraData;
+    } catch (Exception e) {
+      throw new LineaExtraDataException(INVALID_ARGUMENT, e.getMessage());
+    }
   }
 
   public record Response(
