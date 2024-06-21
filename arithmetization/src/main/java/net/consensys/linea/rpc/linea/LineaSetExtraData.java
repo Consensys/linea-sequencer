@@ -20,7 +20,6 @@ import static net.consensys.linea.extradata.LineaExtraDataException.ErrorType.IN
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.extradata.LineaExtraDataException;
 import net.consensys.linea.extradata.LineaExtraDataHandler;
@@ -58,17 +57,15 @@ public class LineaSetExtraData {
   }
 
   public Boolean execute(final PluginRpcRequest request) {
-    if (log.isDebugEnabled()) {
-      // no matter if it overflows, since it is only used to correlate logs for this request,
-      // so we only print callParameters once at the beginning, and we can reference them using the
-      // sequence.
-      LOG_SEQUENCE.incrementAndGet();
-    }
+    // no matter if it overflows, since it is only used to correlate logs for this request,
+    // so we only print callParameters once at the beginning, and we can reference them using the
+    // sequence.
+    final int logId = log.isDebugEnabled() ? LOG_SEQUENCE.incrementAndGet() : -1;
 
     try {
-      final var extraData = parseRequest(request.getParams());
+      final var extraData = parseRequest(logId, request.getParams());
 
-      updatePricingConf(extraData);
+      updatePricingConf(logId, extraData);
 
       updateStandardExtraData(extraData);
 
@@ -87,21 +84,21 @@ public class LineaSetExtraData {
     }
   }
 
-  private void updatePricingConf(final Bytes32 extraData) {
+  private void updatePricingConf(final int logId, final Bytes32 extraData) {
     extraDataHandler.handle(extraData);
     log.atDebug()
         .setMessage("[{}] Successfully handled extra data pricing")
-        .addArgument(LOG_SEQUENCE::get)
+        .addArgument(logId)
         .log();
   }
 
-  private Bytes32 parseRequest(final Object[] params) {
+  private Bytes32 parseRequest(final int logId, final Object[] params) {
     try {
       final var rawParam = parameterParser.required(params, 0, String.class);
       final var extraData = Bytes32.wrap(Bytes.fromHexStringLenient(rawParam));
       log.atDebug()
           .setMessage("[{}] set extra data, raw=[{}] parsed=[{}]")
-          .addArgument(LOG_SEQUENCE::get)
+          .addArgument(logId)
           .addArgument(rawParam)
           .addArgument(extraData::toHexString)
           .log();
@@ -110,11 +107,6 @@ public class LineaSetExtraData {
       throw new LineaExtraDataException(INVALID_ARGUMENT, e.getMessage());
     }
   }
-
-  public record Response(
-      @JsonProperty Boolean gasLimit,
-      @JsonProperty String baseFeePerGas,
-      @JsonProperty String priorityFeePerGas) {}
 
   private record ExtraDataPricingError(LineaExtraDataException ex) implements RpcMethodError {
     @Override

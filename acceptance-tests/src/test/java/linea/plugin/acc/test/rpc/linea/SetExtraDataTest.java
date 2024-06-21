@@ -43,6 +43,7 @@ import org.junit.jupiter.api.Test;
 import org.web3j.crypto.Credentials;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.Request;
+import org.web3j.protocol.core.Response;
 import org.web3j.protocol.http.HttpService;
 import org.web3j.tx.RawTransactionManager;
 import org.web3j.tx.TransactionManager;
@@ -174,20 +175,20 @@ public class SetExtraDataTest extends LineaPluginTestBase {
     minerNode.verify(eth.expectNoTransactionReceipt(txUnprofitable.getTransactionHash()));
 
     final var zeroFixedCostKWei = "00000000";
-    final var minimalVaribleCostKWei = "00000001";
-    final var minimalMinGasPriceKWei = "00000001";
+    final var minimalVariableCostKWei = "00000001";
+    final var minimalMinGasPriceKWei = "00000002";
     final var extraData =
         Bytes32.fromHexString(
             "0x01"
                 + zeroFixedCostKWei
-                + minimalVaribleCostKWei
+                + minimalVariableCostKWei
                 + minimalMinGasPriceKWei
                 + "00000000000000000000000000000000000000");
 
     final var reqLinea = new LineaSetExtraDataRequest(extraData);
     final var respLinea = reqLinea.execute(minerNode.nodeRequests());
     assertThat(respLinea).isTrue();
-    assertThat(minerNode.getMiningParameters().getMinTransactionGasPrice()).isEqualTo(Wei.of(1000));
+    assertThat(minerNode.getMiningParameters().getMinTransactionGasPrice()).isEqualTo(Wei.of(2000));
     // assert that tx is confirmed now
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(txUnprofitable.getTransactionHash()));
   }
@@ -236,8 +237,7 @@ public class SetExtraDataTest extends LineaPluginTestBase {
     }
   }
 
-  static class FailingLineaSetExtraDataRequest
-      implements Transaction<org.web3j.protocol.core.Response.Error> {
+  static class FailingLineaSetExtraDataRequest implements Transaction<Response.Error> {
     private final Bytes extraData;
 
     public FailingLineaSetExtraDataRequest(final Bytes extraData) {
@@ -245,7 +245,7 @@ public class SetExtraDataTest extends LineaPluginTestBase {
     }
 
     @Override
-    public org.web3j.protocol.core.Response.Error execute(final NodeRequests nodeRequests) {
+    public Response.Error execute(final NodeRequests nodeRequests) {
       try {
         return new Request<>(
                 "linea_setExtraData",
