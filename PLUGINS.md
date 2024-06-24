@@ -20,7 +20,7 @@ It is applied, with different configuration to:
 | `--plugin-linea-tx-pool-min-margin`                      | 0.5           |
 
 ### Module line count validator
-The Module line count validator is a shared component, that is used to check if a tx exceed any of the configured line count limit.
+The Module line count validator is a shared component, that is used to check if a tx exceeds any of the configured line count limits.
 It is used in:
 1. `linea_estimateGas` endpoint
 2. Tx validation for the txpool (if tx simulation is enabled)
@@ -35,7 +35,7 @@ It is used in:
 
 
 ### L1 L2 Bridge
-These value are just passed to the ZkTracer
+These values are just passed to the ZkTracer
 
 #### CLI Options
 
@@ -71,7 +71,7 @@ The selectors are in the package `net.consensys.linea.sequencer.txselection.sele
 This plugin extends the default transaction validation rules for adding transactions to the
 transaction pool. It leverages the `PluginTransactionValidatorService` to manage and customize the
 process of transaction validation.
-This includes setting limits such as `TraceLineLimit`, `maxTxGasLimit`, and `maxTxCallData`, and check the profitability
+This includes setting limits such as `TraceLineLimit`, `maxTxGasLimit`, and `maxTxCallData`, and checking the profitability
 of a transaction.
 The validators are in the package `net.consensys.linea.sequencer.txpoolvalidation.validators`.
 
@@ -114,7 +114,7 @@ same as `eth_estimateGas`
 ### Linea Set Extra Data
 #### `linea_setExtraData`
 
-This endpoint is used to configure the extra data based pricing, and only make sense to call it on the sequencer.
+This endpoint is used to configure the extra data based pricing, and it only makes sense to call it on the sequencer.
 Internally it sets runtime pricing configuration and then calls, via the in-process RPC service, `miner_setExtraData`
 and `miner_setMinGasPrice` to update internal Besu configuration, and add the extra data pricing to the future built blocks.
 
