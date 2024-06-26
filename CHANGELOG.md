@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4-test29
+Test pre-release 29 from branch `release-v0.1.4-testX` with code ported from [temp/issue-248/count-stack-only](https://github.com/Consensys/besu-sequencer-plugins/tree/temp/issue-248/count-stack-only)
+* Implement linea_setExtraData [#19](https://github.com/Consensys/linea-sequencer/pull/19)
+* Set plugin-linea-tx-pool-simulation-check-api-enabled=false by default [#23](https://github.com/Consensys/linea-sequencer/pull/23)
+
 ## 0.1.4-test28
 Test pre-release 28 from [temp/issue-248/count-stack-only](https://github.com/Consensys/besu-sequencer-plugins/tree/temp/issue-248/count-stack-only)
 * Extra data based pricing [#10](https://github.com/Consensys/linea-sequencer/pull/10)
