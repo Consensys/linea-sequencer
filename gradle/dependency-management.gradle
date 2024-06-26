@@ -59,11 +59,6 @@ dependencyManagement {
   }
 
   dependencies {
-    dependencySet(group: "net.consensys.linea.zktracer", version: "${arithmetizationVersion}") {
-      entry "arithmetization"
-    }
-
-
     // Besu dependencies
     dependencySet(group: "${besuArtifactGroup}", version: "${besuVersion}") {
       entry "besu-datatypes"

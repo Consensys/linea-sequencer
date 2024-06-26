@@ -61,10 +61,6 @@ dependencies {
   implementation 'org.bouncycastle:bcprov-jdk18on'
   implementation 'org.hibernate.validator:hibernate-validator'
 
-  implementation ('net.consensys.linea.zktracer:arithmetization') {
-    transitive = false
-  }
-
   testImplementation "${besuArtifactGroup}:evm"
   testImplementation "${besuArtifactGroup}:besu-datatypes"
   testImplementation "${besuArtifactGroup}.internal:core:${besuVersion}"
