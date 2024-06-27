@@ -25,7 +25,7 @@ import org.slf4j.spi.LoggingEventBuilder;
 
 /**
  * This class implements the profitability formula, and it is used both to check if a tx is
- * profitable and to give an estimation the profitable priorityFeePerGas for a given tx. The
+ * profitable and to give an estimation of the profitable priorityFeePerGas for a given tx. The
  * profitability depends on the context, so it could mean that it is priced enough to have a chance:
  * to be accepted in the txpool and to be a candidate for new block creation, it is also used to
  * give an estimated priorityFeePerGas in response to a linea_estimateGas call. Each context has it
