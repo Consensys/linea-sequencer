@@ -63,21 +63,20 @@ BLOCK_TRANSACTIONS = 200 # max number of tx in an L2 block
 # Precompiles limits
 # compare with https://github.com/Consensys/linea-arithmetization/issues/257
 #
-PRECOMPILE_ECRECOVER_EFFECTIVE_CALL = 128
-PRECOMPILE_SHA2_BLOCKS              = 671
-PRECOMPILE_RIPEMD_BLOCKS            = 671
-PRECOMPILE_MODEXP_EFFECTIVE_CALL    = 4
-PRECOMPILE_ECADD                    = 16384
-PRECOMPILE_ECMUL                    = 32
-PRECOMPILE_ECPAIRING                = 100 # should be 16 #another limit is missing, is it ECPAIRING WEIGHTED?
-PRECOMPILE_ECPAIRING_EFFECTIVE_CALL = 16
-PRECOMPILE_ECPAIRING_MILLER_LOOP    = 64
-PRECOMPILE_BLAKE                    = 600
-PRECOMPILE_BLAKE_ROUNDS             = 600 # it is possible to call BLAKE2f with r = 0; this is a nontrivial operation ...
+PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS = 128
+PRECOMPILE_SHA2_BLOCKS               = 671
+PRECOMPILE_RIPEMD_BLOCKS             = 671
+PRECOMPILE_MODEXP_EFFECTIVE_CALLS    = 4
+PRECOMPILE_ECADD_EFFECTIVE_CALLS     = 16384
+PRECOMPILE_ECMUL_EFFECTIVE_CALLS     = 32
+PRECOMPILE_ECPAIRING_EFFECTIVE_CALLS = 16
+PRECOMPILE_ECPAIRING_MILLER_LOOP     = 64
+PRECOMPILE_BLAKE_EFFECTIVE_CALLS     = 600
+PRECOMPILE_BLAKE_ROUNDS              = 600 # it is possible to call BLAKE2f with r = 0; this is a nontrivial operation ...
 # # Notes:
 # - there are no IDENTITY related limits
 # - we used to have the following limits
-#      * PRECOMPILE_SHA2_EFFECTIVE_CALL      = 1000000
-#      * PRECOMPILE_RIPEMD_EFFECTIVE_CALL    = 1000000
+#      * PRECOMPILE_SHA2_EFFECTIVE_CALLS      = 1000000
+#      * PRECOMPILE_RIPEMD_EFFECTIVE_CALLS    = 1000000
 #   (the values are nonsensical);
 #   as per Alex they are not required by the prover;
