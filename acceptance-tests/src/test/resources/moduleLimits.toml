@@ -11,7 +11,7 @@
 #
 ADD                 = 524288
 BIN                 = 262144
-BLAKE_MODEXP_DATA = 1
+BLAKE_MODEXP_DATA   = 262144
 BLOCK_DATA          = 16384
 BLOCK_HASH          = 1024
 EC_DATA             = 512
