@@ -12,13 +12,14 @@
 #
 ADD                 = 70
 BIN                 = 262144
-BIN_RT              = 262144
+BLAKE_MODEXP_DATA = 1
 BLOCKDATA = 13
 BLOCKHASH = 1
 EC_DATA             = 4096
 EUC                 = 16384 # can probably be lower
 EXP                 = 32760
 EXT                 = 20
+GAS = 1
 HUB                 = 33
 MMIO                = 1048576
 MMU                 = 524288
@@ -40,6 +41,7 @@ RLP_ADDR            = 20
 RLP_TXN             = 1300
 RLP_TXRCPT          = 100
 TXN_DATA            = 30
+SHAKIRA_DATA = 1
 STP                 = 20
 OOB                 = 262144
 

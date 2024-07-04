@@ -11,12 +11,14 @@
 #
 ADD                 = 524288
 BIN                 = 262144
+BLAKE_MODEXP_DATA = 1
 BLOCK_DATA          = 16384
 BLOCK_HASH          = 1024
 EC_DATA             = 512
 EUC                 = 262144
 EXP                 = 65536
 EXT                 = 8192
+GAS = 1
 HUB                 = 65536
 LOG_DATA            = 65536
 LOG_INFO            = 2097152
@@ -33,6 +35,7 @@ RLP_TXN             = 131072
 RLP_TXRCPT          = 32768
 ROM                 = 8388608
 ROM_LEX             = 1024
+SHAKIRA_DATA = 1
 SHF                 = 32768
 STP                 = 65536
 TRM                 = 32768
