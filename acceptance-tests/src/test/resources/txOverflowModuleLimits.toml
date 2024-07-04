@@ -12,14 +12,14 @@
 #
 ADD                 = 70
 BIN                 = 262144
-BLAKE_MODEXP_DATA = 1
+BLAKE_MODEXP_DATA   = 262144
 BLOCKDATA = 13
 BLOCKHASH = 1
 EC_DATA             = 4096
 EUC                 = 16384 # can probably be lower
 EXP                 = 32760
 EXT                 = 20
-GAS = 1
+GAS                 = 262144
 HUB                 = 33
 MMIO                = 1048576
 MMU                 = 524288
@@ -27,8 +27,6 @@ MOD                 = 20
 MUL                 = 20
 MXP                 = 20
 PHONEY_RLP          = 65536 # can probably get lower
-PUB_LOG             = 16384
-PUB_LOG_INFO        = 16384
 ROM                 = 2402
 ROM_LEX             = 20
 SHF                 = 20
@@ -39,9 +37,9 @@ LOG_DATA            = 20
 LOG_INFO            = 20
 RLP_ADDR            = 20
 RLP_TXN             = 1300
-RLP_TXRCPT          = 100
+RLP_TXN_RCPT        = 100
 TXN_DATA            = 30
-SHAKIRA_DATA = 1
+SHAKIRA_DATA        = 262144
 STP                 = 20
 OOB                 = 262144
 

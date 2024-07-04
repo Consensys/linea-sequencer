@@ -11,12 +11,12 @@
 #
 ADD                 = 7000
 BIN                 = 262144
-BLAKE_MODEXP_DATA = 1
+BLAKE_MODEXP_DATA   = 262144
 EC_DATA             = 4096
 EUC                 = 16384 # can probably be lower
 EXP                 = 32760
 EXT                 = 32768
-GAS = 1
+GAS                 = 262144
 HUB                 = 10000
 MMIO                = 1048576
 MMU                 = 524288
@@ -36,9 +36,9 @@ LOG_DATA            = 262144
 LOG_INFO            = 262144
 RLP_ADDR            = 262144
 RLP_TXN             = 262144
-RLP_TXRCPT          = 262144
+RLP_TXN_RCPT        = 262144
 TXN_DATA            = 262144
-SHAKIRA_DATA = 1
+SHAKIRA_DATA        = 262144
 STP                 = 262144
 OOB                 = 262144
 BLOCKDATA = 13
