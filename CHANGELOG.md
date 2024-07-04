@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.5-rc2
+* Fix Typos [#40](https://github.com/Consensys/linea-sequencer/pull/40)
+* Patch inconsistencies in module line count limits [#41](https://github.com/Consensys/linea-sequencer/pull/41)
+* Update arithmetization to 0.1.5-rc4 [#36](https://github.com/Consensys/linea-sequencer/pull/36)
+
+## 0.1.5-rc1
+* Include baseFee in the calculation of a profitable tx [#30](https://github.com/Consensys/linea-sequencer/pull/30)
+* arithmetizationVersion=0.1.5-rc4 [#36](https://github.com/Consensys/linea-sequencer/pull/36)
+
 ## 0.1.5-test1
 First release of the new series that uses on the ZkTracer as dependency from `linea-arithmetization` repo
 * arithmetizationVersion=0.1.5-rc3 [#29](https://github.com/Consensys/linea-sequencer/pull/29)
