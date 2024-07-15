@@ -75,10 +75,11 @@ public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
         extraDataHandler.handle(initialExtraData);
       } catch (final Exception e) {
         log.warn(
-            "Failed setting initial pricing conf from extra data field ({}) of the chain head block {}({})",
+            "Failed setting initial pricing conf from extra data field ({}) of the chain head block {}({}), error {}",
             initialExtraData,
             chainHeadHeader.getNumber(),
-            chainHeadHeader.getBlockHash());
+            chainHeadHeader.getBlockHash(),
+            e.getMessage());
       }
       besuEventsService.addBlockAddedListener(
           addedBlockContext -> {
@@ -89,10 +90,11 @@ public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
               extraDataHandler.handle(latestExtraData);
             } catch (final Exception e) {
               log.warn(
-                  "Failed setting pricing conf from extra data field ({}) of latest imported block {}({})",
+                  "Failed setting pricing conf from extra data field ({}) of latest imported block {}({}), error {}",
                   latestExtraData,
                   importedBlockHeader.getNumber(),
-                  importedBlockHeader.getBlockHash());
+                  importedBlockHeader.getBlockHash(),
+                  e.getMessage());
             }
           });
     }
