@@ -42,8 +42,8 @@ public class MaxBlockGasTransactionSelector implements PluginTransactionSelector
 
   /**
    * Evaluates a transaction post-processing. Checks if adding the gas used of the transaction, to
-   * the cumulative gas used of the block till now, is below the user configured max gas used per
-   * block.
+   * the cumulative gas used of the block till now, is below the configured max gas used per block
+   * specified by the operator of the node.
    *
    * @param evaluationContext The current selection context.
    * @return TX_TOO_LARGE_FOR_REMAINING_USER_GAS if adding this transaction pushes the gas used by
