@@ -20,9 +20,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import net.consensys.linea.config.LineaL1L2BridgeConfiguration;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaTransactionPoolValidatorConfiguration;
+import net.consensys.linea.plugins.config.LineaL1L2BridgeConfiguration;
 import net.consensys.linea.sequencer.txpoolvalidation.validators.AllowedAddressValidator;
 import net.consensys.linea.sequencer.txpoolvalidation.validators.CalldataValidator;
 import net.consensys.linea.sequencer.txpoolvalidation.validators.GasLimitValidator;

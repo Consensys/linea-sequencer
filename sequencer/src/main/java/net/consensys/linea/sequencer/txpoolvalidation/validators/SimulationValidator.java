@@ -21,8 +21,8 @@ import java.util.Map;
 import java.util.Optional;
 
 import lombok.extern.slf4j.Slf4j;
-import net.consensys.linea.config.LineaL1L2BridgeConfiguration;
 import net.consensys.linea.config.LineaTransactionPoolValidatorConfiguration;
+import net.consensys.linea.plugins.config.LineaL1L2BridgeConfiguration;
 import net.consensys.linea.sequencer.modulelimit.ModuleLimitsValidationResult;
 import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator;
 import net.consensys.linea.zktracer.ZkTracer;

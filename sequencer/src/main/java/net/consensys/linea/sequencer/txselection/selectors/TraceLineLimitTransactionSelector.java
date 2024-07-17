@@ -26,9 +26,9 @@ import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
 import lombok.extern.slf4j.Slf4j;
-import net.consensys.linea.config.LineaL1L2BridgeConfiguration;
-import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
+import net.consensys.linea.plugins.config.LineaL1L2BridgeConfiguration;
+import net.consensys.linea.plugins.config.LineaTracerConfiguration;
 import net.consensys.linea.sequencer.modulelimit.ModuleLimitsValidationResult;
 import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator;
 import net.consensys.linea.zktracer.ZkTracer;
