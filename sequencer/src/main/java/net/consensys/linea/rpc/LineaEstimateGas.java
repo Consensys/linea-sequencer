@@ -127,46 +127,53 @@ public class LineaEstimateGas {
   }
 
   public LineaEstimateGas.Response execute(final PluginRpcRequest request) {
-    if (log.isDebugEnabled()) {
-      // no matter if it overflows, since it is only used to correlate logs for this request,
-      // so we only print callParameters once at the beginning, and we can reference them using the
-      // sequence.
-      LOG_SEQUENCE.incrementAndGet();
+    try {
+      if (log.isDebugEnabled()) {
+        // no matter if it overflows, since it is only used to correlate logs for this request,
+        // so we only print callParameters once at the beginning, and we can reference them using
+        // the
+        // sequence.
+        LOG_SEQUENCE.incrementAndGet();
+      }
+      final var callParameters = parseRequest(request.getParams());
+      final var minGasPrice = besuConfiguration.getMinGasPrice();
+
+      final var transaction =
+          createTransactionForSimulation(callParameters, txValidatorConf.maxTxGasLimit());
+      log.atDebug()
+          .setMessage("[{}] Parsed call parameters: {}; Transaction: {}")
+          .addArgument(LOG_SEQUENCE::get)
+          .addArgument(callParameters)
+          .addArgument(transaction::toTraceLog)
+          .log();
+      final var estimatedGasUsed = estimateGasUsed(callParameters, transaction);
+
+      final Wei baseFee =
+          blockchainService
+              .getNextBlockBaseFee()
+              .orElseThrow(
+                  () ->
+                      new PluginRpcEndpointException(
+                          RpcErrorType.INVALID_REQUEST, "Not on a baseFee market"));
+
+      final Wei estimatedPriorityFee =
+          getEstimatedPriorityFee(transaction, baseFee, minGasPrice, estimatedGasUsed);
+
+      final var response =
+          new Response(create(estimatedGasUsed), create(baseFee), create(estimatedPriorityFee));
+      log.atDebug()
+          .setMessage("[{}] Response for call params {} is {}")
+          .addArgument(LOG_SEQUENCE::get)
+          .addArgument(callParameters)
+          .addArgument(response)
+          .log();
+
+      return response;
+    } catch (PluginRpcEndpointException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new PluginRpcEndpointException(new InternalError(e.getMessage()), null, e);
     }
-    final var callParameters = parseRequest(request.getParams());
-    final var minGasPrice = besuConfiguration.getMinGasPrice();
-
-    final var transaction =
-        createTransactionForSimulation(callParameters, txValidatorConf.maxTxGasLimit());
-    log.atDebug()
-        .setMessage("[{}] Parsed call parameters: {}; Transaction: {}")
-        .addArgument(LOG_SEQUENCE::get)
-        .addArgument(callParameters)
-        .addArgument(transaction::toTraceLog)
-        .log();
-    final var estimatedGasUsed = estimateGasUsed(callParameters, transaction);
-
-    final Wei baseFee =
-        blockchainService
-            .getNextBlockBaseFee()
-            .orElseThrow(
-                () ->
-                    new PluginRpcEndpointException(
-                        RpcErrorType.INVALID_REQUEST, "Not on a baseFee market"));
-
-    final Wei estimatedPriorityFee =
-        getEstimatedPriorityFee(transaction, baseFee, minGasPrice, estimatedGasUsed);
-
-    final var response =
-        new Response(create(estimatedGasUsed), create(baseFee), create(estimatedPriorityFee));
-    log.atDebug()
-        .setMessage("[{}] Response for call params {} is {}")
-        .addArgument(LOG_SEQUENCE::get)
-        .addArgument(callParameters)
-        .addArgument(response)
-        .log();
-
-    return response;
   }
 
   private Wei getEstimatedPriorityFee(
@@ -234,7 +241,7 @@ public class LineaEstimateGas {
                     .addArgument(r.result())
                     .log();
                 throw new PluginRpcEndpointException(
-                    new TransactionSimulationError(r.result().getInvalidReason().orElse("")));
+                    new InternalError(r.result().getInvalidReason().orElse("")));
               }
               if (!r.isSuccessful()) {
                 log.atDebug()
@@ -251,7 +258,7 @@ public class LineaEstimateGas {
                         });
                 final var invalidReason = r.result().getInvalidReason();
                 throw new PluginRpcEndpointException(
-                    new TransactionSimulationError(
+                    new InternalError(
                         "Failed transaction"
                             + invalidReason.map(ir -> ", reason: " + ir).orElse("")));
               }
@@ -431,7 +438,7 @@ public class LineaEstimateGas {
           String.format(
               "Module %s does not exist in the limits file.", moduleLimitResult.getModuleName());
       log.error(moduleNotDefinedMsg);
-      throw new PluginRpcEndpointException(new TransactionSimulationError(moduleNotDefinedMsg));
+      throw new PluginRpcEndpointException(new InternalError(moduleNotDefinedMsg));
     }
     if (moduleLimitResult.getResult() == TX_MODULE_LINE_COUNT_OVERFLOW) {
       String txOverflowMsg =
@@ -441,7 +448,7 @@ public class LineaEstimateGas {
               moduleLimitResult.getModuleLineCount(),
               moduleLimitResult.getModuleLineLimit());
       log.warn(txOverflowMsg);
-      throw new PluginRpcEndpointException(new TransactionSimulationError(txOverflowMsg));
+      throw new PluginRpcEndpointException(new InternalError(txOverflowMsg));
     }
 
     final String internalErrorMsg =
@@ -455,7 +462,7 @@ public class LineaEstimateGas {
       @JsonProperty String baseFeePerGas,
       @JsonProperty String priorityFeePerGas) {}
 
-  private record TransactionSimulationError(String errorReason) implements RpcMethodError {
+  private record InternalError(String errorReason) implements RpcMethodError {
     @Override
     public int getCode() {
       return -32000;
