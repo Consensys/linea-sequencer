@@ -45,6 +45,7 @@ import org.hyperledger.besu.crypto.SECPSignature;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.datatypes.rpc.RpcMethodError;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.exception.InvalidJsonRpcParameters;
+import org.hyperledger.besu.ethereum.api.jsonrpc.internal.exception.InvalidJsonRpcRequestException;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.JsonCallParameter;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.JsonRpcParameter;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.RpcErrorType;
@@ -169,7 +170,7 @@ public class LineaEstimateGas {
           .log();
 
       return response;
-    } catch (PluginRpcEndpointException e) {
+    } catch (PluginRpcEndpointException | InvalidJsonRpcRequestException e) {
       throw e;
     } catch (Exception e) {
       throw new PluginRpcEndpointException(new InternalError(e.getMessage()), null, e);
