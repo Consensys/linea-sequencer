@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.0-rc2.1-test1
+This release in only to include the new version from the arithmetization dependency [v0.2.0-rc2](https://github.com/Consensys/linea-arithmetization/releases/tag/v0.2.0-rc2)
+
 ## 0.1.5-test1
 First release of the new series that uses on the ZkTracer as dependency from `linea-arithmetization` repo
 * arithmetizationVersion=0.1.5-rc3 [#29](https://github.com/Consensys/linea-sequencer/pull/29)
