@@ -58,9 +58,8 @@ tasks.register('acceptanceTests', Test) {
 }
 
 dependencies {
-  testImplementation 'net.consensys.linea.zktracer:arithmetization'
-  testImplementation project(":native:compress")
-  testImplementation project(":sequencer")
+  testCompileOnly project(":native:compress")
+  testCompileOnly project(":sequencer")
   testImplementation "${besuArtifactGroup}.internal:dsl:$besuVersion"
   testImplementation "${besuArtifactGroup}.internal:api:${besuVersion}"
   testImplementation "${besuArtifactGroup}:plugin-api"
