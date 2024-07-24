@@ -25,12 +25,8 @@ import net.consensys.linea.config.LineaTransactionPoolValidatorCliOptions;
 import net.consensys.linea.config.LineaTransactionPoolValidatorConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorCliOptions;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
-import net.consensys.linea.plugins.config.LineaL1L2BridgeCliOptions;
-import net.consensys.linea.plugins.config.LineaL1L2BridgeConfiguration;
-import net.consensys.linea.plugins.config.LineaTracerCliOptions;
-import net.consensys.linea.plugins.config.LineaTracerConfiguration;
+import net.consensys.linea.plugins.AbstractLineaSharedOptionsPlugin;
 import org.hyperledger.besu.plugin.BesuContext;
-import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.services.PicoCLIOptions;
 
 /**
@@ -44,22 +40,18 @@ import org.hyperledger.besu.plugin.services.PicoCLIOptions;
  * automatically see it.
  */
 @Slf4j
-public abstract class AbstractLineaSharedOptionsPlugin implements BesuPlugin {
+public abstract class AbstractLineaPrivateOptionsPlugin extends AbstractLineaSharedOptionsPlugin {
   private static final String CLI_OPTIONS_PREFIX = "linea";
   private static boolean cliOptionsRegistered = false;
   private static boolean configured = false;
   private static LineaTransactionSelectorCliOptions transactionSelectorCliOptions;
   private static LineaTransactionPoolValidatorCliOptions transactionPoolValidatorCliOptions;
-  private static LineaL1L2BridgeCliOptions l1L2BridgeCliOptions;
   private static LineaRpcCliOptions rpcCliOptions;
-  private static LineaTracerCliOptions tracerCliOptions;
   private static LineaProfitabilityCliOptions profitabilityCliOptions;
   protected static LineaTransactionSelectorConfiguration transactionSelectorConfiguration;
   protected static LineaTransactionPoolValidatorConfiguration transactionPoolValidatorConfiguration;
-  protected static LineaL1L2BridgeConfiguration l1L2BridgeConfiguration;
   protected static LineaRpcConfiguration rpcConfiguration;
   protected static LineaProfitabilityConfiguration profitabilityConfiguration;
-  protected static LineaTracerConfiguration tracerConfiguration;
 
   static {
     // force the initialization of the gnark compress native library to fail fast in case of issues
@@ -68,6 +60,7 @@ public abstract class AbstractLineaSharedOptionsPlugin implements BesuPlugin {
 
   @Override
   public synchronized void register(final BesuContext context) {
+    super.register(context);
     if (!cliOptionsRegistered) {
       final PicoCLIOptions cmdlineOptions =
           context
@@ -78,30 +71,25 @@ public abstract class AbstractLineaSharedOptionsPlugin implements BesuPlugin {
                           "Failed to obtain PicoCLI options from the BesuContext"));
       transactionSelectorCliOptions = LineaTransactionSelectorCliOptions.create();
       transactionPoolValidatorCliOptions = LineaTransactionPoolValidatorCliOptions.create();
-      l1L2BridgeCliOptions = LineaL1L2BridgeCliOptions.create();
       rpcCliOptions = LineaRpcCliOptions.create();
       profitabilityCliOptions = LineaProfitabilityCliOptions.create();
-      tracerCliOptions = LineaTracerCliOptions.create();
 
       cmdlineOptions.addPicoCLIOptions(CLI_OPTIONS_PREFIX, transactionSelectorCliOptions);
       cmdlineOptions.addPicoCLIOptions(CLI_OPTIONS_PREFIX, transactionPoolValidatorCliOptions);
-      cmdlineOptions.addPicoCLIOptions(CLI_OPTIONS_PREFIX, l1L2BridgeCliOptions);
       cmdlineOptions.addPicoCLIOptions(CLI_OPTIONS_PREFIX, rpcCliOptions);
       cmdlineOptions.addPicoCLIOptions(CLI_OPTIONS_PREFIX, profitabilityCliOptions);
-      cmdlineOptions.addPicoCLIOptions(CLI_OPTIONS_PREFIX, tracerCliOptions);
       cliOptionsRegistered = true;
     }
   }
 
   @Override
   public void beforeExternalServices() {
+    super.beforeExternalServices();
     if (!configured) {
       transactionSelectorConfiguration = transactionSelectorCliOptions.toDomainObject();
       transactionPoolValidatorConfiguration = transactionPoolValidatorCliOptions.toDomainObject();
-      l1L2BridgeConfiguration = l1L2BridgeCliOptions.toDomainObject();
       rpcConfiguration = rpcCliOptions.toDomainObject();
       profitabilityConfiguration = profitabilityCliOptions.toDomainObject();
-      tracerConfiguration = tracerCliOptions.toDomainObject();
       configured = true;
     }
 
@@ -115,26 +103,22 @@ public abstract class AbstractLineaSharedOptionsPlugin implements BesuPlugin {
         getName(),
         transactionPoolValidatorCliOptions);
 
-    log.debug(
-        "Configured plugin {} with L1 L2 bridge configuration: {}",
-        getName(),
-        l1L2BridgeCliOptions);
-
     log.debug("Configured plugin {} with RPC configuration: {}", getName(), rpcConfiguration);
 
     log.debug(
         "Configured plugin {} with profitability calculator configuration: {}",
         getName(),
         profitabilityConfiguration);
-
-    log.debug("Configured plugin {} with tracer configuration: {}", getName(), tracerConfiguration);
   }
 
   @Override
-  public void start() {}
+  public void start() {
+    super.start();
+  }
 
   @Override
   public void stop() {
+    super.stop();
     cliOptionsRegistered = false;
     configured = false;
   }

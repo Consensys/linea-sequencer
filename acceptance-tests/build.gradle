@@ -51,15 +51,11 @@ tasks.register('acceptanceTests', Test) {
   useJUnitPlatform {
     includeTags("AcceptanceTest")
   }
-
-  doFirst {
-    systemProperty("besu.plugins.dir", rootProject.besuPluginDir)
-  }
 }
 
 dependencies {
-  testCompileOnly project(":native:compress")
-  testCompileOnly project(":sequencer")
+  testImplementation project(":native:compress")
+  testImplementation project(":sequencer")
   testImplementation "${besuArtifactGroup}.internal:dsl:$besuVersion"
   testImplementation "${besuArtifactGroup}.internal:api:${besuVersion}"
   testImplementation "${besuArtifactGroup}:plugin-api"
