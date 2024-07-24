@@ -20,7 +20,6 @@ import java.util.Optional;
 import com.google.auto.service.AutoService;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
-import net.consensys.linea.zktracer.opcode.OpCodes;
 import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.services.RpcEndpointService;
@@ -62,11 +61,5 @@ public class CaptureEndpointServicePlugin extends AbstractLineaRequiredPlugin {
       final CaptureToFile method, final RpcEndpointService rpcEndpointService) {
     rpcEndpointService.registerRPCEndpoint(
         method.getNamespace(), method.getName(), method::execute);
-  }
-
-  /** Start the RPC service. This method loads the OpCodes. */
-  @Override
-  public void start() {
-    OpCodes.load();
   }
 }

@@ -17,7 +17,6 @@ package net.consensys.linea.rpc.counters;
 
 import com.google.auto.service.AutoService;
 import net.consensys.linea.AbstractLineaSharedOptionsPlugin;
-import net.consensys.linea.zktracer.opcode.OpCodes;
 import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.services.RpcEndpointService;
@@ -69,11 +68,5 @@ public class CountersEndpointServicePlugin extends AbstractLineaSharedOptionsPlu
       final GenerateCountersV0 method, final RpcEndpointService rpcEndpointService) {
     rpcEndpointService.registerRPCEndpoint(
         method.getNamespace(), method.getName(), method::execute);
-  }
-
-  /** Start the RPC service. This method loads the OpCodes. */
-  @Override
-  public void start() {
-    OpCodes.load();
   }
 }

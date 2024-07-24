@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4-test30
+Test pre-release 30 from branch `release-v0.1.4-testX` with code ported from [temp/issue-248/count-stack-only](https://github.com/Consensys/besu-sequencer-plugins/tree/temp/issue-248/count-stack-only)
+* Improve ZkTracer initialization time [#11](https://github.com/Consensys/linea-sequencer/pull/11) (This PR was removed by error in 0.1.4-test29)
+* Parallelize refundedGas for big transactions [linea-arithmetization#793](https://github.com/Consensys/linea-arithmetization/pull/793)
+
+
 ## 0.1.4-test29
 Test pre-release 29 from branch `release-v0.1.4-testX` with code ported from [temp/issue-248/count-stack-only](https://github.com/Consensys/besu-sequencer-plugins/tree/temp/issue-248/count-stack-only)
 * Implement linea_setExtraData [#19](https://github.com/Consensys/linea-sequencer/pull/19)

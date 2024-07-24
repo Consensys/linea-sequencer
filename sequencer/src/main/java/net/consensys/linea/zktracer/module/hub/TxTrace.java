@@ -33,6 +33,9 @@ public class TxTrace {
   /** A cache for the line count of this transaction */
   private int cachedLineCount = 0;
 
+  private long refundedGas = -1;
+  private static final int PARALLELIZATION_THRESHOLD = 10_000;
+
   public int size() {
     return this.trace.size();
   }
@@ -67,13 +70,22 @@ public class TxTrace {
   }
 
   public long refundedGas() {
-    long refundedGas = 0;
-    for (TraceSection section : this.trace) {
-      if (!section.hasReverted()) {
-        refundedGas += section.refundDelta();
+    if (this.trace.size() >= PARALLELIZATION_THRESHOLD) {
+      return this.trace.parallelStream()
+          .filter(section -> !section.hasReverted())
+          .mapToLong(TraceSection::refundDelta)
+          .sum();
+    } else {
+      if (this.refundedGas == -1) {
+        this.refundedGas = 0;
+        for (TraceSection section : this.trace) {
+          if (!section.hasReverted()) {
+            this.refundedGas += section.refundDelta();
+          }
+        }
       }
+      return this.refundedGas;
     }
-    return refundedGas;
   }
 
   /**
