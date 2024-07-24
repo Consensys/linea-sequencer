@@ -94,7 +94,8 @@ class TransactionProfitabilityCalculatorTest {
 
   @Test
   void contractDeploymentIsProfitable() throws IOException {
-    final String contractDeploymentHex = new String(getClass().getResourceAsStream("/contract-bytecode").readAllBytes());
+    final String contractDeploymentHex =
+        new String(getClass().getResourceAsStream("/contract-bytecode").readAllBytes());
     final Bytes payload = Bytes.fromHexString(contractDeploymentHex);
     final Transaction plainTransfer =
         Transaction.builder()
