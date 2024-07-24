@@ -161,9 +161,9 @@ class TransactionProfitabilityCalculatorTest {
 
   @Test
   void smallExecutionGasTransactionIsProfitable() {
-    final String contractDeploymentHex =
+    final String contractCallArguments =
         "0x3e8b68c100000000000000000000000000000000000000000000000000000000000005dc000000000000000000000000000000000000000000000000000000000000001f";
-    final Bytes payload = Bytes.fromHexString(contractDeploymentHex);
+    final Bytes payload = Bytes.fromHexString(contractCallArguments);
     final Transaction plainTransfer =
         Transaction.builder()
             .sender(SENDER)
