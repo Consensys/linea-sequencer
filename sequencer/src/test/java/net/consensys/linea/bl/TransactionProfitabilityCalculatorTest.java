@@ -74,7 +74,7 @@ class TransactionProfitabilityCalculatorTest {
   }
 
   @Test
-  void plainTransferIsProfitable() {
+  void plainTransfer() {
     final Transaction plainTransfer =
         Transaction.builder()
             .sender(SENDER)
@@ -93,7 +93,7 @@ class TransactionProfitabilityCalculatorTest {
   }
 
   @Test
-  void contractDeploymentIsProfitable() throws IOException {
+  void contractDeployment() throws IOException {
     final String contractDeploymentHex =
         new String(getClass().getResourceAsStream("/contract-bytecode").readAllBytes());
     final Bytes payload = Bytes.fromHexString(contractDeploymentHex);
@@ -113,13 +113,13 @@ class TransactionProfitabilityCalculatorTest {
   }
 
   @Test
-  void inscriptionWith250BytesIsProfitable() {
+  void inscriptionWith250Bytes() {
     final Bytes payload = Bytes.random(250);
     final Transaction plainTransfer =
         Transaction.builder()
             .sender(SENDER)
             .to(RECIPIENT)
-            .gasLimit(22984)
+            .gasLimit(24988)
             .gasPrice(ETH_GAS_PRICE)
             .payload(payload)
             .signature(FAKE_SIGNATURE)
@@ -135,13 +135,13 @@ class TransactionProfitabilityCalculatorTest {
   }
 
   @Test
-  void inscriptionWith500BytesIsProfitable() {
+  void inscriptionWith500Bytes() {
     final Bytes payload = Bytes.random(500);
     final Transaction plainTransfer =
         Transaction.builder()
             .sender(SENDER)
             .to(RECIPIENT)
-            .gasLimit(24972)
+            .gasLimit(28964)
             .gasPrice(ETH_GAS_PRICE)
             .payload(payload)
             .signature(FAKE_SIGNATURE)
@@ -156,13 +156,13 @@ class TransactionProfitabilityCalculatorTest {
   }
 
   @Test
-  void inscriptionWith1000BytesIsNotProfitable() {
+  void inscriptionWith1000Bytes() {
     final Bytes payload = Bytes.random(1000);
     final Transaction plainTransfer =
         Transaction.builder()
             .sender(SENDER)
             .to(RECIPIENT)
-            .gasLimit(28900)
+            .gasLimit(36964)
             .gasPrice(ETH_GAS_PRICE)
             .payload(payload)
             .signature(FAKE_SIGNATURE)
@@ -176,7 +176,7 @@ class TransactionProfitabilityCalculatorTest {
   }
 
   @Test
-  void smallExecutionGasTransactionIsProfitable() {
+  void smallExecutionGasTransaction() {
     final String contractCallArguments =
         "0x3e8b68c100000000000000000000000000000000000000000000000000000000000005dc000000000000000000000000000000000000000000000000000000000000001f";
     final Bytes payload = Bytes.fromHexString(contractCallArguments);
