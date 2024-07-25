@@ -15,19 +15,23 @@
 
 package net.consensys.linea;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.compress.LibCompress;
 import net.consensys.linea.config.LineaProfitabilityCliOptions;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaRpcCliOptions;
 import net.consensys.linea.config.LineaRpcConfiguration;
+import net.consensys.linea.config.LineaTracerCliOptions;
+import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionPoolValidatorCliOptions;
 import net.consensys.linea.config.LineaTransactionPoolValidatorConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorCliOptions;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.plugins.AbstractLineaSharedOptionsPlugin;
-import org.hyperledger.besu.plugin.BesuContext;
-import org.hyperledger.besu.plugin.services.PicoCLIOptions;
+import net.consensys.linea.plugins.LineaOptionsPluginConfiguration;
 
 /**
  * This abstract class is used as superclass for all the plugins that share one or more
@@ -41,17 +45,6 @@ import org.hyperledger.besu.plugin.services.PicoCLIOptions;
  */
 @Slf4j
 public abstract class AbstractLineaPrivateOptionsPlugin extends AbstractLineaSharedOptionsPlugin {
-  private static final String CLI_OPTIONS_PREFIX = "linea";
-  private static boolean cliOptionsRegistered = false;
-  private static boolean configured = false;
-  private static LineaTransactionSelectorCliOptions transactionSelectorCliOptions;
-  private static LineaTransactionPoolValidatorCliOptions transactionPoolValidatorCliOptions;
-  private static LineaRpcCliOptions rpcCliOptions;
-  private static LineaProfitabilityCliOptions profitabilityCliOptions;
-  protected static LineaTransactionSelectorConfiguration transactionSelectorConfiguration;
-  protected static LineaTransactionPoolValidatorConfiguration transactionPoolValidatorConfiguration;
-  protected static LineaRpcConfiguration rpcConfiguration;
-  protected static LineaProfitabilityConfiguration profitabilityConfiguration;
 
   static {
     // force the initialization of the gnark compress native library to fail fast in case of issues
@@ -59,67 +52,52 @@ public abstract class AbstractLineaPrivateOptionsPlugin extends AbstractLineaSha
   }
 
   @Override
-  public synchronized void register(final BesuContext context) {
-    super.register(context);
-    if (!cliOptionsRegistered) {
-      final PicoCLIOptions cmdlineOptions =
-          context
-              .getService(PicoCLIOptions.class)
-              .orElseThrow(
-                  () ->
-                      new IllegalStateException(
-                          "Failed to obtain PicoCLI options from the BesuContext"));
-      transactionSelectorCliOptions = LineaTransactionSelectorCliOptions.create();
-      transactionPoolValidatorCliOptions = LineaTransactionPoolValidatorCliOptions.create();
-      rpcCliOptions = LineaRpcCliOptions.create();
-      profitabilityCliOptions = LineaProfitabilityCliOptions.create();
+  public Map<String, LineaOptionsPluginConfiguration> getLineaPluginConfigMap() {
+    final var configMap = new HashMap<>(super.getLineaPluginConfigMap());
 
-      cmdlineOptions.addPicoCLIOptions(CLI_OPTIONS_PREFIX, transactionSelectorCliOptions);
-      cmdlineOptions.addPicoCLIOptions(CLI_OPTIONS_PREFIX, transactionPoolValidatorCliOptions);
-      cmdlineOptions.addPicoCLIOptions(CLI_OPTIONS_PREFIX, rpcCliOptions);
-      cmdlineOptions.addPicoCLIOptions(CLI_OPTIONS_PREFIX, profitabilityCliOptions);
-      cliOptionsRegistered = true;
-    }
+    configMap.put(
+        LineaTransactionSelectorCliOptions.CONFIG_KEY,
+        LineaTransactionSelectorCliOptions.create().asPluginConfig());
+    configMap.put(
+        LineaTransactionPoolValidatorCliOptions.CONFIG_KEY,
+        LineaTransactionPoolValidatorCliOptions.create().asPluginConfig());
+    configMap.put(LineaRpcCliOptions.CONFIG_KEY, LineaRpcCliOptions.create().asPluginConfig());
+    configMap.put(
+        LineaProfitabilityCliOptions.CONFIG_KEY,
+        LineaProfitabilityCliOptions.create().asPluginConfig());
+    configMap.put(
+        LineaTracerCliOptions.CONFIG_KEY, LineaTracerCliOptions.create().asPluginConfig());
+
+    return configMap;
   }
 
-  @Override
-  public void beforeExternalServices() {
-    super.beforeExternalServices();
-    if (!configured) {
-      transactionSelectorConfiguration = transactionSelectorCliOptions.toDomainObject();
-      transactionPoolValidatorConfiguration = transactionPoolValidatorCliOptions.toDomainObject();
-      rpcConfiguration = rpcCliOptions.toDomainObject();
-      profitabilityConfiguration = profitabilityCliOptions.toDomainObject();
-      configured = true;
-    }
+  public LineaTransactionSelectorConfiguration transactionSelectorConfiguration() {
+    return (LineaTransactionSelectorConfiguration)
+        getConfigurationByKey(LineaTransactionSelectorCliOptions.CONFIG_KEY).optionsConfig();
+  }
 
-    log.debug(
-        "Configured plugin {} with transaction selector configuration: {}",
-        getName(),
-        transactionSelectorCliOptions);
+  public LineaTransactionPoolValidatorConfiguration transactionPoolValidatorConfiguration() {
+    return (LineaTransactionPoolValidatorConfiguration)
+        getConfigurationByKey(LineaTransactionPoolValidatorCliOptions.CONFIG_KEY).optionsConfig();
+  }
 
-    log.debug(
-        "Configured plugin {} with transaction pool validator configuration: {}",
-        getName(),
-        transactionPoolValidatorCliOptions);
+  public LineaRpcConfiguration rpcConfiguration() {
+    return (LineaRpcConfiguration)
+        getConfigurationByKey(LineaRpcCliOptions.CONFIG_KEY).optionsConfig();
+  }
 
-    log.debug("Configured plugin {} with RPC configuration: {}", getName(), rpcConfiguration);
+  public LineaProfitabilityConfiguration profitabilityConfiguration() {
+    return (LineaProfitabilityConfiguration)
+        getConfigurationByKey(LineaProfitabilityCliOptions.CONFIG_KEY).optionsConfig();
+  }
 
-    log.debug(
-        "Configured plugin {} with profitability calculator configuration: {}",
-        getName(),
-        profitabilityConfiguration);
+  public LineaTracerConfiguration tracerConfiguration() {
+    return (LineaTracerConfiguration)
+        getConfigurationByKey(LineaTracerCliOptions.CONFIG_KEY).optionsConfig();
   }
 
   @Override
   public void start() {
     super.start();
-  }
-
-  @Override
-  public void stop() {
-    super.stop();
-    cliOptionsRegistered = false;
-    configured = false;
   }
 }

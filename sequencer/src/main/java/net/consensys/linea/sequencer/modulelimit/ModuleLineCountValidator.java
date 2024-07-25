@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 import com.google.common.io.Resources;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import net.consensys.linea.plugins.config.LineaTracerConfiguration;
+import net.consensys.linea.config.LineaTracerConfiguration;
 import org.apache.tuweni.toml.Toml;
 import org.apache.tuweni.toml.TomlParseResult;
 import org.apache.tuweni.toml.TomlTable;
