@@ -58,7 +58,7 @@ class TransactionProfitabilityCalculatorTest {
   public static final Long VARIABlE_COST =
       (long)
           (3287000L
-              / 0.0006); // 3287000 Wei is average from Mainnet over 16 days with 0.0006 margin
+              / 0.0006);
   public static final LineaProfitabilityConfiguration profitabilityConfiguration =
       LineaProfitabilityCliOptions.create().toDomainObject().toBuilder()
           .minMargin(1.0)
