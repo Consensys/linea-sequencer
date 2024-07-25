@@ -97,7 +97,7 @@ class TransactionProfitabilityCalculatorTest {
     final String contractDeploymentHex =
         new String(getClass().getResourceAsStream("/contract-bytecode").readAllBytes());
     final Bytes payload = Bytes.fromHexString(contractDeploymentHex);
-    final Transaction plainTransfer =
+    final Transaction contractDeployment =
         Transaction.builder()
             .sender(SENDER)
             .gasLimit(468428)
@@ -106,16 +106,16 @@ class TransactionProfitabilityCalculatorTest {
             .signature(FAKE_SIGNATURE)
             .value(Wei.ZERO)
             .build();
-    performPositiveTest(plainTransfer, 1);
+    performPositiveTest(contractDeployment, 1);
 
     setVariableCostTo(VARIABlE_COST * 5);
-    performPositiveTest(plainTransfer, 3);
+    performPositiveTest(contractDeployment, 3);
   }
 
   @Test
   void inscriptionWith250Bytes() {
     final Bytes payload = Bytes.random(250);
-    final Transaction plainTransfer =
+    final Transaction inscription =
         Transaction.builder()
             .sender(SENDER)
             .to(RECIPIENT)
@@ -126,18 +126,18 @@ class TransactionProfitabilityCalculatorTest {
             .value(Wei.ZERO)
             .build();
 
-    performNegativeTest(plainTransfer, 1);
-    performPositiveTest(plainTransfer, 3);
+    performNegativeTest(inscription, 1);
+    performPositiveTest(inscription, 3);
 
     setVariableCostTo(VARIABlE_COST * 5);
-    performNegativeTest(plainTransfer, 5);
-    performPositiveTest(plainTransfer, 9);
+    performNegativeTest(inscription, 5);
+    performPositiveTest(inscription, 9);
   }
 
   @Test
   void inscriptionWith500Bytes() {
     final Bytes payload = Bytes.random(500);
-    final Transaction plainTransfer =
+    final Transaction inscription =
         Transaction.builder()
             .sender(SENDER)
             .to(RECIPIENT)
@@ -148,17 +148,17 @@ class TransactionProfitabilityCalculatorTest {
             .value(Wei.ZERO)
             .build();
 
-    performNegativeTest(plainTransfer, 1);
-    performPositiveTest(plainTransfer, 4);
+    performNegativeTest(inscription, 1);
+    performPositiveTest(inscription, 4);
 
     setVariableCostTo(VARIABlE_COST * 5);
-    performPositiveTest(plainTransfer, 14);
+    performPositiveTest(inscription, 14);
   }
 
   @Test
   void inscriptionWith1000Bytes() {
     final Bytes payload = Bytes.random(1000);
-    final Transaction plainTransfer =
+    final Transaction inscription =
         Transaction.builder()
             .sender(SENDER)
             .to(RECIPIENT)
@@ -168,11 +168,11 @@ class TransactionProfitabilityCalculatorTest {
             .signature(FAKE_SIGNATURE)
             .value(Wei.ZERO)
             .build();
-    performNegativeTest(plainTransfer, 1);
-    performPositiveTest(plainTransfer, 5);
+    performNegativeTest(inscription, 1);
+    performPositiveTest(inscription, 5);
 
     setVariableCostTo(VARIABlE_COST * 5);
-    performPositiveTest(plainTransfer, 22);
+    performPositiveTest(inscription, 22);
   }
 
   @Test
@@ -180,7 +180,7 @@ class TransactionProfitabilityCalculatorTest {
     final String contractCallArguments =
         "0x3e8b68c100000000000000000000000000000000000000000000000000000000000005dc000000000000000000000000000000000000000000000000000000000000001f";
     final Bytes payload = Bytes.fromHexString(contractCallArguments);
-    final Transaction plainTransfer =
+    final Transaction smallComputation =
         Transaction.builder()
             .sender(SENDER)
             .to(RECIPIENT)
@@ -190,10 +190,32 @@ class TransactionProfitabilityCalculatorTest {
             .signature(FAKE_SIGNATURE)
             .value(Wei.ZERO)
             .build();
-    performPositiveTest(plainTransfer, 1);
+    performPositiveTest(smallComputation, 1);
 
     setVariableCostTo(VARIABlE_COST * 5);
-    performPositiveTest(plainTransfer, 2);
+    performPositiveTest(smallComputation, 2);
+  }
+
+  @Test
+  void oracleTransaction() throws IOException {
+    final String contractCallArguments =
+            new String(getClass().getResourceAsStream("/oracle-transaction").readAllBytes());;
+    final Bytes payload = Bytes.fromHexString(contractCallArguments);
+    final Wei gasPrice = Wei.of(5400000000L); // 5.4 Gwei
+    final Transaction oracleTransaction =
+        Transaction.builder()
+            .sender(SENDER)
+            .to(RECIPIENT)
+            .gasLimit(150468)
+            .gasPrice(gasPrice)
+            .payload(payload)
+            .signature(FAKE_SIGNATURE)
+            .value(Wei.ZERO)
+            .build();
+    performNegativeTest(oracleTransaction, 1);
+
+    setVariableCostTo(VARIABlE_COST * 5);
+    performPositiveTest(oracleTransaction, 6);
   }
 
   private void setVariableCostTo(long newVariableCost) {
