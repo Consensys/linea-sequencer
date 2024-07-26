@@ -55,10 +55,7 @@ class TransactionProfitabilityCalculatorTest {
       Address.fromHexString("0x0000000000000000000000000000000000001000");
   public static final Address RECIPIENT =
       Address.fromHexString("0x0000000000000000000000000000000000001001");
-  public static final Long VARIABlE_COST =
-      (long)
-          (3287000L
-              / 0.0006);
+  public static final Long VARIABlE_COST = (long) (3287000L / 0.0006);
   public static final LineaProfitabilityConfiguration profitabilityConfiguration =
       LineaProfitabilityCliOptions.create().toDomainObject().toBuilder()
           .minMargin(1.0)
@@ -199,7 +196,8 @@ class TransactionProfitabilityCalculatorTest {
   @Test
   void oracleTransaction() throws IOException {
     final String contractCallArguments =
-            new String(getClass().getResourceAsStream("/oracle-transaction").readAllBytes());;
+        new String(getClass().getResourceAsStream("/oracle-transaction").readAllBytes());
+    ;
     final Bytes payload = Bytes.fromHexString(contractCallArguments);
     final Wei gasPrice = Wei.of(5400000000L); // 5.4 Gwei
     final Transaction oracleTransaction =
