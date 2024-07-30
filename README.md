@@ -26,7 +26,7 @@ Linea's stack is made up of multiple repositories, these include:
 - [linea-sequencer](https://github.com/Consensys/linea-sequencer): A set of Linea-Besu plugins for the sequencer and RPC nodes
 - [linea-tracer](https://github.com/Consensys/linea-tracer): Linea-Besu plugin which produces the traces that the constraint system applies and that serve as inputs to the prover
 - [linea-constraints](https://github.com/Consensys/linea-constraints): Constraints applied to the arithmetization, and ultimately to the circuits
-- [linea-specification](https://github.com/Consensys/linea-specification): Home of the zk-EVM specification
+- [linea-specification](https://github.com/Consensys/linea-specification): Specification of the constraint system defining Linea's zk-EVM
 
 Linea abstracts away the complexity of this technical architecture to allow developers to:
 
