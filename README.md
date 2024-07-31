@@ -20,7 +20,7 @@ Discover [existing plugins](docs/plugins.md) and understand the [plugin release 
 ## Looking for the Linea code?
 
 Linea's stack is made up of multiple repositories, these include:
-
+- This repo, [linea-sequencer](https://github.com/Consensys/linea-sequencer): A set of Linea-Besu plugins for the sequencer and RPC nodes
 - [linea-monorepo](https://github.com/Consensys/linea-monorepo): The main repository for the Linea stack & network 
 - [linea-besu](https://github.com/Consensys/linea-besu): Fork of Besu to implement the Linea-Besu client
 - [linea-tracer](https://github.com/Consensys/linea-tracer): Linea-Besu plugin which produces the traces that the constraint system applies and that serve as inputs to the prover
