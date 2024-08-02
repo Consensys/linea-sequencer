@@ -63,18 +63,21 @@ dependencyManagement {
       entry "arithmetization"
     }
 
-
     // Besu dependencies
     dependencySet(group: "${besuArtifactGroup}", version: "${besuVersion}") {
       entry "besu-datatypes"
       entry "evm"
       entry "plugin-api"
-      entry "internal"
     }
 
-    dependencySet(group: 'ch.qos.logback', version: '1.5.6') {
-      entry 'logback-core'
-      entry 'logback-classic'
+    // Besu internal dependencies
+    dependencySet(group: "${besuArtifactGroup}.internal", version: "${besuVersion}") {
+      entry "algorithms"
+      entry "api"
+      entry "core"
+      entry "dsl"
+      entry "eth"
+      entry "rlp"
     }
 
     dependency 'com.fasterxml.jackson.core:jackson-databind:2.16.1'
@@ -82,14 +85,6 @@ dependencyManagement {
     dependency 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.16.1'
 
     dependency 'com.google.auto.service:auto-service:1.1.1'
-
-    dependency 'com.google.guava:guava:33.0.0-jre'
-
-    dependency 'commons-io:commons-io:2.15.1'
-
-    dependency 'com.slack.api:slack-api-client:1.32.1'
-
-    dependency 'com.splunk.logging:splunk-library-javalogging:1.11.8'
 
     dependencySet(group: 'info.picocli', version: '4.7.5') {
       entry 'picocli'
@@ -103,29 +98,15 @@ dependencyManagement {
       entry 'tuweni-units'
     }
 
-    dependency 'io.vertx:vertx-core:4.5.8'
-
     dependency 'junit:junit:4.13.2'
 
     dependency 'net.java.dev.jna:jna:5.14.0'
 
     dependency 'org.assertj:assertj-core:3.25.1'
 
-    dependency 'org.apache.commons:commons-lang3:3.14.0'
-
-    dependencySet(group: 'org.apache.logging.log4j', version: '2.23.1') {
-      entry 'log4j-api'
-      entry 'log4j-core'
-      entry 'log4j-slf4j2-impl'
-    }
+    dependency 'org.apache.logging.log4j:log4j-slf4j2-impl:2.23.1'
 
     dependency 'org.awaitility:awaitility:4.2.0'
-
-    dependencySet(group: 'org.bouncycastle', version: '1.77') {
-      entry 'bcpkix-jdk18on'
-      entry 'bcprov-jdk18on'
-      entry 'jcajce'
-    }
 
     dependency 'org.hibernate.validator:hibernate-validator:8.0.1.Final'
 
@@ -147,7 +128,6 @@ dependencyManagement {
       entry 'abi'
       entry 'besu'
       entry 'core'
-      entry 'crypto'
     }
   }
 }
