@@ -38,8 +38,6 @@ dependencies {
 
   compileOnly 'info.picocli:picocli'
 
-  compileOnly 'io.vertx:vertx-core'
-
   implementation project(":native:compress")
 
   implementation 'com.fasterxml.jackson.core:jackson-databind'
@@ -71,8 +69,6 @@ configurations {
     transitive = false
   }
 }
-
-apply from: rootProject.file("gradle/dist.gradle")
 
 jar {
   zip64=true

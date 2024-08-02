@@ -48,6 +48,8 @@ dependencies {
   testImplementation project(":native:compress")
   testImplementation project(":sequencer")
 
+  testImplementation 'net.consensys.linea.zktracer:arithmetization'
+
   testImplementation "${besuArtifactGroup}:besu-datatypes"
   testImplementation "${besuArtifactGroup}:evm"
   testImplementation "${besuArtifactGroup}:plugin-api"
@@ -67,7 +69,6 @@ dependencies {
 
   testImplementation 'junit:junit'
   testImplementation 'org.awaitility:awaitility'
-  testImplementation 'com.splunk.logging:splunk-library-javalogging'
 }
 
 test.enabled = false
