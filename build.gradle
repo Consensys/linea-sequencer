@@ -14,8 +14,6 @@ plugins {
   id 'com.github.jk1.dependency-license-report' version '2.8'
 }
 
-version = project.hasProperty('releaseVersion') ? project.getProperty('releaseVersion') : 'snapshot'
-
 allprojects {
   apply from: rootProject.file("gradle/dependency-management.gradle")
   apply from: rootProject.file("gradle/java.gradle")
@@ -23,6 +21,8 @@ allprojects {
   apply from: rootProject.file("gradle/tests.gradle")
   apply from: rootProject.file("gradle/lint.gradle")
   apply from: rootProject.file("gradle/build-aliases.gradle")
+
+  version = project.hasProperty('releaseVersion') ? project.getProperty('releaseVersion') : 'snapshot'
 }
 
 licenseReport {

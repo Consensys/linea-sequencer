@@ -18,14 +18,6 @@ plugins {
   id 'common-plugins'
 }
 
-repositories {
-  mavenCentral()
-}
-
-test {
-  useJUnitPlatform()
-}
-
 tasks.register('buildJNI', Exec) {
   if(project.hasProperty("releaseNativeLibs")) {
     workingDir buildscript.sourceFile.parentFile.parentFile
@@ -39,20 +31,14 @@ tasks.register('buildJNI', Exec) {
   }
 }
 
-compileJava{
+compileJava {
   dependsOn buildJNI
 }
 
 dependencies {
   implementation 'io.tmio:tuweni-bytes'
   implementation 'net.java.dev.jna:jna'
-
-  testImplementation 'org.assertj:assertj-core'
-  testImplementation 'org.junit.jupiter:junit-jupiter-api'
-  testImplementation 'org.junit.jupiter:junit-jupiter-engine'
-  testImplementation 'org.mockito:mockito-core'
 }
-
 
 tasks.register('macArmLibCopy', Copy) {
   from 'build/native/libcompress_jni.dylib'
@@ -97,5 +83,3 @@ jar {
       )
   }
 }
-
-jar.dependsOn(buildJNI)
