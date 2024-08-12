@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.3.0-rc2.1
+* bump linea-arithmetization version to 0.3.0-rc2 [#62](https://github.com/Consensys/linea-sequencer/pull/62)
+* bump Linea-Besu version to 24.7-develop-c0029e6 (delivery-28) [#62](https://github.com/Consensys/linea-sequencer/pull/62)
+
+## 0.3.0-rc1.1
+* bump linea-arithmetization version to 0.3.0-rc1 [#54](https://github.com/Consensys/linea-sequencer/pull/54)
+* bump Linea-Besu version to 24.7-develop-f812936 (delivery-27) [#54](https://github.com/Consensys/linea-sequencer/pull/54)
+* Fix linea_estimateGas when called with gasPrice set [#58](https://github.com/Consensys/linea-sequencer/pull/58)
+
+## 0.2.0-rc5.1
+* bump linea-arithmetization version to 0.2.0-rc5 [#55](https://github.com/Consensys/linea-sequencer/pull/55)
+
+## 0.2.0-rc4.1
+* feat: bump linea-arithmetization version to 0.2.0-rc4 [#47](https://github.com/Consensys/linea-sequencer/pull/47)
+* Option to disable setting minGasPrice via extra data [#50](https://github.com/Consensys/linea-sequencer/pull/50)
+* Remove the check that profitable priority fee must be greater than minGasPrice [#49](https://github.com/Consensys/linea-sequencer/pull/49)
+* Fix and enable unit tests in CI [#45](https://github.com/Consensys/linea-sequencer/pull/45)
+* Documentation using javadoc [#33](https://github.com/Consensys/linea-sequencer/pull/33)
+* Improve error log when setting pricing conf via extra data fails [#44](https://github.com/Consensys/linea-sequencer/pull/44)
+
 ## 0.1.5-test1
 First release of the new series that uses on the ZkTracer as dependency from `linea-arithmetization` repo
 * arithmetizationVersion=0.1.5-rc3 [#29](https://github.com/Consensys/linea-sequencer/pull/29)

@@ -19,10 +19,13 @@ import java.math.BigDecimal;
 
 import com.google.common.base.MoreObjects;
 import jakarta.validation.constraints.Positive;
+import net.consensys.linea.plugins.LineaCliOptions;
 import picocli.CommandLine;
 
 /** The Linea profitability calculator CLI options. */
-public class LineaProfitabilityCliOptions {
+public class LineaProfitabilityCliOptions implements LineaCliOptions {
+  public static final String CONFIG_KEY = "profitability-config";
+
   public static final String FIXED_GAS_COST_WEI = "--plugin-linea-fixed-gas-cost-wei";
   public static final long DEFAULT_FIXED_GAS_COST_WEI = 0;
 
@@ -49,6 +52,10 @@ public class LineaProfitabilityCliOptions {
   public static final String EXTRA_DATA_PRICING_ENABLED =
       "--plugin-linea-extra-data-pricing-enabled";
   public static final boolean DEFAULT_EXTRA_DATA_PRICING_ENABLED = false;
+
+  public static final String EXTRA_DATA_SET_MIN_GAS_PRICE_ENABLED =
+      "--plugin-linea-extra-data-set-min-gas-price-enabled";
+  public static final boolean DEFAULT_EXTRA_DATA_SET_MIN_GAS_PRICE_ENABLED = true;
 
   @Positive
   @CommandLine.Option(
@@ -119,6 +126,15 @@ public class LineaProfitabilityCliOptions {
           "Enable setting pricing parameters via extra data field (default: ${DEFAULT-VALUE})")
   private boolean extraDataPricingEnabled = DEFAULT_EXTRA_DATA_PRICING_ENABLED;
 
+  @CommandLine.Option(
+      names = {EXTRA_DATA_SET_MIN_GAS_PRICE_ENABLED},
+      arity = "0..1",
+      hidden = true,
+      paramLabel = "<BOOLEAN>",
+      description =
+          "Enable setting min gas price runtime value via extra data field (default: ${DEFAULT-VALUE})")
+  private boolean extraDataSetMinGasPriceEnabled = DEFAULT_EXTRA_DATA_SET_MIN_GAS_PRICE_ENABLED;
+
   private LineaProfitabilityCliOptions() {}
 
   /**
@@ -147,6 +163,7 @@ public class LineaProfitabilityCliOptions {
     options.txPoolCheckApiEnabled = config.txPoolCheckApiEnabled();
     options.txPoolCheckP2pEnabled = config.txPoolCheckP2pEnabled();
     options.extraDataPricingEnabled = config.extraDataPricingEnabled();
+    options.extraDataSetMinGasPriceEnabled = config.extraDataSetMinGasPriceEnabled();
     return options;
   }
 
@@ -155,6 +172,7 @@ public class LineaProfitabilityCliOptions {
    *
    * @return the Linea factory configuration
    */
+  @Override
   public LineaProfitabilityConfiguration toDomainObject() {
     return LineaProfitabilityConfiguration.builder()
         .fixedCostWei(fixedGasCostWei)
@@ -165,6 +183,7 @@ public class LineaProfitabilityCliOptions {
         .txPoolCheckApiEnabled(txPoolCheckApiEnabled)
         .txPoolCheckP2pEnabled(txPoolCheckP2pEnabled)
         .extraDataPricingEnabled(extraDataPricingEnabled)
+        .extraDataSetMinGasPriceEnabled(extraDataSetMinGasPriceEnabled)
         .build();
   }
 
@@ -179,6 +198,7 @@ public class LineaProfitabilityCliOptions {
         .add(TX_POOL_ENABLE_CHECK_API, txPoolCheckApiEnabled)
         .add(TX_POOL_ENABLE_CHECK_P2P, txPoolCheckP2pEnabled)
         .add(EXTRA_DATA_PRICING_ENABLED, extraDataPricingEnabled)
+        .add(EXTRA_DATA_SET_MIN_GAS_PRICE_ENABLED, extraDataSetMinGasPriceEnabled)
         .toString();
   }
 }

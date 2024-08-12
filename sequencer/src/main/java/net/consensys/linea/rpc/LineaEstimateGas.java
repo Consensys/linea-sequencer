@@ -29,10 +29,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
-import net.consensys.linea.config.LineaL1L2BridgeConfiguration;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaRpcConfiguration;
 import net.consensys.linea.config.LineaTransactionPoolValidatorConfiguration;
+import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.sequencer.TracerAggregator;
 import net.consensys.linea.sequencer.modulelimit.ModuleLimitsValidationResult;
 import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator;
@@ -43,7 +43,6 @@ import org.bouncycastle.asn1.x9.X9ECParameters;
 import org.bouncycastle.crypto.params.ECDomainParameters;
 import org.hyperledger.besu.crypto.SECPSignature;
 import org.hyperledger.besu.datatypes.Wei;
-import org.hyperledger.besu.datatypes.rpc.RpcMethodError;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.exception.InvalidJsonRpcParameters;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.exception.InvalidJsonRpcRequestException;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.JsonCallParameter;
@@ -57,6 +56,7 @@ import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.TransactionSimulationService;
 import org.hyperledger.besu.plugin.services.exception.PluginRpcEndpointException;
 import org.hyperledger.besu.plugin.services.rpc.PluginRpcRequest;
+import org.hyperledger.besu.plugin.services.rpc.RpcMethodError;
 
 @Slf4j
 public class LineaEstimateGas {
@@ -87,7 +87,7 @@ public class LineaEstimateGas {
   private LineaTransactionPoolValidatorConfiguration txValidatorConf;
   private LineaProfitabilityConfiguration profitabilityConf;
   private TransactionProfitabilityCalculator txProfitabilityCalculator;
-  private LineaL1L2BridgeConfiguration l1L2BridgeConfiguration;
+  private LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration;
 
   private ModuleLineCountValidator moduleLineCountValidator;
 
@@ -105,7 +105,7 @@ public class LineaEstimateGas {
       final LineaTransactionPoolValidatorConfiguration transactionValidatorConfiguration,
       final LineaProfitabilityConfiguration profitabilityConf,
       final Map<String, Integer> limitsMap,
-      final LineaL1L2BridgeConfiguration l1L2BridgeConfiguration) {
+      final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration) {
     this.rpcConfiguration = rpcConfiguration;
     this.txValidatorConf = transactionValidatorConfiguration;
     this.profitabilityConf = profitabilityConf;
@@ -197,18 +197,7 @@ public class LineaEstimateGas {
         txProfitabilityCalculator.profitablePriorityFeePerGas(
             transaction, profitabilityConf.estimateGasMinMargin(), estimatedGasUsed, minGasPrice);
 
-    if (profitablePriorityFee.greaterOrEqualThan(priorityFeeLowerBound)) {
-      return profitablePriorityFee;
-    }
-
-    log.atDebug()
-        .setMessage(
-            "[{}] Estimated priority fee {} is lower that the lower bound {}, returning the latter")
-        .addArgument(LOG_SEQUENCE::get)
-        .addArgument(profitablePriorityFee::toHumanReadableString)
-        .addArgument(priorityFeeLowerBound::toHumanReadableString)
-        .log();
-    return priorityFeeLowerBound;
+    return profitablePriorityFee;
   }
 
   private Long estimateGasUsed(
@@ -365,7 +354,7 @@ public class LineaEstimateGas {
   }
 
   private void validateParameters(final JsonCallParameter callParameters) {
-    if (callParameters.getGasPrice() != null && isBaseFeeMarket(callParameters)) {
+    if (callParameters.getGasPrice() != null && isBaseFeeTransaction(callParameters)) {
       throw new InvalidJsonRpcParameters(
           "gasPrice cannot be used with maxFeePerGas or maxPriorityFeePerGas or maxFeePerBlobGas");
     }
@@ -377,7 +366,7 @@ public class LineaEstimateGas {
     }
   }
 
-  private boolean isBaseFeeMarket(final JsonCallParameter callParameters) {
+  private boolean isBaseFeeTransaction(final JsonCallParameter callParameters) {
     return (callParameters.getMaxFeePerGas().isPresent()
         || callParameters.getMaxPriorityFeePerGas().isPresent()
         || callParameters.getMaxFeePerBlobGas().isPresent());
@@ -415,11 +404,17 @@ public class LineaEstimateGas {
             .value(callParameters.getValue() == null ? Wei.ZERO : callParameters.getValue())
             .signature(FAKE_SIGNATURE_FOR_SIZE_CALCULATION);
 
-    if (!isBaseFeeMarket(callParameters) && callParameters.getGasPrice() == null) {
-      txBuilder.gasPrice(blockchainService.getNextBlockBaseFee().orElse(Wei.ZERO));
+    if (isBaseFeeTransaction(callParameters)) {
+      callParameters.getMaxFeePerGas().ifPresent(txBuilder::maxFeePerGas);
+      callParameters.getMaxPriorityFeePerGas().ifPresent(txBuilder::maxPriorityFeePerGas);
+      callParameters.getMaxFeePerBlobGas().ifPresent(txBuilder::maxFeePerBlobGas);
+    } else {
+      txBuilder.gasPrice(
+          callParameters.getGasPrice() != null
+              ? callParameters.getGasPrice()
+              : blockchainService.getNextBlockBaseFee().orElse(Wei.ZERO));
     }
-    callParameters.getMaxFeePerGas().ifPresent(txBuilder::maxFeePerGas);
-    callParameters.getMaxPriorityFeePerGas().ifPresent(txBuilder::maxPriorityFeePerGas);
+
     callParameters.getAccessList().ifPresent(txBuilder::accessList);
 
     return txBuilder.build();
