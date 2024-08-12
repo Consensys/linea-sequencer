@@ -21,12 +21,6 @@ plugins {
   id 'org.web3j.solidity' version '0.5.0'
 }
 
-apply from: rootProject.file("gradle/java.gradle")
-apply from: rootProject.file("gradle/dependency-management.gradle")
-apply from: rootProject.file('gradle/common-dependencies.gradle')
-apply from: rootProject.file("gradle/tests.gradle")
-apply from: rootProject.file("gradle/lint.gradle")
-
 web3j {
   generatedPackageName = 'linea.plugin.acc.test.tests.web3j.generated'
 }
@@ -54,6 +48,8 @@ dependencies {
   testImplementation project(":native:compress")
   testImplementation project(":sequencer")
 
+  testImplementation 'net.consensys.linea.zktracer:arithmetization'
+
   testImplementation "${besuArtifactGroup}:besu-datatypes"
   testImplementation "${besuArtifactGroup}:evm"
   testImplementation "${besuArtifactGroup}:plugin-api"
@@ -73,7 +69,10 @@ dependencies {
 
   testImplementation 'junit:junit'
   testImplementation 'org.awaitility:awaitility'
-  testImplementation 'com.splunk.logging:splunk-library-javalogging'
 }
 
 test.enabled = false
+
+jar {
+  enabled = false
+}

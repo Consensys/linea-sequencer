@@ -16,19 +16,10 @@
 plugins {
   id 'java'
   id 'common-plugins'
-  id 'com.github.hierynomus.license'
 }
 
 group = 'net.consensys.linea.besu.plugin'
 version = rootProject.version
-
-apply from: rootProject.file("gradle/java.gradle")
-apply from: rootProject.file("gradle/dependency-management.gradle")
-apply from: rootProject.file('gradle/common-dependencies.gradle')
-apply from: rootProject.file("gradle/tests.gradle")
-apply from: rootProject.file("gradle/build-aliases.gradle")
-apply from: rootProject.file("gradle/check-licenses.gradle")
-apply from: rootProject.file("gradle/lint.gradle")
 
 dependencies {
   // annotationProcessor generates the file META-INF/services/org.hyperledger.besu.plugin.BesuPlugin
@@ -46,8 +37,6 @@ dependencies {
   compileOnly 'com.google.auto.service:auto-service-annotations'
 
   compileOnly 'info.picocli:picocli'
-
-  compileOnly 'io.vertx:vertx-core'
 
   implementation project(":native:compress")
 
@@ -80,8 +69,6 @@ configurations {
     transitive = false
   }
 }
-
-apply from: rootProject.file("gradle/dist.gradle")
 
 jar {
   zip64=true
