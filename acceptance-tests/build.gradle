@@ -60,6 +60,8 @@ dependencies {
   testImplementation "${besuArtifactGroup}.internal:dsl"
   testImplementation "${besuArtifactGroup}.internal:eth"
 
+  testImplementation 'com.google.guava:guava'
+
   testImplementation 'io.tmio:tuweni-bytes'
   testImplementation 'io.tmio:tuweni-units'
 

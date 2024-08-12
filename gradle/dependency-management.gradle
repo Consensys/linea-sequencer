@@ -86,6 +86,8 @@ dependencyManagement {
 
     dependency 'com.google.auto.service:auto-service:1.1.1'
 
+    dependency 'com.google.guava:guava:32.1.2-jre'
+
     dependencySet(group: 'info.picocli', version: '4.7.5') {
       entry 'picocli'
       entry 'picocli-codegen'
