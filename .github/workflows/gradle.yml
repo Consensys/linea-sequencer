@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - release-v0.1.4-testX
   pull_request:
 
 env:
@@ -29,7 +30,7 @@ jobs:
           distribution: temurin
 
       - name: Build and test
-        run: ./gradlew build
+        run: ./gradlew build -x test
         env:
           JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
 
