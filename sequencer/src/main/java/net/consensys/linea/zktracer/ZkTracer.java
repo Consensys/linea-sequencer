@@ -30,7 +30,7 @@ import java.util.Set;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import net.consensys.linea.config.LineaL1L2BridgeConfiguration;
+import net.consensys.linea.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.zktracer.module.Module;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.types.Utils;
@@ -72,10 +72,10 @@ public class ZkTracer implements ConflationAwareOperationTracer {
   private Hash hashOfLastTransactionTraced = Hash.EMPTY;
 
   public ZkTracer() {
-    this(LineaL1L2BridgeConfiguration.EMPTY);
+    this(LineaL1L2BridgeSharedConfiguration.EMPTY);
   }
 
-  public ZkTracer(final LineaL1L2BridgeConfiguration bridgeConfiguration) {
+  public ZkTracer(final LineaL1L2BridgeSharedConfiguration bridgeConfiguration) {
     this.hub = new Hub(bridgeConfiguration.contract(), bridgeConfiguration.topic());
     for (Module m : this.hub.getModulesToCount()) {
       if (!spillings.containsKey(m.moduleKey())) {

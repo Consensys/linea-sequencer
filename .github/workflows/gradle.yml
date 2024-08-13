@@ -28,7 +28,7 @@ jobs:
           java-version: 21
           distribution: temurin
 
-      - name: Build and tests
+      - name: Build and test
         run: ./gradlew build
         env:
           JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false

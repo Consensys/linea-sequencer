@@ -24,9 +24,18 @@ import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt32;
 import org.hyperledger.besu.datatypes.Wei;
-import org.hyperledger.besu.datatypes.rpc.JsonRpcResponseType;
 import org.hyperledger.besu.plugin.services.RpcEndpointService;
+import org.hyperledger.besu.plugin.services.rpc.RpcResponseType;
 
+/**
+ * Handles the Linea extra data custom extension.
+ *
+ * <p>In Linea the extra data field is used to distribute pricing config, it has a standard format,
+ * it is versioned to support for changes in the format.
+ *
+ * <p>The version is the first byte of the extra data, currently on version 1 exists, in case the
+ * version byte is not recognized as supported, then the extra data is simply ignored.
+ */
 @Slf4j
 public class LineaExtraDataHandler {
   private final RpcEndpointService rpcEndpointService;
@@ -39,6 +48,13 @@ public class LineaExtraDataHandler {
     this.extraDataConsumers = new ExtraDataConsumer[] {new Version1Consumer(profitabilityConf)};
   }
 
+  /**
+   * Handles the extra data, first tries to see if it has a supported format, if so the bytes are
+   * processed according to that format.
+   *
+   * @param rawExtraData the extra data bytes
+   * @throws LineaExtraDataException if the format of the extra data is invalid
+   */
   public void handle(final Bytes rawExtraData) throws LineaExtraDataException {
 
     if (!Bytes.EMPTY.equals(rawExtraData)) {
@@ -56,7 +72,15 @@ public class LineaExtraDataHandler {
     }
   }
 
+  /** A consumer of a specific version of the extra data format */
   private interface ExtraDataConsumer extends Consumer<Bytes> {
+
+    /**
+     * Is this consumer able to process the given extra data?
+     *
+     * @param extraData extra data bytes
+     * @return true if this consumer can process the extra data
+     */
     boolean canConsume(Bytes extraData);
 
     static Long toLong(final Bytes fieldBytes) {
@@ -64,6 +88,14 @@ public class LineaExtraDataHandler {
     }
   }
 
+  /**
+   * Handles a version 1 extra data field and on successful parsing it updates the pricing config
+   * and the min gas price
+   *
+   * <p>Version 1 has this format:
+   *
+   * <p>VERSION (1 byte) FIXED_COST (4 bytes) VARIABLE_COST (4 bytes) ETH_GAS_PRICE (4 bytes)
+   */
   @SuppressWarnings("rawtypes")
   private class Version1Consumer implements ExtraDataConsumer {
     private static final int WEI_IN_KWEI = 1_000;
@@ -106,14 +138,18 @@ public class LineaExtraDataHandler {
     }
 
     void updateMinGasPrice(final Long minGasPriceKWei) {
-      final var minGasPriceWei = Wei.of(minGasPriceKWei).multiply(WEI_IN_KWEI);
-      final var resp =
-          rpcEndpointService.call(
-              "miner_setMinGasPrice", new Object[] {minGasPriceWei.toShortHexString()});
-      if (!resp.getType().equals(JsonRpcResponseType.SUCCESS)) {
-        throw new LineaExtraDataException(
-            LineaExtraDataException.ErrorType.FAILED_CALLING_SET_MIN_GAS_PRICE,
-            "Internal setMinGasPrice method failed: " + resp);
+      if (profitabilityConf.extraDataSetMinGasPriceEnabled()) {
+        final var minGasPriceWei = Wei.of(minGasPriceKWei).multiply(WEI_IN_KWEI);
+        final var resp =
+            rpcEndpointService.call(
+                "miner_setMinGasPrice", new Object[] {minGasPriceWei.toShortHexString()});
+        if (!resp.getType().equals(RpcResponseType.SUCCESS)) {
+          throw new LineaExtraDataException(
+              LineaExtraDataException.ErrorType.FAILED_CALLING_SET_MIN_GAS_PRICE,
+              "Internal setMinGasPrice method failed: " + resp);
+        }
+      } else {
+        log.trace("Setting minGasPrice from extraData is disabled by conf");
       }
     }
   }

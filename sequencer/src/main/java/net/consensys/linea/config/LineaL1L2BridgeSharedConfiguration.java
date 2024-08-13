@@ -15,21 +15,22 @@
 
 package net.consensys.linea.config;
 
-import java.math.BigDecimal;
-
 import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
-import lombok.experimental.Accessors;
 import net.consensys.linea.LineaOptionsConfiguration;
+import org.apache.tuweni.bytes.Bytes;
+import org.hyperledger.besu.datatypes.Address;
 
-/** The Linea RPC configuration. */
+/** The Linea L1 L2 bridge configuration. */
 @Builder(toBuilder = true)
-@Accessors(fluent = true)
-@Getter
-@ToString
-public class LineaRpcConfiguration implements LineaOptionsConfiguration {
-  @Setter private volatile boolean estimateGasCompatibilityModeEnabled;
-  private BigDecimal estimateGasCompatibilityMultiplier;
+public record LineaL1L2BridgeSharedConfiguration(Address contract, Bytes topic)
+    implements LineaOptionsConfiguration {
+  public static final LineaL1L2BridgeSharedConfiguration EMPTY =
+      LineaL1L2BridgeSharedConfiguration.builder()
+          .contract(Address.ZERO)
+          .topic(Bytes.EMPTY)
+          .build();
+
+  public boolean isEmpty() {
+    return this.contract.equals(Address.ZERO) || this.topic.isEmpty();
+  }
 }

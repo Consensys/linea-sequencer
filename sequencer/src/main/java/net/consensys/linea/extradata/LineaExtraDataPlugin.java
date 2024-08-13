@@ -31,7 +31,7 @@ import org.hyperledger.besu.plugin.services.RpcEndpointService;
 @AutoService(BesuPlugin.class)
 public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
   public static final String NAME = "linea";
-  private BesuEvents besuEventsService;
+  private BesuContext besuContext;
   private RpcEndpointService rpcEndpointService;
   private BlockchainService blockchainService;
 
@@ -42,11 +42,7 @@ public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
 
   @Override
   public void doRegister(final BesuContext context) {
-    besuEventsService =
-        context
-            .getService(BesuEvents.class)
-            .orElseThrow(
-                () -> new RuntimeException("Failed to obtain BesuEvents from the BesuContext."));
+    besuContext = context;
     rpcEndpointService =
         context
             .getService(RpcEndpointService.class)
@@ -63,12 +59,17 @@ public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
                         "Failed to obtain BlockchainService from the BesuContext."));
   }
 
+  /**
+   * Starts this plugin and in case the extra data pricing is enabled, as first thing it tries to
+   * extract extra data pricing configuration from the chain head, then it starts listening for new
+   * imported block, in order to update the extra data pricing on every incoming block.
+   */
   @Override
   public void start() {
     super.start();
-    if (profitabilityConfiguration.extraDataPricingEnabled()) {
+    if (profitabilityConfiguration().extraDataPricingEnabled()) {
       final var extraDataHandler =
-          new LineaExtraDataHandler(rpcEndpointService, profitabilityConfiguration);
+          new LineaExtraDataHandler(rpcEndpointService, profitabilityConfiguration());
       final var chainHeadHeader = blockchainService.getChainHeadHeader();
       final var initialExtraData = chainHeadHeader.getExtraData();
       try {
@@ -78,8 +79,16 @@ public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
             "Failed setting initial pricing conf from extra data field ({}) of the chain head block {}({})",
             initialExtraData,
             chainHeadHeader.getNumber(),
-            chainHeadHeader.getBlockHash());
+            chainHeadHeader.getBlockHash(),
+            e);
       }
+
+      final var besuEventsService =
+          besuContext
+              .getService(BesuEvents.class)
+              .orElseThrow(
+                  () -> new RuntimeException("Failed to obtain BesuEvents from the BesuContext."));
+
       besuEventsService.addBlockAddedListener(
           addedBlockContext -> {
             final var importedBlockHeader = addedBlockContext.getBlockHeader();
@@ -92,7 +101,8 @@ public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
                   "Failed setting pricing conf from extra data field ({}) of latest imported block {}({})",
                   latestExtraData,
                   importedBlockHeader.getNumber(),
-                  importedBlockHeader.getBlockHash());
+                  importedBlockHeader.getBlockHash(),
+                  e);
             }
           });
     }

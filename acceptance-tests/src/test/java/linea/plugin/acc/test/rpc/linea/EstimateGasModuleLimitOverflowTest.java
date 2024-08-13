@@ -52,12 +52,13 @@ public class EstimateGasModuleLimitOverflowTest extends LineaPluginTestBase {
             simpleStorage.getContractAddress(),
             null,
             payload.toHexString(),
-            "0");
+            "0",
+            null);
 
     final var reqLinea = new EstimateGasTest.BadLineaEstimateGasRequest(callParams);
     final var respLinea = reqLinea.execute(minerNode.nodeRequests());
     assertThat(respLinea.getCode()).isEqualTo(-32000);
     assertThat(respLinea.getMessage())
-        .isEqualTo("Transaction line count for module SHF=32 is above the limit 20");
+        .isEqualTo("Transaction line count for module WCP=132 is above the limit 120");
   }
 }

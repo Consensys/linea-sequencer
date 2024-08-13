@@ -17,29 +17,36 @@ package net.consensys.linea.sequencer.txselection;
 
 import java.util.Map;
 
-import net.consensys.linea.config.LineaL1L2BridgeConfiguration;
+import net.consensys.linea.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.sequencer.txselection.selectors.LineaTransactionSelector;
+import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelectorFactory;
 
-/** Represents a factory for creating transaction selectors. */
+/**
+ * Represents a factory for creating transaction selectors. Note that a new instance of the
+ * transaction selector is created everytime a new block creation time is started.
+ */
 public class LineaTransactionSelectorFactory implements PluginTransactionSelectorFactory {
+  private final BlockchainService blockchainService;
   private final LineaTransactionSelectorConfiguration txSelectorConfiguration;
-  private final LineaL1L2BridgeConfiguration l1L2BridgeConfiguration;
+  private final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration;
   private final LineaProfitabilityConfiguration profitabilityConfiguration;
   private final LineaTracerConfiguration tracerConfiguration;
 
   private final Map<String, Integer> limitsMap;
 
   public LineaTransactionSelectorFactory(
+      final BlockchainService blockchainService,
       final LineaTransactionSelectorConfiguration txSelectorConfiguration,
-      final LineaL1L2BridgeConfiguration l1L2BridgeConfiguration,
+      final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
       final LineaProfitabilityConfiguration profitabilityConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
       final Map<String, Integer> limitsMap) {
+    this.blockchainService = blockchainService;
     this.txSelectorConfiguration = txSelectorConfiguration;
     this.l1L2BridgeConfiguration = l1L2BridgeConfiguration;
     this.profitabilityConfiguration = profitabilityConfiguration;
@@ -50,6 +57,7 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
   @Override
   public PluginTransactionSelector create() {
     return new LineaTransactionSelector(
+        blockchainService,
         txSelectorConfiguration,
         l1L2BridgeConfiguration,
         profitabilityConfiguration,

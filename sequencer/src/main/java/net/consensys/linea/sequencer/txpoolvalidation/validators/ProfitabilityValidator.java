@@ -26,6 +26,11 @@ import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolValidator;
 
+/**
+ * Validator that checks if the upfront gas price, that the transaction is willing to pay, is
+ * profitable. This check does not apply to transaction with priority and can be enabled/disabled
+ * independently for transactions received via API or P2P.
+ */
 @Slf4j
 public class ProfitabilityValidator implements PluginTransactionPoolValidator {
   final BesuConfiguration besuConfiguration;
@@ -51,11 +56,17 @@ public class ProfitabilityValidator implements PluginTransactionPoolValidator {
         && (isLocal && profitabilityConf.txPoolCheckApiEnabled()
             || !isLocal && profitabilityConf.txPoolCheckP2pEnabled())) {
 
+      final Wei baseFee =
+          blockchainService
+              .getNextBlockBaseFee()
+              .orElseThrow(() -> new RuntimeException("We only support a base fee market"));
+
       return profitabilityCalculator.isProfitable(
               "Txpool",
               transaction,
               profitabilityConf.txPoolMinMargin(),
-              calculateUpfrontGasPrice(transaction),
+              baseFee,
+              calculateUpfrontGasPrice(transaction, baseFee),
               transaction.getGasLimit(),
               besuConfiguration.getMinGasPrice())
           ? Optional.empty()
@@ -65,11 +76,7 @@ public class ProfitabilityValidator implements PluginTransactionPoolValidator {
     return Optional.empty();
   }
 
-  private Wei calculateUpfrontGasPrice(final Transaction transaction) {
-    final Wei baseFee =
-        blockchainService
-            .getNextBlockBaseFee()
-            .orElseThrow(() -> new RuntimeException("We only support a base fee market"));
+  private Wei calculateUpfrontGasPrice(final Transaction transaction, final Wei baseFee) {
 
     return transaction
         .getMaxFeePerGas()

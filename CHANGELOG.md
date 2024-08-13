@@ -1,10 +1,36 @@
 # Changelog
 
+## 0.3.0-rc2.1
+* bump linea-arithmetization version to 0.3.0-rc2 [#62](https://github.com/Consensys/linea-sequencer/pull/62)
+* bump Linea-Besu version to 24.7-develop-c0029e6 (delivery-28) [#62](https://github.com/Consensys/linea-sequencer/pull/62)
+
+## 0.3.0-rc1.1
+* bump linea-arithmetization version to 0.3.0-rc1 [#54](https://github.com/Consensys/linea-sequencer/pull/54)
+* bump Linea-Besu version to 24.7-develop-f812936 (delivery-27) [#54](https://github.com/Consensys/linea-sequencer/pull/54)
+* Fix linea_estimateGas when called with gasPrice set [#58](https://github.com/Consensys/linea-sequencer/pull/58)
+
+## 0.2.0-rc5.1
+* bump linea-arithmetization version to 0.2.0-rc5 [#55](https://github.com/Consensys/linea-sequencer/pull/55)
+
+## 0.2.0-rc4.1
+* feat: bump linea-arithmetization version to 0.2.0-rc4 [#47](https://github.com/Consensys/linea-sequencer/pull/47)
+* Option to disable setting minGasPrice via extra data [#50](https://github.com/Consensys/linea-sequencer/pull/50)
+* Remove the check that profitable priority fee must be greater than minGasPrice [#49](https://github.com/Consensys/linea-sequencer/pull/49)
+* Fix and enable unit tests in CI [#45](https://github.com/Consensys/linea-sequencer/pull/45)
+* Documentation using javadoc [#33](https://github.com/Consensys/linea-sequencer/pull/33)
+* Improve error log when setting pricing conf via extra data fails [#44](https://github.com/Consensys/linea-sequencer/pull/44)
+
+## 0.1.5-test1
+First release of the new series that uses on the ZkTracer as dependency from `linea-arithmetization` repo
+* arithmetizationVersion=0.1.5-rc3 [#29](https://github.com/Consensys/linea-sequencer/pull/29)
+* Align linea_estimateGas behavior to geth [#25](https://github.com/Consensys/linea-sequencer/pull/25)
+* Implement linea_setExtraData [#19](https://github.com/Consensys/linea-sequencer/pull/19)
+* Set plugin-linea-tx-pool-simulation-check-api-enabled=false by default [#23](https://github.com/Consensys/linea-sequencer/pull/23)
+
 ## 0.1.4-test30
 Test pre-release 30 from branch `release-v0.1.4-testX` with code ported from [temp/issue-248/count-stack-only](https://github.com/Consensys/besu-sequencer-plugins/tree/temp/issue-248/count-stack-only)
 * Improve ZkTracer initialization time [#11](https://github.com/Consensys/linea-sequencer/pull/11) (This PR was removed by error in 0.1.4-test29)
 * Parallelize refundedGas for big transactions [linea-arithmetization#793](https://github.com/Consensys/linea-arithmetization/pull/793)
-
 
 ## 0.1.4-test29
 Test pre-release 29 from branch `release-v0.1.4-testX` with code ported from [temp/issue-248/count-stack-only](https://github.com/Consensys/besu-sequencer-plugins/tree/temp/issue-248/count-stack-only)
@@ -106,8 +132,8 @@ release rebase off of main
 ## 0.1.4-test14
 release rebase off of main
 Test pre-release 14 from [temp/issue-248/count-stack-only](https://github.com/Consensys/besu-sequencer-plugins/tree/temp/issue-248/count-stack-only)
-* Fix log of line counts in case of block limit reached + minor changes [#555](https://github.com/ConsenSys/besu-sequencer-plugins/pull/555)
-* build: update Corset to 9.3.0 [#554](https://github.com/ConsenSys/besu-sequencer-plugins/pull/554)
+* Fix log of line counts in case of block limit reached + minor changes [#555](https://github.com/Consensys/besu-sequencer-plugins/pull/555)
+* build: update Corset to 9.3.0 [#554](https://github.com/Consensys/besu-sequencer-plugins/pull/554)
 
 ## 0.1.4-test13
 Test pre-release 13 from [temp/issue-248/count-stack-only](https://github.com/Consensys/besu-sequencer-plugins/tree/temp/issue-248/count-stack-only)
@@ -143,20 +169,20 @@ Test pre-release 7 from [temp/issue-248/count-stack-only](https://github.com/Con
 Test pre-release 6, fix: [make precompile counters work](https://github.com/Consensys/besu-sequencer-plugins/commit/10f03ead5207746f253703a328f13988ed9b9305)
 * feat: implement fake hashdata/info [Franklin Delehelle]
 * temp: geth-compatibily hacks [Franklin Delehelle]
-* refactor: group RLPs modules, use retro-compatible module keys [#508](https://github.com/ConsenSys/besu-sequencer-plugins/pull/508)
-* [MINOR] Add javadoc [#507](https://github.com/ConsenSys/besu-sequencer-plugins/pull/507)
-* style: update name of prec limits to avoid confusion with old geth name [#506](https://github.com/ConsenSys/besu-sequencer-plugins/pull/506)
-* perf: cache tx-specific line counter [#497](https://github.com/ConsenSys/besu-sequencer-plugins/pull/497)
-* fix: continuous tracing plugin start check [#500](https://github.com/ConsenSys/besu-sequencer-plugins/pull/500)
-* fix: lookup txndata <-> wcp [#488](https://github.com/ConsenSys/besu-sequencer-plugins/pull/488)
-* fix(romLex): wrong stack arg for extcodecopy address [#498](https://github.com/ConsenSys/besu-sequencer-plugins/pull/498)
+* refactor: group RLPs modules, use retro-compatible module keys [#508](https://github.com/Consensys/besu-sequencer-plugins/pull/508)
+* [MINOR] Add javadoc [#507](https://github.com/Consensys/besu-sequencer-plugins/pull/507)
+* style: update name of prec limits to avoid confusion with old geth name [#506](https://github.com/Consensys/besu-sequencer-plugins/pull/506)
+* perf: cache tx-specific line counter [#497](https://github.com/Consensys/besu-sequencer-plugins/pull/497)
+* fix: continuous tracing plugin start check [#500](https://github.com/Consensys/besu-sequencer-plugins/pull/500)
+* fix: lookup txndata <-> wcp [#488](https://github.com/Consensys/besu-sequencer-plugins/pull/488)
+* fix(romLex): wrong stack arg for extcodecopy address [#498](https://github.com/Consensys/besu-sequencer-plugins/pull/498)
 
 ## 0.1.4-test3
 Test pre-release 3 from [temp/issue-248/count-stack-only](https://github.com/Consensys/besu-sequencer-plugins/tree/temp/issue-248/count-stack-only)
-* Log ZkTracer counters for every produced block [#485](https://github.com/ConsenSys/besu-sequencer-plugins/pull/485)
-* fix: overflow for modexp arg [#489](https://github.com/ConsenSys/besu-sequencer-plugins/pull/489)
-* bin reimplementation [#473](https://github.com/ConsenSys/besu-sequencer-plugins/pull/473)
-* applyMavenExclusions=false [#477](https://github.com/ConsenSys/besu-sequencer-plugins/pull/477)
+* Log ZkTracer counters for every produced block [#485](https://github.com/Consensys/besu-sequencer-plugins/pull/485)
+* fix: overflow for modexp arg [#489](https://github.com/Consensys/besu-sequencer-plugins/pull/489)
+* bin reimplementation [#473](https://github.com/Consensys/besu-sequencer-plugins/pull/473)
+* applyMavenExclusions=false [#477](https://github.com/Consensys/besu-sequencer-plugins/pull/477)
 
 ## 0.1.4-test2
 Testing pre-release from branch test-release/v0.1.4-test2
@@ -169,23 +195,23 @@ Temporary line counting release for testnet.
 
 * count stack temporary impl: make loginfo counts closer to Geth [temp/issue-248/count-stack-only](https://github.com/Consensys/besu-sequencer-plugins/tree/temp/issue-248/count-stack-only)
   --
-* fix: `Bytes.toUnsignedInteger` [#484](https://github.com/ConsenSys/besu-sequencer-plugins/pull/484)
-* perf: delay computations at trace time [#483](https://github.com/ConsenSys/besu-sequencer-plugins/pull/483)
+* fix: `Bytes.toUnsignedInteger` [#484](https://github.com/Consensys/besu-sequencer-plugins/pull/484)
+* perf: delay computations at trace time [#483](https://github.com/Consensys/besu-sequencer-plugins/pull/483)
 
 ## 0.1.3
-- perf: improve `StackedSet` performances  [#466](https://github.com/ConsenSys/besu-sequencer-plugins/pull/466)
-- feat: implement L1 block & Keccak limits [#445](https://github.com/ConsenSys/besu-sequencer-plugins/pull/445)
-- feat: partially implement EC_DATA [#475](https://github.com/ConsenSys/besu-sequencer-plugins/pull/475)
-- fix: ensure trace files are always deleted [#462](https://github.com/ConsenSys/besu-sequencer-plugins/pull/462)
+- perf: improve `StackedSet` performances  [#466](https://github.com/Consensys/besu-sequencer-plugins/pull/466)
+- feat: implement L1 block & Keccak limits [#445](https://github.com/Consensys/besu-sequencer-plugins/pull/445)
+- feat: partially implement EC_DATA [#475](https://github.com/Consensys/besu-sequencer-plugins/pull/475)
+- fix: ensure trace files are always deleted [#462](https://github.com/Consensys/besu-sequencer-plugins/pull/462)
 
 
 ## 0.1.2
 Release 8 for 23.10.4-SNAPSHOT of linea-besu
-- changed default file name to toml [#476](https://github.com/ConsenSys/besu-sequencer-plugins/pull/476)
-- feat: implement `BIN` counting [#471](https://github.com/ConsenSys/besu-sequencer-plugins/pull/471)
-- Upgrade Linea Besu to 23.10.4-SNAPSHOT [#469](https://github.com/ConsenSys/besu-sequencer-plugins/pull/469)
-- fix: incorrect address comparison [#470](https://github.com/ConsenSys/besu-sequencer-plugins/pull/470)
-- fix: line count discrepancy [#468](https://github.com/ConsenSys/besu-sequencer-plugins/pull/468)
+- changed default file name to toml [#476](https://github.com/Consensys/besu-sequencer-plugins/pull/476)
+- feat: implement `BIN` counting [#471](https://github.com/Consensys/besu-sequencer-plugins/pull/471)
+- Upgrade Linea Besu to 23.10.4-SNAPSHOT [#469](https://github.com/Consensys/besu-sequencer-plugins/pull/469)
+- fix: incorrect address comparison [#470](https://github.com/Consensys/besu-sequencer-plugins/pull/470)
+- fix: line count discrepancy [#468](https://github.com/Consensys/besu-sequencer-plugins/pull/468)
 
 ## 0.1.1
 Release for 23.10.3-SNAPSHOT of linea-besu

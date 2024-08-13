@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import lombok.extern.slf4j.Slf4j;
-import net.consensys.linea.config.LineaL1L2BridgeConfiguration;
+import net.consensys.linea.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.config.LineaTransactionPoolValidatorConfiguration;
 import net.consensys.linea.sequencer.modulelimit.ModuleLimitsValidationResult;
 import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator;
@@ -33,20 +33,24 @@ import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.TransactionSimulationService;
 import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolValidator;
 
+/**
+ * Validator that checks if transaction simulation completes successfully, including line counting.
+ * This check can be enabled/disabled independently for transactions received via API or P2P.
+ */
 @Slf4j
 public class SimulationValidator implements PluginTransactionPoolValidator {
   private final BlockchainService blockchainService;
   private final TransactionSimulationService transactionSimulationService;
   private final LineaTransactionPoolValidatorConfiguration txPoolValidatorConf;
   private final Map<String, Integer> moduleLineLimitsMap;
-  private final LineaL1L2BridgeConfiguration l1L2BridgeConfiguration;
+  private final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration;
 
   public SimulationValidator(
       final BlockchainService blockchainService,
       final TransactionSimulationService transactionSimulationService,
       final LineaTransactionPoolValidatorConfiguration txPoolValidatorConf,
       final Map<String, Integer> moduleLineLimitsMap,
-      final LineaL1L2BridgeConfiguration l1L2BridgeConfiguration) {
+      final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration) {
     this.blockchainService = blockchainService;
     this.transactionSimulationService = transactionSimulationService;
     this.txPoolValidatorConf = txPoolValidatorConf;

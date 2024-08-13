@@ -13,15 +13,24 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-allprojects {
-  group = 'net.consensys.linea.besu.plugin'
-  version = rootProject.version
+package net.consensys.linea;
 
-  apply from: rootProject.file("gradle/java.gradle")
-  apply from: rootProject.file("gradle/dependency-management.gradle")
-  apply from: rootProject.file("gradle/check-licenses.gradle")
-  apply from: rootProject.file("gradle/build-aliases.gradle")
-  apply from: rootProject.file('gradle/common-dependencies.gradle')
-  apply from: rootProject.file("gradle/lint.gradle")
-  apply from: rootProject.file("gradle/tests.gradle")
+import java.util.function.Supplier;
+
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
+
+@Accessors(fluent = true)
+@RequiredArgsConstructor
+public class LineaOptionsPluginConfiguration {
+  @Getter private final LineaCliOptions cliOptions;
+  private final Supplier<LineaOptionsConfiguration> optionsConfigSupplier;
+  @Getter private LineaOptionsConfiguration optionsConfig;
+
+  public void initOptionsConfig() {
+    if (optionsConfig == null) {
+      optionsConfig = optionsConfigSupplier.get();
+    }
+  }
 }

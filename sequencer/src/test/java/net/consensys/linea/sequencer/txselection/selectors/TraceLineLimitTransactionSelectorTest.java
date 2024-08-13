@@ -27,7 +27,7 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
-import net.consensys.linea.config.LineaL1L2BridgeConfiguration;
+import net.consensys.linea.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator;
@@ -101,7 +101,7 @@ public class TraceLineLimitTransactionSelectorTest {
 
   @Test
   public void shouldNotSelectWhenOverLimits() {
-    lineCountLimits.put("ADD", 1);
+    lineCountLimits.put("EXT", 5);
     final var transactionSelector = newSelectorForNewBlock(lineCountLimits);
     transactionSelector.resetCache();
 
@@ -121,7 +121,7 @@ public class TraceLineLimitTransactionSelectorTest {
 
   @Test
   public void shouldNotReprocessedWhenOverLimits() {
-    lineCountLimits.put("ADD", 1);
+    lineCountLimits.put("EXT", 5);
     var transactionSelector = newSelectorForNewBlock(lineCountLimits);
     transactionSelector.resetCache();
 
@@ -158,7 +158,7 @@ public class TraceLineLimitTransactionSelectorTest {
 
   @Test
   public void shouldEvictWhenCacheIsFull() {
-    lineCountLimits.put("ADD", 1);
+    lineCountLimits.put("EXT", 5);
     final var transactionSelector = newSelectorForNewBlock(lineCountLimits);
     transactionSelector.resetCache();
 
@@ -252,7 +252,7 @@ public class TraceLineLimitTransactionSelectorTest {
           LineaTransactionSelectorConfiguration.builder()
               .overLinesLimitCacheSize(overLimitCacheSize)
               .build(),
-          LineaL1L2BridgeConfiguration.builder()
+          LineaL1L2BridgeSharedConfiguration.builder()
               .contract(Address.fromHexString("0xDEADBEEF"))
               .topic(Bytes.fromHexString("0x012345"))
               .build(),
