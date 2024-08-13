@@ -27,6 +27,15 @@ First release of the new series that uses on the ZkTracer as dependency from `li
 * Implement linea_setExtraData [#19](https://github.com/Consensys/linea-sequencer/pull/19)
 * Set plugin-linea-tx-pool-simulation-check-api-enabled=false by default [#23](https://github.com/Consensys/linea-sequencer/pull/23)
 
+## 0.1.4-test31
+Test pre-release 31 from branch `release-v0.1.4-testX` with code ported from [temp/issue-248/count-stack-only](https://github.com/Consensys/besu-sequencer-plugins/tree/temp/issue-248/count-stack-only)
+* Improve linea_estimateGas error handling [#48](https://github.com/Consensys/linea-sequencer/pull/48)
+* Fix linea_estimateGas when called with gasPrice set [#58](https://github.com/Consensys/linea-sequencer/pull/58)
+* Option to disable setting minGasPrice via extra data [#50](https://github.com/Consensys/linea-sequencer/pull/50)
+* Remove the check that profitable priority fee must be greater than minGasPrice [#49](https://github.com/Consensys/linea-sequencer/pull/49)
+* Improve error log when setting pricing conf via extra data fails [#44](https://github.com/Consensys/linea-sequencer/pull/44)
+* Include baseFee in the calculation of a profitable tx [#30](https://github.com/Consensys/linea-sequencer/pull/30)
+
 ## 0.1.4-test30
 Test pre-release 30 from branch `release-v0.1.4-testX` with code ported from [temp/issue-248/count-stack-only](https://github.com/Consensys/besu-sequencer-plugins/tree/temp/issue-248/count-stack-only)
 * Improve ZkTracer initialization time [#11](https://github.com/Consensys/linea-sequencer/pull/11) (This PR was removed by error in 0.1.4-test29)
