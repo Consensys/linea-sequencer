@@ -27,6 +27,10 @@ First release of the new series that uses on the ZkTracer as dependency from `li
 * Implement linea_setExtraData [#19](https://github.com/Consensys/linea-sequencer/pull/19)
 * Set plugin-linea-tx-pool-simulation-check-api-enabled=false by default [#23](https://github.com/Consensys/linea-sequencer/pull/23)
 
+## 0.1.4-test32
+Test pre-release 32 from branch `release-v0.1.4-testX` with code ported from [temp/issue-248/count-stack-only](https://github.com/Consensys/besu-sequencer-plugins/tree/temp/issue-248/count-stack-only)
+* Fix: postpone registration of plugin validator factory when blockchain service is fully initialized [#67](https://github.com/Consensys/linea-sequencer/pull/67)
+
 ## 0.1.4-test31
 Test pre-release 31 from branch `release-v0.1.4-testX` with code ported from [temp/issue-248/count-stack-only](https://github.com/Consensys/besu-sequencer-plugins/tree/temp/issue-248/count-stack-only)
 * Improve linea_estimateGas error handling [#48](https://github.com/Consensys/linea-sequencer/pull/48)
