@@ -43,8 +43,8 @@ jobs:
           draft: true
           prerelease: false
 
-      - name: Upload Release Asset
-        id: upload-release-asset
+      - name: Upload Release Sequencer Asset
+        id: upload-release-asset-sequencer
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -52,4 +52,15 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./sequencer/build/libs/linea-sequencer-${{ steps.get_version.outputs.VERSION }}.jar
           asset_name: linea-sequencer-${{ steps.get_version.outputs.VERSION }}.jar
+          asset_content_type: application/octet-stream
+
+      - name: Upload Release Native Compress Asset
+        id: upload-release-asset-native-compress
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./native/compress/build/libs/linea-native-compress-${{ steps.get_version.outputs.VERSION }}.jar
+          asset_name: linea-native-compress-${{ steps.get_version.outputs.VERSION }}.jar
           asset_content_type: application/octet-stream
