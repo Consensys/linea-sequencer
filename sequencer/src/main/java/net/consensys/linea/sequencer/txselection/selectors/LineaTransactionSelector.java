@@ -149,6 +149,23 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
     selectors.forEach(
         selector ->
             selector.onTransactionNotSelected(evaluationContext, transactionSelectionResult));
+
+    notifyNotSelectedTransaction(evaluationContext, transactionSelectionResult);
+  }
+
+  private void notifyNotSelectedTransaction(
+      final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
+      final TransactionSelectionResult transactionSelectionResult) {
+    if (transactionSelectionResult.discard()) {
+      final String reason = transactionSelectionResult.toString();
+      final PendingTransaction pendingTransaction = evaluationContext.getPendingTransaction();
+      sendDroppedTransactionNotification(pendingTransaction, reason);
+    }
+  }
+
+  private void sendDroppedTransactionNotification(
+      final PendingTransaction pendingTransaction, final String reason) {
+    throw new UnsupportedOperationException("To be implemented");
   }
 
   /**
