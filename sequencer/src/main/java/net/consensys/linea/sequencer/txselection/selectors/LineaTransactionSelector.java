@@ -149,6 +149,26 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
     selectors.forEach(
         selector ->
             selector.onTransactionNotSelected(evaluationContext, transactionSelectionResult));
+
+    notifyDiscardedTransaction(evaluationContext, transactionSelectionResult);
+  }
+
+  private void notifyDiscardedTransaction(
+      TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
+      TransactionSelectionResult transactionSelectionResult) {
+    if (transactionSelectionResult.discard()) {
+      log.debug(
+          "Discarding transaction {} because of {}",
+          evaluationContext.getPendingTransaction().getTransaction().getHash(),
+          transactionSelectionResult);
+      // Once Besu
+      // https://github.com/hyperledger/besu/commit/19e1a9aaf6f00eb79b70eff13e2d33963f377cf0 is
+      // released,
+      // we can use the following line
+      // evaluationContext.getPendingBlockHeader();
+
+      // TODO: Submit the details to provided endpoint API
+    }
   }
 
   /**

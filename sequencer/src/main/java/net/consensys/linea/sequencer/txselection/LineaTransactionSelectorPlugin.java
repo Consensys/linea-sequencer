@@ -64,8 +64,8 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
   }
 
   @Override
-  public void beforeExternalServices() {
-    super.beforeExternalServices();
+  public void start() {
+    super.start();
     transactionSelectionService.registerPluginTransactionSelectorFactory(
         new LineaTransactionSelectorFactory(
             blockchainService,
