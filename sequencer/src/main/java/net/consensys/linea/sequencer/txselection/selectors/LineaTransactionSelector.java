@@ -157,34 +157,37 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
   private void notifyDiscardedTransaction(
       TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
       TransactionSelectionResult transactionSelectionResult) {
-    if (transactionSelectionResult.discard()) {
-      final PendingTransaction pendingTransaction = evaluationContext.getPendingTransaction();
-      final ProcessableBlockHeader pendingBlockHeader = evaluationContext.getPendingBlockHeader();
-
-      log.debug(
-          "Discarding transaction {} because of {}. Block number: {}",
-          pendingTransaction.getTransaction().getHash(),
-          transactionSelectionResult, pendingBlockHeader.getNumber());
-
-
-      // TODO: Submit the details to provided endpoint API
-      /*
-      linea_saveRejectedTransaction({
-          "blockNumber": "base 10 number",
-          "transactionRLP": "transaction as the user sent in eth_sendRawTransaction",
-          "reasonMessage": "Transaction line count for module ADD=402 is above the limit 70"
-          "overflows": [{
-            "module": "ADD",
-            "count": 402,
-            "limit": 70
-          }, {
-            "module": "MUL",
-            "count": 587,
-            "limit": 400
-          }]
-      })
-       */
+    if (!transactionSelectionResult.discard()) {
+      return;
     }
+
+    final PendingTransaction pendingTransaction = evaluationContext.getPendingTransaction();
+    final ProcessableBlockHeader pendingBlockHeader = evaluationContext.getPendingBlockHeader();
+
+    log.debug(
+        "Discarding transaction {} because of {}. Block number: {}",
+        pendingTransaction.getTransaction().getHash(),
+        transactionSelectionResult,
+        pendingBlockHeader.getNumber());
+
+    // TODO: Submit the details to provided endpoint API
+    /*
+    linea_saveRejectedTransaction({
+        "blockNumber": "base 10 number",
+        "transactionRLP": "transaction as the user sent in eth_sendRawTransaction",
+        "reasonMessage": "Transaction line count for module ADD=402 is above the limit 70"
+        "overflows": [{
+          "module": "ADD",
+          "count": 402,
+          "limit": 70
+        }, {
+          "module": "MUL",
+          "count": 587,
+          "limit": 400
+        }]
+    })
+     */
+
   }
 
   /**
