@@ -23,6 +23,7 @@ import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import org.hyperledger.besu.datatypes.PendingTransaction;
+import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.BlockchainService;
@@ -157,17 +158,32 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
       TransactionSelectionResult transactionSelectionResult) {
     if (transactionSelectionResult.discard()) {
+      final PendingTransaction pendingTransaction = evaluationContext.getPendingTransaction();
+      final ProcessableBlockHeader pendingBlockHeader = evaluationContext.getPendingBlockHeader();
+
       log.debug(
-          "Discarding transaction {} because of {}",
-          evaluationContext.getPendingTransaction().getTransaction().getHash(),
-          transactionSelectionResult);
-      // Once Besu
-      // https://github.com/hyperledger/besu/commit/19e1a9aaf6f00eb79b70eff13e2d33963f377cf0 is
-      // released,
-      // we can use the following line
-      // evaluationContext.getPendingBlockHeader();
+          "Discarding transaction {} because of {}. Block number: {}",
+          pendingTransaction.getTransaction().getHash(),
+          transactionSelectionResult, pendingBlockHeader.getNumber());
+
 
       // TODO: Submit the details to provided endpoint API
+      /*
+      linea_saveRejectedTransaction({
+          "blockNumber": "base 10 number",
+          "transactionRLP": "transaction as the user sent in eth_sendRawTransaction",
+          "reasonMessage": "Transaction line count for module ADD=402 is above the limit 70"
+          "overflows": [{
+            "module": "ADD",
+            "count": 402,
+            "limit": 70
+          }, {
+            "module": "MUL",
+            "count": 587,
+            "limit": 400
+          }]
+      })
+       */
     }
   }
 
