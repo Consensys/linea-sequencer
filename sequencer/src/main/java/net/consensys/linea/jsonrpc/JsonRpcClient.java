@@ -3,6 +3,7 @@ package net.consensys.linea.jsonrpc;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
@@ -15,8 +16,9 @@ public class JsonRpcClient {
   private static final int MAX_RETRIES = 3;
   private static final ExecutorService executorService = Executors.newCachedThreadPool();
 
-  public static String sendRequest(String urlString, String jsonInputString) throws Exception {
-    HttpURLConnection conn = getHttpURLConnection(urlString, jsonInputString);
+  public static String sendRequest(final URI endpoint, final String jsonInputString)
+      throws Exception {
+    HttpURLConnection conn = getHttpURLConnection(endpoint, jsonInputString);
 
     int responseCode = conn.getResponseCode();
     if (responseCode == HttpURLConnection.HTTP_OK) {
@@ -28,29 +30,30 @@ public class JsonRpcClient {
     }
   }
 
-  private static HttpURLConnection getHttpURLConnection(String urlString, String jsonInputString)
-      throws IOException {
-    URL url = new URL(urlString);
-    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+  private static HttpURLConnection getHttpURLConnection(
+      final URI endpoint, final String jsonInputString) throws IOException {
+    final URL url = endpoint.toURL();
+    final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setRequestMethod("POST");
     conn.setRequestProperty("Content-Type", "application/json; utf-8");
     conn.setRequestProperty("Accept", "application/json");
     conn.setDoOutput(true);
 
-    try (OutputStream os = conn.getOutputStream()) {
-      byte[] input = jsonInputString.getBytes(StandardCharsets.UTF_8);
+    try (final OutputStream os = conn.getOutputStream()) {
+      final byte[] input = jsonInputString.getBytes(StandardCharsets.UTF_8);
       os.write(input, 0, input.length);
     }
     return conn;
   }
 
-  public static Future<String> sendRequestWithRetries(String urlString, String jsonInputString) {
+  public static Future<String> sendRequestWithRetries(
+      final URI endpoint, final String jsonInputString) {
     Callable<String> task =
         () -> {
           int attempt = 0;
           while (attempt < MAX_RETRIES) {
             try {
-              return sendRequest(urlString, jsonInputString);
+              return sendRequest(endpoint, jsonInputString);
             } catch (Exception e) {
               attempt++;
               if (attempt >= MAX_RETRIES) {

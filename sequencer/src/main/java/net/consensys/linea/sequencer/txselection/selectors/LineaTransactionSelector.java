@@ -14,8 +14,10 @@
  */
 package net.consensys.linea.sequencer.txselection.selectors;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +42,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
 
   private TraceLineLimitTransactionSelector traceLineLimitTransactionSelector;
   private final List<PluginTransactionSelector> selectors;
+  private final Optional<URI> rejectedTxEndpoint;
 
   public LineaTransactionSelector(
       final BlockchainService blockchainService,
@@ -48,7 +51,8 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       final LineaProfitabilityConfiguration profitabilityConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
       final Map<String, Integer> limitsMap) {
-    this.selectors =
+    rejectedTxEndpoint = Optional.ofNullable(txSelectorConfiguration.rejectedTxEndpoint());
+    selectors =
         createTransactionSelectors(
             blockchainService,
             txSelectorConfiguration,
@@ -154,12 +158,14 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
         selector ->
             selector.onTransactionNotSelected(evaluationContext, transactionSelectionResult));
 
-    notifyDiscardedTransaction(evaluationContext, transactionSelectionResult);
+    rejectedTxEndpoint.ifPresent(
+        uri -> notifyDiscardedTransaction(evaluationContext, transactionSelectionResult, uri));
   }
 
-  private void notifyDiscardedTransaction(
-      TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
-      TransactionSelectionResult transactionSelectionResult) {
+  private static void notifyDiscardedTransaction(
+      final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
+      final TransactionSelectionResult transactionSelectionResult,
+      final URI rejectedTxEndpoint) {
     if (!transactionSelectionResult.discard()) {
       return;
     }
@@ -190,17 +196,17 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
     })
      */
     // Build JSON-RPC request
-    JsonObject params = new JsonObject();
+    final JsonObject params = new JsonObject();
     params.addProperty("blockNumber", pendingBlockHeader.getNumber());
     params.addProperty(
         "transactionRLP", pendingTransaction.getTransaction().encoded().toHexString());
     params.addProperty("reasonMessage", transactionSelectionResult.maybeInvalidReason().orElse(""));
 
-    String jsonRequest =
+    final String jsonRequest =
         JsonRpcRequestBuilder.buildRequest("linea_saveRejectedTransaction", params, 1);
 
     // Send JSON-RPC request with retries in a new thread
-    JsonRpcClient.sendRequestWithRetries("http://your-json-rpc-endpoint", jsonRequest);
+    JsonRpcClient.sendRequestWithRetries(rejectedTxEndpoint, jsonRequest);
   }
 
   /**
