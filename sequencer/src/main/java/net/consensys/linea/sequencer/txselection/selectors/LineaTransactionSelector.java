@@ -17,10 +17,13 @@ package net.consensys.linea.sequencer.txselection.selectors;
 import java.util.List;
 import java.util.Map;
 
+import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
+import net.consensys.linea.jsonrpc.JsonRpcClient;
+import net.consensys.linea.jsonrpc.JsonRpcRequestBuilder;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
@@ -170,7 +173,6 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
         transactionSelectionResult,
         pendingBlockHeader.getNumber());
 
-    // TODO: Submit the details to provided endpoint API
     /*
     linea_saveRejectedTransaction({
         "blockNumber": "base 10 number",
@@ -187,7 +189,18 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
         }]
     })
      */
+    // Build JSON-RPC request
+    JsonObject params = new JsonObject();
+    params.addProperty("blockNumber", pendingBlockHeader.getNumber());
+    params.addProperty(
+        "transactionRLP", pendingTransaction.getTransaction().encoded().toHexString());
+    params.addProperty("reasonMessage", transactionSelectionResult.maybeInvalidReason().orElse(""));
 
+    String jsonRequest =
+        JsonRpcRequestBuilder.buildRequest("linea_saveRejectedTransaction", params, 1);
+
+    // Send JSON-RPC request with retries in a new thread
+    JsonRpcClient.sendRequestWithRetries("http://your-json-rpc-endpoint", jsonRequest);
   }
 
   /**
