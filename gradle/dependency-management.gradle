@@ -157,5 +157,7 @@ dependencyManagement {
       entry 'core'
       entry 'crypto'
     }
+
+    dependency "org.wiremock:wiremock:3.9.1"
   }
 }
