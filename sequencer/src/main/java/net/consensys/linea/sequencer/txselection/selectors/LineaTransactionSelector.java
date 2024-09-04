@@ -14,9 +14,10 @@
  */
 package net.consensys.linea.sequencer.txselection.selectors;
 
-import static net.consensys.linea.sequencer.txselection.selectors.ReportRejectedTransaction.notifyDiscardedTransaction;
+import static net.consensys.linea.sequencer.txselection.selectors.RejectedTransactionNotifier.notifyDiscardedTransactionAsync;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -157,7 +158,9 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
             selector.onTransactionNotSelected(evaluationContext, transactionSelectionResult));
 
     rejectedTxEndpoint.ifPresent(
-        uri -> notifyDiscardedTransaction(evaluationContext, transactionSelectionResult, uri));
+        uri ->
+            notifyDiscardedTransactionAsync(
+                evaluationContext, transactionSelectionResult, Instant.now(), uri));
   }
 
   /**

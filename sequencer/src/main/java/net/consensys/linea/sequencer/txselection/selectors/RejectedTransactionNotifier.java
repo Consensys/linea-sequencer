@@ -15,6 +15,7 @@
 package net.consensys.linea.sequencer.txselection.selectors;
 
 import java.net.URI;
+import java.time.Instant;
 
 import com.google.gson.JsonObject;
 import net.consensys.linea.jsonrpc.JsonRpcClient;
@@ -28,10 +29,12 @@ import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationCon
  *
  *
  * <pre>
- * {@code linea_saveRejectedTransaction({
+ * {@code linea_saveRejectedTransactionV1({
+ *         "txRejectionStage": "SEQUENCER/RPC/P2P",
+ *         "timestamp": "2024-08-22T09:18:51Z", # ISO8601 UTC+0 when tx was rejected by node, usefull if P2P edge node.
  *         "blockNumber": "base 10 number",
  *         "transactionRLP": "transaction as the user sent in eth_sendRawTransaction",
- *         "reasonMessage": "Transaction line count for module ADD=402 is above the limit 70"
+ *         "reason": "Transaction line count for module ADD=402 is above the limit 70"
  *         "overflows": [{
  *           "module": "ADD",
  *           "count": 402,
@@ -45,10 +48,12 @@ import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationCon
  * }
  * </pre>
  */
-public class ReportRejectedTransaction {
-  static void notifyDiscardedTransaction(
+public class RejectedTransactionNotifier {
+
+  static void notifyDiscardedTransactionAsync(
       final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
       final TransactionSelectionResult transactionSelectionResult,
+      final Instant timestamp,
       final URI rejectedTxEndpoint) {
     if (!transactionSelectionResult.discard()) {
       return;
@@ -59,13 +64,15 @@ public class ReportRejectedTransaction {
 
     // Build JSON-RPC request
     final JsonObject params = new JsonObject();
+    params.addProperty("txRejectionStage", "SEQUENCER");
+    params.addProperty("timestamp", timestamp.toString());
     params.addProperty("blockNumber", pendingBlockHeader.getNumber());
     params.addProperty(
         "transactionRLP", pendingTransaction.getTransaction().encoded().toHexString());
     params.addProperty("reasonMessage", transactionSelectionResult.maybeInvalidReason().orElse(""));
 
     final String jsonRequest =
-        JsonRpcRequestBuilder.buildRequest("linea_saveRejectedTransaction", params, 1);
+        JsonRpcRequestBuilder.buildRequest("linea_saveRejectedTransactionV1", params, 1);
 
     // Send JSON-RPC request with retries in a new thread
     JsonRpcClient.sendRequestWithRetries(rejectedTxEndpoint, jsonRequest);

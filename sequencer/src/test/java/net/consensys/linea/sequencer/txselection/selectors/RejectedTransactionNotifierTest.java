@@ -25,9 +25,12 @@ import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.URI;
+import java.time.Instant;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import com.google.gson.JsonObject;
+import net.consensys.linea.jsonrpc.JsonRpcRequestBuilder;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Transaction;
@@ -40,16 +43,17 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @WireMockTest
 @ExtendWith(MockitoExtension.class)
-class ReportDroppedTxTest {
+class RejectedTransactionNotifierTest {
   @Mock PendingTransaction pendingTransaction;
   @Mock ProcessableBlockHeader pendingBlockHeader;
   @Mock Transaction transaction;
 
   @Test
   void droppedTxIsReported(final WireMockRuntimeInfo wmInfo) throws Exception {
+    // mock stubbing
     when(pendingBlockHeader.getNumber()).thenReturn(1L);
     when(pendingTransaction.getTransaction()).thenReturn(transaction);
-    Bytes randomEncodedBytes = Bytes.random(32);
+    final Bytes randomEncodedBytes = Bytes.random(32);
     when(transaction.encoded()).thenReturn(randomEncodedBytes);
 
     // json-rpc stubbing
@@ -59,25 +63,34 @@ class ReportDroppedTxTest {
                 aResponse()
                     .withStatus(200)
                     .withHeader("Content-Type", "application/json")
-                    .withBody("{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}")));
+                    .withBody(
+                        "{\"jsonrpc\":\"2.0\",\"result\":{ \"status\": \"SAVED\"},\"id\":1}")));
 
-    TestTransactionEvaluationContext context =
+    final TestTransactionEvaluationContext context =
         new TestTransactionEvaluationContext(pendingTransaction)
             .setPendingBlockHeader(pendingBlockHeader);
-    TransactionSelectionResult result = TransactionSelectionResult.invalid("test");
+    final TransactionSelectionResult result = TransactionSelectionResult.invalid("test");
+    final Instant timestamp = Instant.now();
 
-    ReportRejectedTransaction.notifyDiscardedTransaction(
-        context, result, URI.create(wmInfo.getHttpBaseUrl()));
+    // call the method under test
+    RejectedTransactionNotifier.notifyDiscardedTransactionAsync(
+        context, result, timestamp, URI.create(wmInfo.getHttpBaseUrl()));
 
-    // assert wiremock was called
+    // sleep a bit to allow async processing
     Thread.sleep(1000);
 
-    verify(
-        postRequestedFor(urlEqualTo("/"))
-            .withRequestBody(
-                equalToJson(
-                    "{\"jsonrpc\":\"2.0\",\"method\":\"linea_saveRejectedTransaction\",\"params\":{\"blockNumber\":1,\"transactionRLP\":\""
-                        + randomEncodedBytes.toHexString()
-                        + "\",\"reasonMessage\":\"test\"},\"id\":1}")));
+    // build expected json-rpc request
+    final JsonObject params = new JsonObject();
+    params.addProperty("txRejectionStage", "SEQUENCER");
+    params.addProperty("timestamp", timestamp.toString());
+    params.addProperty("blockNumber", 1);
+    params.addProperty("transactionRLP", randomEncodedBytes.toHexString());
+    params.addProperty("reasonMessage", "test");
+
+    final String jsonRequest =
+        JsonRpcRequestBuilder.buildRequest("linea_saveRejectedTransactionV1", params, 1);
+
+    // assert that the expected json-rpc request was sent to WireMock
+    verify(postRequestedFor(urlEqualTo("/")).withRequestBody(equalToJson(jsonRequest)));
   }
 }
