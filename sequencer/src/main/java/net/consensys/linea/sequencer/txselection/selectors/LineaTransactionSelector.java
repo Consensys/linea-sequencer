@@ -14,21 +14,19 @@
  */
 package net.consensys.linea.sequencer.txselection.selectors;
 
+import static net.consensys.linea.sequencer.txselection.selectors.ReportRejectedTransaction.notifyDiscardedTransaction;
+
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
-import net.consensys.linea.jsonrpc.JsonRpcClient;
-import net.consensys.linea.jsonrpc.JsonRpcRequestBuilder;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import org.hyperledger.besu.datatypes.PendingTransaction;
-import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.BlockchainService;
@@ -160,53 +158,6 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
 
     rejectedTxEndpoint.ifPresent(
         uri -> notifyDiscardedTransaction(evaluationContext, transactionSelectionResult, uri));
-  }
-
-  private static void notifyDiscardedTransaction(
-      final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
-      final TransactionSelectionResult transactionSelectionResult,
-      final URI rejectedTxEndpoint) {
-    if (!transactionSelectionResult.discard()) {
-      return;
-    }
-
-    final PendingTransaction pendingTransaction = evaluationContext.getPendingTransaction();
-    final ProcessableBlockHeader pendingBlockHeader = evaluationContext.getPendingBlockHeader();
-
-    log.debug(
-        "Discarding transaction {} because of {}. Block number: {}",
-        pendingTransaction.getTransaction().getHash(),
-        transactionSelectionResult,
-        pendingBlockHeader.getNumber());
-
-    /*
-    linea_saveRejectedTransaction({
-        "blockNumber": "base 10 number",
-        "transactionRLP": "transaction as the user sent in eth_sendRawTransaction",
-        "reasonMessage": "Transaction line count for module ADD=402 is above the limit 70"
-        "overflows": [{
-          "module": "ADD",
-          "count": 402,
-          "limit": 70
-        }, {
-          "module": "MUL",
-          "count": 587,
-          "limit": 400
-        }]
-    })
-     */
-    // Build JSON-RPC request
-    final JsonObject params = new JsonObject();
-    params.addProperty("blockNumber", pendingBlockHeader.getNumber());
-    params.addProperty(
-        "transactionRLP", pendingTransaction.getTransaction().encoded().toHexString());
-    params.addProperty("reasonMessage", transactionSelectionResult.maybeInvalidReason().orElse(""));
-
-    final String jsonRequest =
-        JsonRpcRequestBuilder.buildRequest("linea_saveRejectedTransaction", params, 1);
-
-    // Send JSON-RPC request with retries in a new thread
-    JsonRpcClient.sendRequestWithRetries(rejectedTxEndpoint, jsonRequest);
   }
 
   /**
