@@ -72,11 +72,4 @@ public class TransactionTraceLimitTest extends LineaPluginTestBase {
     // add module only allows for one of these transactions.
     assertTransactionsMinedInSeparateBlocks(web3j, hashes);
   }
-
-  @Test
-  public void transactionsMinedInSeparateBlocksTest2() throws Exception {
-    final SimpleStorage simpleStorage = deploySimpleStorage();
-    final SimpleStorage simpleStorage2 = deploySimpleStorage();
-  }
-
 }
