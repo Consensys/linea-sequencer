@@ -22,6 +22,8 @@ import java.util.Optional;
 import com.google.auto.service.AutoService;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
+import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
+import net.consensys.linea.jsonrpc.JsonRpcManager;
 import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
@@ -39,6 +41,7 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
   public static final String NAME = "linea";
   private TransactionSelectionService transactionSelectionService;
   private BlockchainService blockchainService;
+  private Optional<JsonRpcManager> rejectedTxJsonRpcManager = Optional.empty();
   private BesuConfiguration besuConfiguration;
 
   @Override
@@ -76,14 +79,28 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
   @Override
   public void start() {
     super.start();
+    final LineaTransactionSelectorConfiguration txSelectorConfiguration =
+        transactionSelectorConfiguration();
+    rejectedTxJsonRpcManager =
+        Optional.ofNullable(txSelectorConfiguration.rejectedTxEndpoint())
+            .map(
+                endpoint ->
+                    new JsonRpcManager(
+                        besuConfiguration.getDataPath().resolve("rej_tx_rpc"), endpoint));
     transactionSelectionService.registerPluginTransactionSelectorFactory(
         new LineaTransactionSelectorFactory(
             blockchainService,
-            besuConfiguration,
-            transactionSelectorConfiguration(),
+            txSelectorConfiguration,
             l1L2BridgeSharedConfiguration(),
             profitabilityConfiguration(),
             tracerConfiguration(),
-            createLimitModules(tracerConfiguration())));
+            createLimitModules(tracerConfiguration()),
+            rejectedTxJsonRpcManager));
+  }
+
+  @Override
+  public void stop() {
+    super.stop();
+    rejectedTxJsonRpcManager.ifPresent(JsonRpcManager::shutdown);
   }
 }

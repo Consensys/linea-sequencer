@@ -14,9 +14,6 @@
  */
 package net.consensys.linea.sequencer.txselection.selectors;
 
-import static net.consensys.linea.sequencer.txselection.selectors.RejectedTransactionNotifier.notifyDiscardedTransactionAsync;
-
-import java.net.URI;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -26,11 +23,12 @@ import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
+import net.consensys.linea.jsonrpc.JsonRpcManager;
+import net.consensys.linea.jsonrpc.JsonRpcRequestBuilder;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
-import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.tracer.BlockAwareOperationTracer;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
@@ -42,19 +40,17 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
 
   private TraceLineLimitTransactionSelector traceLineLimitTransactionSelector;
   private final List<PluginTransactionSelector> selectors;
-  private final BesuConfiguration besuConfiguration;
-  private final Optional<URI> rejectedTxEndpoint;
+  private final Optional<JsonRpcManager> rejectedTxJsonRpcManager;
 
   public LineaTransactionSelector(
       final BlockchainService blockchainService,
-      final BesuConfiguration besuConfiguration,
       final LineaTransactionSelectorConfiguration txSelectorConfiguration,
       final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
       final LineaProfitabilityConfiguration profitabilityConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
-      final Map<String, Integer> limitsMap) {
-    this.besuConfiguration = besuConfiguration;
-    rejectedTxEndpoint = Optional.ofNullable(txSelectorConfiguration.rejectedTxEndpoint());
+      final Map<String, Integer> limitsMap,
+      final Optional<JsonRpcManager> rejectedTxJsonRpcManager) {
+    this.rejectedTxJsonRpcManager = rejectedTxJsonRpcManager;
     selectors =
         createTransactionSelectors(
             blockchainService,
@@ -68,9 +64,9 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
   /**
    * Creates a list of selectors based on Linea configuration.
    *
-   * @param blockchainService
+   * @param blockchainService Blockchain service.
    * @param txSelectorConfiguration The configuration to use.
-   * @param profitabilityConfiguration
+   * @param profitabilityConfiguration The profitability configuration.
    * @param limitsMap The limits map.
    * @return A list of selectors.
    */
@@ -161,14 +157,14 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
         selector ->
             selector.onTransactionNotSelected(evaluationContext, transactionSelectionResult));
 
-    rejectedTxEndpoint.ifPresent(
-        uri ->
-            notifyDiscardedTransactionAsync(
-                evaluationContext,
-                transactionSelectionResult,
-                Instant.now(),
-                uri,
-                this.besuConfiguration.getDataPath()));
+    rejectedTxJsonRpcManager.ifPresent(
+        jsonRpcManager -> {
+          if (transactionSelectionResult.discard()) {
+            jsonRpcManager.submitNewJsonRpcCall(
+                JsonRpcRequestBuilder.buildRejectedTxRequest(
+                    evaluationContext, transactionSelectionResult, Instant.now()));
+          }
+        });
   }
 
   /**
