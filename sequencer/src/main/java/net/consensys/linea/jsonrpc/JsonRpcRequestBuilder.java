@@ -16,6 +16,7 @@
 package net.consensys.linea.jsonrpc;
 
 import java.time.Instant;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.gson.JsonObject;
 import org.hyperledger.besu.datatypes.PendingTransaction;
@@ -25,6 +26,8 @@ import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationCon
 
 /** Helper class to build JSON-RPC requests for rejected transactions. */
 public class JsonRpcRequestBuilder {
+  private static final AtomicLong idCounter = new AtomicLong(1);
+
   /**
    *
    *
@@ -52,10 +55,6 @@ public class JsonRpcRequestBuilder {
       final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
       final TransactionSelectionResult transactionSelectionResult,
       final Instant timestamp) {
-    //    if (!transactionSelectionResult.discard()) {
-    //      return;
-    //    }
-
     final PendingTransaction pendingTransaction = evaluationContext.getPendingTransaction();
     final ProcessableBlockHeader pendingBlockHeader = evaluationContext.getPendingBlockHeader();
 
@@ -72,7 +71,7 @@ public class JsonRpcRequestBuilder {
     request.addProperty("jsonrpc", "2.0");
     request.addProperty("method", "linea_saveRejectedTransactionV1");
     request.add("params", params);
-    request.addProperty("id", 1);
+    request.addProperty("id", idCounter.getAndIncrement());
     return request.toString();
   }
 }

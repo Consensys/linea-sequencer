@@ -80,7 +80,7 @@ public class JsonRpcManager {
       Files.createDirectories(rejTxRpcDirectory);
 
       // Load existing JSON files
-      loadExistingJsonFiles();
+      processExistingJsonFiles();
       return this;
     } catch (IOException e) {
       log.error("Failed to create or access rej-tx-rpc directory", e);
@@ -109,7 +109,7 @@ public class JsonRpcManager {
     }
   }
 
-  private void loadExistingJsonFiles() {
+  private void processExistingJsonFiles() {
     try {
       final TreeSet<Path> sortedFiles = new TreeSet<>(Comparator.comparing(Path::getFileName));
 
