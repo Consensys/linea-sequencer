@@ -17,19 +17,26 @@ package net.consensys.linea.jsonrpc;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
+import static com.github.tomakehurst.wiremock.client.WireMock.exactly;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.stream.Stream;
 
+import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import net.consensys.linea.sequencer.txselection.selectors.TestTransactionEvaluationContext;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.PendingTransaction;
@@ -49,13 +56,18 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class JsonRpcManagerTest {
   @TempDir private Path tempDataDir;
   private JsonRpcManager jsonRpcManager;
-
+  private final Bytes randomEncodedBytes = Bytes.random(32);
   @Mock private PendingTransaction pendingTransaction;
   @Mock private ProcessableBlockHeader pendingBlockHeader;
   @Mock private Transaction transaction;
 
   @BeforeEach
   void init(final WireMockRuntimeInfo wmInfo) {
+    // mock stubbing
+    when(pendingBlockHeader.getNumber()).thenReturn(1L);
+    when(pendingTransaction.getTransaction()).thenReturn(transaction);
+    when(transaction.encoded()).thenReturn(randomEncodedBytes);
+
     jsonRpcManager = new JsonRpcManager(tempDataDir, URI.create(wmInfo.getHttpBaseUrl()));
     jsonRpcManager.start();
   }
@@ -67,12 +79,6 @@ class JsonRpcManagerTest {
 
   @Test
   void rejectedTxIsReported() throws InterruptedException {
-    // mock stubbing
-    when(pendingBlockHeader.getNumber()).thenReturn(1L);
-    when(pendingTransaction.getTransaction()).thenReturn(transaction);
-    final Bytes randomEncodedBytes = Bytes.random(32);
-    when(transaction.encoded()).thenReturn(randomEncodedBytes);
-
     // json-rpc stubbing
     stubFor(
         post(urlEqualTo("/"))
@@ -98,6 +104,161 @@ class JsonRpcManagerTest {
     Thread.sleep(1000);
 
     // assert that the expected json-rpc request was sent to WireMock
-    verify(postRequestedFor(urlEqualTo("/")).withRequestBody(equalToJson(jsonRpcCall)));
+    verify(exactly(1), postRequestedFor(urlEqualTo("/")).withRequestBody(equalToJson(jsonRpcCall)));
+  }
+
+  @Test
+  void firstCallErrorSecondCallSuccessScenario() throws InterruptedException, IOException {
+    stubFor(
+        post(urlEqualTo("/"))
+            .inScenario("RPC Calls")
+            .whenScenarioStateIs(Scenario.STARTED)
+            .willReturn(
+                aResponse()
+                    .withStatus(500)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32000,\"message\":\"Internal error\"},\"id\":1}"))
+            .willSetStateTo("Second Call"));
+
+    stubFor(
+        post(urlEqualTo("/"))
+            .inScenario("RPC Calls")
+            .whenScenarioStateIs("Second Call")
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"jsonrpc\":\"2.0\",\"result\":{ \"status\": \"SAVED\"},\"id\":1}")));
+
+    // Prepare test data
+    final TestTransactionEvaluationContext context =
+        new TestTransactionEvaluationContext(pendingTransaction)
+            .setPendingBlockHeader(pendingBlockHeader);
+    final TransactionSelectionResult result = TransactionSelectionResult.invalid("test");
+    final Instant timestamp = Instant.now();
+
+    // Generate JSON-RPC call
+    final String jsonRpcCall =
+        JsonRpcRequestBuilder.buildRejectedTxRequest(context, result, timestamp);
+
+    // Submit the call, the scheduler will retry the failed call
+    jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
+
+    // Sleep to allow async processing
+    Thread.sleep(2000); // Increased sleep time to allow for two calls
+
+    // Verify that two requests were made
+    verify(exactly(2), postRequestedFor(urlEqualTo("/")).withRequestBody(equalToJson(jsonRpcCall)));
+
+    // Verify that the JSON file no longer exists in the directory (as the second call was
+    // successful)
+    Path rejTxRpcDir = tempDataDir.resolve("rej_tx_rpc");
+    try (Stream<Path> files = Files.list(rejTxRpcDir)) {
+      long fileCount = files.filter(path -> path.toString().endsWith(".json")).count();
+      assertThat(fileCount).isEqualTo(0);
+    }
+  }
+
+  @Test
+  void serverRespondingWithErrorScenario() throws InterruptedException, IOException {
+    // Stub for error response
+    stubFor(
+        post(urlEqualTo("/"))
+            .willReturn(
+                aResponse()
+                    .withStatus(500)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32000,\"message\":\"Internal error\"},\"id\":1}")));
+
+    // Prepare test data
+    final TestTransactionEvaluationContext context =
+        new TestTransactionEvaluationContext(pendingTransaction)
+            .setPendingBlockHeader(pendingBlockHeader);
+    final TransactionSelectionResult result = TransactionSelectionResult.invalid("test");
+    final Instant timestamp = Instant.now();
+
+    // Generate JSON-RPC call
+    final String jsonRpcCall =
+        JsonRpcRequestBuilder.buildRejectedTxRequest(context, result, timestamp);
+
+    // Submit the call
+    jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
+
+    // Sleep to allow async processing
+    Thread.sleep(1000);
+
+    // Verify that the request was made
+    verify(exactly(1), postRequestedFor(urlEqualTo("/")).withRequestBody(equalToJson(jsonRpcCall)));
+
+    // Verify that the JSON file still exists in the directory (as the call was unsuccessful)
+    final Path rejTxRpcDir = tempDataDir.resolve("rej_tx_rpc");
+    try (Stream<Path> files = Files.list(rejTxRpcDir)) {
+      long fileCount = files.filter(path -> path.toString().endsWith(".json")).count();
+      assertThat(fileCount).as("JSON file should exist as server responded with error").isOne();
+    }
+  }
+
+  @Test
+  void firstTwoCallsErrorThenLastCallSuccessScenario() throws InterruptedException, IOException {
+    stubFor(
+        post(urlEqualTo("/"))
+            .inScenario("RPC Calls")
+            .whenScenarioStateIs(Scenario.STARTED)
+            .willReturn(aResponse().withFault(Fault.MALFORMED_RESPONSE_CHUNK))
+            .willSetStateTo("Second Call"));
+
+    stubFor(
+        post(urlEqualTo("/"))
+            .inScenario("RPC Calls")
+            .whenScenarioStateIs("Second Call")
+            .willReturn(
+                aResponse()
+                    .withStatus(500)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32000,\"message\":\"Internal error\"},\"id\":1}"))
+            .willSetStateTo("Third Call"));
+
+    stubFor(
+        post(urlEqualTo("/"))
+            .inScenario("RPC Calls")
+            .whenScenarioStateIs("Third Call")
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"jsonrpc\":\"2.0\",\"result\":{ \"status\": \"SAVED\"},\"id\":1}")));
+
+    // Prepare test data
+    final TestTransactionEvaluationContext context =
+        new TestTransactionEvaluationContext(pendingTransaction)
+            .setPendingBlockHeader(pendingBlockHeader);
+    final TransactionSelectionResult result = TransactionSelectionResult.invalid("test");
+    final Instant timestamp = Instant.now();
+
+    // Generate JSON-RPC call
+    final String jsonRpcCall =
+        JsonRpcRequestBuilder.buildRejectedTxRequest(context, result, timestamp);
+
+    // Submit the call, the scheduler will retry the failed calls
+    jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
+
+    // Sleep to allow async processing
+    Thread.sleep(6000); // Increased sleep time to allow for three calls
+
+    // Verify that two requests were made
+    verify(exactly(3), postRequestedFor(urlEqualTo("/")).withRequestBody(equalToJson(jsonRpcCall)));
+
+    // Verify that the JSON file no longer exists in the directory (as the second call was
+    // successful)
+    Path rejTxRpcDir = tempDataDir.resolve("rej_tx_rpc");
+    try (Stream<Path> files = Files.list(rejTxRpcDir)) {
+      long fileCount = files.filter(path -> path.toString().endsWith(".json")).count();
+      assertThat(fileCount).isEqualTo(0);
+    }
   }
 }

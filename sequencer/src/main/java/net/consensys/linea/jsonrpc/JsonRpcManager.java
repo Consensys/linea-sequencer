@@ -19,8 +19,14 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.DirectoryStream;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -38,6 +44,7 @@ import okhttp3.Response;
 /** This class is responsible for managing JSON-RPC requests for reporting rejected transactions */
 @Slf4j
 public class JsonRpcManager {
+  private static final long INITIAL_RETRY_DELAY = 1000L;
   private static final int MAX_THREADS =
       Math.min(32, Runtime.getRuntime().availableProcessors() * 2);
   private static final long MAX_RETRY_DURATION = TimeUnit.HOURS.toMillis(2);
@@ -45,11 +52,12 @@ public class JsonRpcManager {
 
   private final OkHttpClient client = new OkHttpClient();
   private final ObjectMapper objectMapper = new ObjectMapper();
+  private final Map<Path, Long> fileStartTimes = new ConcurrentHashMap<>();
 
   private final Path rejTxRpcDirectory;
   private final URI rejectedTxEndpoint;
   private final ExecutorService executorService;
-  private final ScheduledExecutorService schedulerService;
+  private final ScheduledExecutorService retrySchedulerService;
 
   /**
    * Creates a new JSON-RPC manager.
@@ -62,7 +70,7 @@ public class JsonRpcManager {
     this.rejTxRpcDirectory = besuDataDir.resolve("rej_tx_rpc");
     this.rejectedTxEndpoint = rejectedTxEndpoint;
     this.executorService = Executors.newFixedThreadPool(MAX_THREADS);
-    this.schedulerService = Executors.newScheduledThreadPool(1);
+    this.retrySchedulerService = Executors.newScheduledThreadPool(1);
   }
 
   /** Load existing JSON-RPC and submit them. */
@@ -83,7 +91,7 @@ public class JsonRpcManager {
   /** Shuts down the executor service and scheduler service. */
   public void shutdown() {
     executorService.shutdown();
-    schedulerService.shutdown();
+    retrySchedulerService.shutdown();
   }
 
   /**
@@ -94,28 +102,41 @@ public class JsonRpcManager {
   public void submitNewJsonRpcCall(final String jsonContent) {
     try {
       final Path jsonFile = saveJsonToFile(jsonContent);
-      submitJsonRpcCall(jsonFile);
+      fileStartTimes.put(jsonFile, System.currentTimeMillis());
+      submitJsonRpcCall(jsonFile, INITIAL_RETRY_DELAY);
     } catch (final IOException e) {
       log.error("Failed to save JSON content", e);
     }
   }
 
   private void loadExistingJsonFiles() {
-    try (final DirectoryStream<Path> stream =
-        Files.newDirectoryStream(rejTxRpcDirectory, "rpc_*.json")) {
-      for (final Path path : stream) {
-        submitJsonRpcCall(path);
+    try {
+      final TreeSet<Path> sortedFiles = new TreeSet<>(Comparator.comparing(Path::getFileName));
+
+      try (DirectoryStream<Path> stream =
+          Files.newDirectoryStream(rejTxRpcDirectory, "rpc_*.json")) {
+        for (Path path : stream) {
+          sortedFiles.add(path);
+        }
       }
+
+      for (Path path : sortedFiles) {
+        fileStartTimes.put(path, System.currentTimeMillis());
+        submitJsonRpcCall(path, INITIAL_RETRY_DELAY);
+      }
+
+      log.info("Loaded {} existing JSON files for rej-tx reporting", sortedFiles.size());
     } catch (final IOException e) {
       log.error("Failed to load existing JSON files", e);
     }
   }
 
-  private void submitJsonRpcCall(final Path jsonFile) {
+  private void submitJsonRpcCall(final Path jsonFile, final long nextDelay) {
     executorService.submit(
         () -> {
           if (!Files.exists(jsonFile)) {
             log.debug("json-rpc file no longer exists, skipping processing: {}", jsonFile);
+            fileStartTimes.remove(jsonFile);
             return;
           }
           try {
@@ -123,26 +144,35 @@ public class JsonRpcManager {
             final boolean success = sendJsonRpcCall(jsonContent);
             if (success) {
               Files.deleteIfExists(jsonFile);
+              fileStartTimes.remove(jsonFile);
             } else {
-              log.warn(
+              log.error(
                   "Failed to send JSON-RPC call to {}, retrying: {}", rejectedTxEndpoint, jsonFile);
-              scheduleRetry(jsonFile, System.currentTimeMillis(), 1000);
+              scheduleRetry(jsonFile, nextDelay);
             }
-          } catch (final IOException e) {
+          } catch (final Exception e) {
             log.error("Failed to process json-rpc file: {}", jsonFile, e);
+            scheduleRetry(jsonFile, nextDelay);
           }
         });
   }
 
-  private void scheduleRetry(final Path jsonFile, final long startTime, final long delay) {
+  private void scheduleRetry(final Path jsonFile, final long currentDelay) {
+    final Long startTime = fileStartTimes.get(jsonFile);
+    if (startTime == null) {
+      log.debug("No start time found for file: {}. Skipping retry.", jsonFile);
+      return;
+    }
+
     // check if we're still within the maximum retry duration
     if (System.currentTimeMillis() - startTime < MAX_RETRY_DURATION) {
-      // schedule a retry
-      schedulerService.schedule(() -> submitJsonRpcCall(jsonFile), delay, TimeUnit.MILLISECONDS);
-
-      // exponential backoff with a maximum delay of 1 minute
-      long nextDelay = Math.min(delay * 2, TimeUnit.MINUTES.toMillis(1));
-      scheduleRetry(jsonFile, startTime, nextDelay);
+      // schedule a retry with exponential backoff
+      long nextDelay = Math.min(currentDelay * 2, TimeUnit.MINUTES.toMillis(1)); // Cap at 1 minute
+      retrySchedulerService.schedule(
+          () -> submitJsonRpcCall(jsonFile, nextDelay), currentDelay, TimeUnit.MILLISECONDS);
+    } else {
+      log.error("Exceeded maximum retry duration for rej-tx json-rpc file: {}", jsonFile);
+      fileStartTimes.remove(jsonFile);
     }
   }
 
@@ -150,7 +180,6 @@ public class JsonRpcManager {
     final RequestBody body = RequestBody.create(jsonContent, JSON);
     final Request request =
         new Request.Builder().url(rejectedTxEndpoint.toString()).post(body).build();
-
     try (final Response response = client.newCall(request).execute()) {
       if (!response.isSuccessful()) {
         log.error("Unexpected response code from rejected-tx endpoint: {}", response.code());
@@ -189,9 +218,16 @@ public class JsonRpcManager {
   }
 
   private Path saveJsonToFile(final String jsonContent) throws IOException {
-    final String fileName = "rpc_" + System.currentTimeMillis() + ".json";
-    final Path filePath = rejTxRpcDirectory.resolve(fileName);
-    Files.write(filePath, jsonContent.getBytes());
-    return filePath;
+    long timestamp = System.currentTimeMillis();
+    for (int attempt = 0; attempt < 100; attempt++) {
+      final String fileName = String.format("rpc_%d_%d.json", timestamp, attempt);
+      final Path filePath = rejTxRpcDirectory.resolve(fileName);
+      try {
+        return Files.writeString(filePath, jsonContent, StandardOpenOption.CREATE_NEW);
+      } catch (final FileAlreadyExistsException e) {
+        log.trace("File already exists {}, retrying.", filePath);
+      }
+    }
+    throw new IOException("Failed to save JSON content after 100 attempts");
   }
 }
