@@ -45,8 +45,6 @@ import okhttp3.Response;
 @Slf4j
 public class JsonRpcManager {
   private static final long INITIAL_RETRY_DELAY = 1000L;
-  private static final int MAX_THREADS =
-      Math.min(32, Runtime.getRuntime().availableProcessors() * 2);
   private static final long MAX_RETRY_DURATION = TimeUnit.HOURS.toMillis(2);
   private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
 
@@ -69,8 +67,8 @@ public class JsonRpcManager {
   public JsonRpcManager(final Path besuDataDir, final URI rejectedTxEndpoint) {
     this.rejTxRpcDirectory = besuDataDir.resolve("rej_tx_rpc");
     this.rejectedTxEndpoint = rejectedTxEndpoint;
-    this.executorService = Executors.newFixedThreadPool(MAX_THREADS);
-    this.retrySchedulerService = Executors.newScheduledThreadPool(1);
+    this.executorService = Executors.newVirtualThreadPerTaskExecutor();
+    this.retrySchedulerService = Executors.newSingleThreadScheduledExecutor();
   }
 
   /** Load existing JSON-RPC and submit them. */
