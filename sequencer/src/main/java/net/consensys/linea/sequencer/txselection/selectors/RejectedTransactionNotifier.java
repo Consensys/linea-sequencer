@@ -15,6 +15,7 @@
 package net.consensys.linea.sequencer.txselection.selectors;
 
 import java.net.URI;
+import java.nio.file.Path;
 import java.time.Instant;
 
 import com.google.gson.JsonObject;
@@ -54,7 +55,8 @@ public class RejectedTransactionNotifier {
       final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
       final TransactionSelectionResult transactionSelectionResult,
       final Instant timestamp,
-      final URI rejectedTxEndpoint) {
+      final URI rejectedTxEndpoint,
+      final Path besuDataPath) {
     if (!transactionSelectionResult.discard()) {
       return;
     }

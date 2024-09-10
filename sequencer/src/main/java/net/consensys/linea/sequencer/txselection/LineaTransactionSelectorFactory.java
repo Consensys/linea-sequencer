@@ -22,6 +22,7 @@ import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.sequencer.txselection.selectors.LineaTransactionSelector;
+import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelectorFactory;
@@ -32,6 +33,7 @@ import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelecto
  */
 public class LineaTransactionSelectorFactory implements PluginTransactionSelectorFactory {
   private final BlockchainService blockchainService;
+  private final BesuConfiguration besuConfiguration;
   private final LineaTransactionSelectorConfiguration txSelectorConfiguration;
   private final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration;
   private final LineaProfitabilityConfiguration profitabilityConfiguration;
@@ -41,12 +43,14 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
 
   public LineaTransactionSelectorFactory(
       final BlockchainService blockchainService,
+      final BesuConfiguration besuConfiguration,
       final LineaTransactionSelectorConfiguration txSelectorConfiguration,
       final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
       final LineaProfitabilityConfiguration profitabilityConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
       final Map<String, Integer> limitsMap) {
     this.blockchainService = blockchainService;
+    this.besuConfiguration = besuConfiguration;
     this.txSelectorConfiguration = txSelectorConfiguration;
     this.l1L2BridgeConfiguration = l1L2BridgeConfiguration;
     this.profitabilityConfiguration = profitabilityConfiguration;
@@ -58,6 +62,7 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
   public PluginTransactionSelector create() {
     return new LineaTransactionSelector(
         blockchainService,
+        besuConfiguration,
         txSelectorConfiguration,
         l1L2BridgeConfiguration,
         profitabilityConfiguration,

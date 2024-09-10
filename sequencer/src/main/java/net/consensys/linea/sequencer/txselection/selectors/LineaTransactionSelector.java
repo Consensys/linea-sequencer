@@ -30,6 +30,7 @@ import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
+import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.tracer.BlockAwareOperationTracer;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
@@ -41,15 +42,18 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
 
   private TraceLineLimitTransactionSelector traceLineLimitTransactionSelector;
   private final List<PluginTransactionSelector> selectors;
+  private final BesuConfiguration besuConfiguration;
   private final Optional<URI> rejectedTxEndpoint;
 
   public LineaTransactionSelector(
       final BlockchainService blockchainService,
+      final BesuConfiguration besuConfiguration,
       final LineaTransactionSelectorConfiguration txSelectorConfiguration,
       final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
       final LineaProfitabilityConfiguration profitabilityConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
       final Map<String, Integer> limitsMap) {
+    this.besuConfiguration = besuConfiguration;
     rejectedTxEndpoint = Optional.ofNullable(txSelectorConfiguration.rejectedTxEndpoint());
     selectors =
         createTransactionSelectors(
@@ -160,7 +164,11 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
     rejectedTxEndpoint.ifPresent(
         uri ->
             notifyDiscardedTransactionAsync(
-                evaluationContext, transactionSelectionResult, Instant.now(), uri));
+                evaluationContext,
+                transactionSelectionResult,
+                Instant.now(),
+                uri,
+                this.besuConfiguration.getDataPath()));
   }
 
   /**
