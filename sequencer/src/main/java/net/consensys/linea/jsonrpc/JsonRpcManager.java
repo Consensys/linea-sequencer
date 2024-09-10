@@ -16,6 +16,7 @@
 package net.consensys.linea.jsonrpc;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -25,7 +26,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 /** This class is responsible for managing JSON-RPC requests for reporting rejected transactions */
 @Slf4j
@@ -33,8 +41,12 @@ public class JsonRpcManager {
   private static final int MAX_THREADS =
       Math.min(32, Runtime.getRuntime().availableProcessors() * 2);
   private static final long MAX_RETRY_DURATION = TimeUnit.HOURS.toMillis(2);
+  private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
 
-  private final Path jsonDirectory;
+  private final OkHttpClient client = new OkHttpClient();
+  private final ObjectMapper objectMapper = new ObjectMapper();
+
+  private final Path rejTxRpcDirectory;
   private final URI rejectedTxEndpoint;
   private final ExecutorService executorService;
   private final ScheduledExecutorService schedulerService;
@@ -42,11 +54,12 @@ public class JsonRpcManager {
   /**
    * Creates a new JSON-RPC manager.
    *
-   * @param jsonDirectory The directory to store and load JSON files containing json-rpc calls
+   * @param besuDataDir Path to Besu data directory. The json-rpc files will be stored here under
+   *     rej-tx-rpc subdirectory.
    * @param rejectedTxEndpoint The endpoint to send rejected transactions to
    */
-  public JsonRpcManager(final Path jsonDirectory, final URI rejectedTxEndpoint) {
-    this.jsonDirectory = jsonDirectory;
+  public JsonRpcManager(final Path besuDataDir, final URI rejectedTxEndpoint) {
+    this.rejTxRpcDirectory = besuDataDir.resolve("rej_tx_rpc");
     this.rejectedTxEndpoint = rejectedTxEndpoint;
     this.executorService = Executors.newFixedThreadPool(MAX_THREADS);
     this.schedulerService = Executors.newScheduledThreadPool(1);
@@ -54,8 +67,17 @@ public class JsonRpcManager {
 
   /** Load existing JSON-RPC and submit them. */
   public JsonRpcManager start() {
-    loadExistingJsonFiles();
-    return this;
+    try {
+      // Create the rej-tx-rpc directory if it doesn't exist
+      Files.createDirectories(rejTxRpcDirectory);
+
+      // Load existing JSON files
+      loadExistingJsonFiles();
+      return this;
+    } catch (IOException e) {
+      log.error("Failed to create or access rej-tx-rpc directory", e);
+      throw new UncheckedIOException(e);
+    }
   }
 
   /** Shuts down the executor service and scheduler service. */
@@ -80,11 +102,11 @@ public class JsonRpcManager {
 
   private void loadExistingJsonFiles() {
     try (final DirectoryStream<Path> stream =
-        Files.newDirectoryStream(jsonDirectory, "rpc_*.json")) {
-      for (Path path : stream) {
+        Files.newDirectoryStream(rejTxRpcDirectory, "rpc_*.json")) {
+      for (final Path path : stream) {
         submitJsonRpcCall(path);
       }
-    } catch (IOException e) {
+    } catch (final IOException e) {
       log.error("Failed to load existing JSON files", e);
     }
   }
@@ -125,14 +147,50 @@ public class JsonRpcManager {
   }
 
   private boolean sendJsonRpcCall(final String jsonContent) {
-    // Implement your JSON-RPC call logic here
-    // Return true if successful, false otherwise
-    return false; // Placeholder
+    final RequestBody body = RequestBody.create(jsonContent, JSON);
+    final Request request =
+        new Request.Builder().url(rejectedTxEndpoint.toString()).post(body).build();
+
+    try (final Response response = client.newCall(request).execute()) {
+      if (!response.isSuccessful()) {
+        log.error("Unexpected response code from rejected-tx endpoint: {}", response.code());
+        return false;
+      }
+
+      // process the response body here ...
+      final String responseBody = response.body() != null ? response.body().string() : null;
+      if (responseBody == null) {
+        log.error("Unexpected empty response body from rejected-tx endpoint");
+        return false;
+      }
+
+      final JsonNode jsonNode = objectMapper.readTree(responseBody);
+      if (jsonNode == null) {
+        log.error("Failed to parse JSON response from rejected-tx endpoint: {}", responseBody);
+        return false;
+      }
+      if (jsonNode.has("error")) {
+        log.error("Error response from rejected-tx endpoint: {}", jsonNode.get("error"));
+        return false;
+      }
+      // Check for result
+      if (jsonNode.has("result")) {
+        String status = jsonNode.get("result").get("status").asText();
+        log.debug("Rejected-tx JSON-RPC call successful. Status: {}", status);
+        return true;
+      }
+
+      log.warn("Unexpected rejected-tx JSON-RPC response format: {}", responseBody);
+      return false;
+    } catch (final IOException e) {
+      log.error("Failed to send JSON-RPC call to rejected-tx endpoint {}", rejectedTxEndpoint, e);
+      return false;
+    }
   }
 
   private Path saveJsonToFile(final String jsonContent) throws IOException {
     final String fileName = "rpc_" + System.currentTimeMillis() + ".json";
-    final Path filePath = jsonDirectory.resolve(fileName);
+    final Path filePath = rejTxRpcDirectory.resolve(fileName);
     Files.write(filePath, jsonContent.getBytes());
     return filePath;
   }

@@ -83,10 +83,7 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
         transactionSelectorConfiguration();
     rejectedTxJsonRpcManager =
         Optional.ofNullable(txSelectorConfiguration.rejectedTxEndpoint())
-            .map(
-                endpoint ->
-                    new JsonRpcManager(
-                        besuConfiguration.getDataPath().resolve("rej_tx_rpc"), endpoint));
+            .map(endpoint -> new JsonRpcManager(besuConfiguration.getDataPath(), endpoint).start());
     transactionSelectionService.registerPluginTransactionSelectorFactory(
         new LineaTransactionSelectorFactory(
             blockchainService,
