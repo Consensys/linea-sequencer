@@ -22,6 +22,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.Instant;
@@ -77,14 +78,14 @@ public class JsonRpcManager {
   /** Load existing JSON-RPC and submit them. */
   public JsonRpcManager start() {
     try {
-      // Create the rej-tx-rpc directory if it doesn't exist
-      Files.createDirectories(rejTxRpcDirectory);
+      // Create the rej_tx_rpc/discarded directories if it doesn't exist
+      Files.createDirectories(rejTxRpcDirectory.resolve("discarded"));
 
       // Load existing JSON files
       processExistingJsonFiles();
       return this;
-    } catch (IOException e) {
-      log.error("Failed to create or access rej-tx-rpc directory", e);
+    } catch (final IOException e) {
+      log.error("Failed to create or access directory: {}", rejTxRpcDirectory, e);
       throw new UncheckedIOException(e);
     }
   }
@@ -101,13 +102,16 @@ public class JsonRpcManager {
    * @param jsonContent The JSON content to submit
    */
   public void submitNewJsonRpcCall(final String jsonContent) {
+    final Path jsonFile;
     try {
-      final Path jsonFile = saveJsonToFile(jsonContent);
-      fileStartTimes.put(jsonFile, Instant.now());
-      submitJsonRpcCall(jsonFile, INITIAL_RETRY_DELAY_DURATION);
+      jsonFile = saveJsonToFile(jsonContent);
     } catch (final IOException e) {
-      log.error("Failed to save JSON content", e);
+      log.error("Failed to save JSON-RPC content", e);
+      return;
     }
+
+    fileStartTimes.put(jsonFile, Instant.now());
+    submitJsonRpcCall(jsonFile, INITIAL_RETRY_DELAY_DURATION);
   }
 
   private void processExistingJsonFiles() {
@@ -121,14 +125,14 @@ public class JsonRpcManager {
         }
       }
 
+      log.info("Loaded {} existing JSON-RPC files for reporting", sortedFiles.size());
+
       for (Path path : sortedFiles) {
         fileStartTimes.put(path, Instant.now());
         submitJsonRpcCall(path, INITIAL_RETRY_DELAY_DURATION);
       }
-
-      log.info("Loaded {} existing JSON files for rej-tx reporting", sortedFiles.size());
     } catch (final IOException e) {
-      log.error("Failed to load existing JSON files", e);
+      log.error("Failed to load existing JSON-RPC files", e);
     }
   }
 
@@ -183,10 +187,21 @@ public class JsonRpcManager {
           currentDelay.toMillis(),
           TimeUnit.MILLISECONDS);
     } else {
-      log.error("Exceeded maximum retry duration for rej-tx json-rpc file: {}", jsonFile);
-      fileStartTimes.remove(jsonFile);
-      // TODO (review suggestion) : Log that notification is discarded and not sent to endpoint
-      // TODO : Consider moving the file to `failed` directory for manual inspection
+      log.error("Exceeded maximum retry duration for JSON-RPC file: {}.", jsonFile);
+      final Path destination =
+          rejTxRpcDirectory.resolve("discarded").resolve(jsonFile.getFileName());
+
+      try {
+        Files.move(jsonFile, destination, StandardCopyOption.REPLACE_EXISTING);
+        log.error(
+            "The JSON-RPC file {} has been moved to: {}. The tx notification has been discarded.",
+            jsonFile,
+            destination);
+      } catch (final IOException e) {
+        log.error("Failed to move JSON-RPC file to discarded directory: {}", jsonFile, e);
+      } finally {
+        fileStartTimes.remove(jsonFile);
+      }
     }
   }
 
@@ -218,7 +233,7 @@ public class JsonRpcManager {
       }
       // Check for result
       if (jsonNode.has("result")) {
-        String status = jsonNode.get("result").get("status").asText();
+        final String status = jsonNode.get("result").get("status").asText();
         log.debug("Rejected-tx JSON-RPC call successful. Status: {}", status);
         return true;
       }
@@ -252,7 +267,7 @@ public class JsonRpcManager {
       return Files.writeString(filePath, jsonContent, StandardOpenOption.CREATE_NEW);
     } catch (final FileAlreadyExistsException e) {
       // This should never happen with UUID, but just in case
-      log.warn("Unexpected file collision occurred: {}", filePath);
+      log.warn("Unexpected JSON-RPC filename collision occurred: {}", filePath);
       throw new IOException("Unexpected file name collision", e);
     }
   }
