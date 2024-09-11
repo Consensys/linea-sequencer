@@ -23,7 +23,9 @@ import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -100,11 +102,14 @@ class JsonRpcManagerTest {
         JsonRpcRequestBuilder.buildRejectedTxRequest(context, result, timestamp);
     jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
 
-    // sleep a bit to allow async processing
-    Thread.sleep(1000);
-
-    // assert that the expected json-rpc request was sent to WireMock
-    verify(exactly(1), postRequestedFor(urlEqualTo("/")).withRequestBody(equalToJson(jsonRpcCall)));
+    // Use Awaitility to wait for the condition to be met
+    await()
+        .atMost(2, SECONDS)
+        .untilAsserted(
+            () ->
+                verify(
+                    exactly(1),
+                    postRequestedFor(urlEqualTo("/")).withRequestBody(equalToJson(jsonRpcCall))));
   }
 
   @Test
@@ -146,11 +151,14 @@ class JsonRpcManagerTest {
     // Submit the call, the scheduler will retry the failed call
     jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
 
-    // Sleep to allow async processing
-    Thread.sleep(2000); // Increased sleep time to allow for two calls
-
-    // Verify that two requests were made
-    verify(exactly(2), postRequestedFor(urlEqualTo("/")).withRequestBody(equalToJson(jsonRpcCall)));
+    // Use Awaitility to wait for the condition to be met
+    await()
+        .atMost(2, SECONDS)
+        .untilAsserted(
+            () ->
+                verify(
+                    exactly(2),
+                    postRequestedFor(urlEqualTo("/")).withRequestBody(equalToJson(jsonRpcCall))));
 
     // Verify that the JSON file no longer exists in the directory (as the second call was
     // successful)
@@ -187,11 +195,14 @@ class JsonRpcManagerTest {
     // Submit the call
     jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
 
-    // Sleep to allow async processing
-    Thread.sleep(1000);
-
-    // Verify that the request was made
-    verify(exactly(1), postRequestedFor(urlEqualTo("/")).withRequestBody(equalToJson(jsonRpcCall)));
+    // Use Awaitility to wait for the condition to be met
+    await()
+        .atMost(2, SECONDS)
+        .untilAsserted(
+            () ->
+                verify(
+                    exactly(1),
+                    postRequestedFor(urlEqualTo("/")).withRequestBody(equalToJson(jsonRpcCall))));
 
     // Verify that the JSON file still exists in the directory (as the call was unsuccessful)
     final Path rejTxRpcDir = tempDataDir.resolve("rej_tx_rpc");
@@ -247,11 +258,14 @@ class JsonRpcManagerTest {
     // Submit the call, the scheduler will retry the failed calls
     jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
 
-    // Sleep to allow async processing
-    Thread.sleep(6000); // Increased sleep time to allow for three calls
-
-    // Verify that two requests were made
-    verify(exactly(3), postRequestedFor(urlEqualTo("/")).withRequestBody(equalToJson(jsonRpcCall)));
+    // Use Awaitility to wait for the condition to be met
+    await()
+        .atMost(6, SECONDS)
+        .untilAsserted(
+            () ->
+                verify(
+                    exactly(3),
+                    postRequestedFor(urlEqualTo("/")).withRequestBody(equalToJson(jsonRpcCall))));
 
     // Verify that the JSON file no longer exists in the directory (as the second call was
     // successful)

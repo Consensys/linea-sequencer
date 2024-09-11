@@ -38,6 +38,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -104,7 +105,7 @@ public class JsonRpcManager {
   public void submitNewJsonRpcCall(final String jsonContent) {
     final Path jsonFile;
     try {
-      jsonFile = saveJsonToFile(jsonContent);
+      jsonFile = saveJsonToDir(jsonContent, rejTxRpcDirectory);
     } catch (final IOException e) {
       log.error("Failed to save JSON-RPC content", e);
       return;
@@ -253,11 +254,14 @@ public class JsonRpcManager {
    * <p>The file naming format is: rpc_[timestamp]_[uuid].json
    *
    * @param jsonContent The JSON string to be written to the file.
+   * @param rejTxRpcDirectory The directory where the file should be saved.
    * @return The Path object representing the newly created file.
    * @throws IOException If an I/O error occurs while writing the file, including unexpected file
    *     collisions.
    */
-  private Path saveJsonToFile(final String jsonContent) throws IOException {
+  @VisibleForTesting
+  static Path saveJsonToDir(final String jsonContent, final Path rejTxRpcDirectory)
+      throws IOException {
     final String timestamp = generateTimestampWithNanos();
     final String uuid = UUID.randomUUID().toString();
     final String fileName = String.format("rpc_%s_%s.json", timestamp, uuid);

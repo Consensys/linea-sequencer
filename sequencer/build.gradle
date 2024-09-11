@@ -71,6 +71,7 @@ dependencies {
   testImplementation "${besuArtifactGroup}.internal:rlp"
   testImplementation "${besuArtifactGroup}.internal:core"
   testImplementation "${besuArtifactGroup}:plugin-api"
+  testImplementation "org.awaitility:awaitility"
 
   // workaround for bug https://github.com/dnsjava/dnsjava/issues/329, remove when upgraded upstream
   testImplementation 'dnsjava:dnsjava:3.6.1'
