@@ -215,10 +215,21 @@ public class JsonRpcManager {
     }
   }
 
+  /**
+   * Saves the JSON content to a file in the rej-tx-rpc directory. The file name is generated based
+   * on a timestamp and an attempt number to allow sorted loading in case of restart.
+   *
+   * @param jsonContent The JSON content to save
+   * @return The path to the saved file
+   * @throws IOException If an I/O error occurs or failed to save JSON content after 100 attempts
+   *     due to collision
+   */
   private Path saveJsonToFile(final String jsonContent) throws IOException {
-    long timestamp = System.currentTimeMillis();
+    final String timestamp = generateTimestampWithNanos();
+    // there is a very low chance of collision that multiple rejected tx being notified within same
+    // current timestamp, but we'll retry up to 100 times
     for (int attempt = 0; attempt < 100; attempt++) {
-      final String fileName = String.format("rpc_%d_%d.json", timestamp, attempt);
+      final String fileName = String.format("rpc_%s_%d.json", timestamp, attempt);
       final Path filePath = rejTxRpcDirectory.resolve(fileName);
       try {
         return Files.writeString(filePath, jsonContent, StandardOpenOption.CREATE_NEW);
@@ -227,5 +238,13 @@ public class JsonRpcManager {
       }
     }
     throw new IOException("Failed to save JSON content after 100 attempts");
+  }
+
+  private static String generateTimestampWithNanos() {
+    long millis = System.currentTimeMillis();
+    long nanos = System.nanoTime();
+    long millisPart = millis % 1000;
+    long nanosPart = nanos % 1_000_000;
+    return String.format("%d%03d%06d", millis / 1000, millisPart, nanosPart);
   }
 }
