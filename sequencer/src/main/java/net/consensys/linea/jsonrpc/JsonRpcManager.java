@@ -23,6 +23,8 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.TreeSet;
@@ -45,13 +47,13 @@ import okhttp3.Response;
 /** This class is responsible for managing JSON-RPC requests for reporting rejected transactions */
 @Slf4j
 public class JsonRpcManager {
-  private static final long INITIAL_RETRY_DELAY = 1000L;
-  private static final long MAX_RETRY_DURATION = TimeUnit.HOURS.toMillis(2);
+  private static final Duration INITIAL_RETRY_DELAY_DURATION = Duration.ofSeconds(1);
+  private static final Duration MAX_RETRY_DURATION = Duration.ofHours(2);
   private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
 
   private final OkHttpClient client = new OkHttpClient();
   private final ObjectMapper objectMapper = new ObjectMapper();
-  private final Map<Path, Long> fileStartTimes = new ConcurrentHashMap<>();
+  private final Map<Path, Instant> fileStartTimes = new ConcurrentHashMap<>();
 
   private final Path rejTxRpcDirectory;
   private final URI rejectedTxEndpoint;
@@ -101,8 +103,8 @@ public class JsonRpcManager {
   public void submitNewJsonRpcCall(final String jsonContent) {
     try {
       final Path jsonFile = saveJsonToFile(jsonContent);
-      fileStartTimes.put(jsonFile, System.currentTimeMillis());
-      submitJsonRpcCall(jsonFile, INITIAL_RETRY_DELAY);
+      fileStartTimes.put(jsonFile, Instant.now());
+      submitJsonRpcCall(jsonFile, INITIAL_RETRY_DELAY_DURATION);
     } catch (final IOException e) {
       log.error("Failed to save JSON content", e);
     }
@@ -120,8 +122,8 @@ public class JsonRpcManager {
       }
 
       for (Path path : sortedFiles) {
-        fileStartTimes.put(path, System.currentTimeMillis());
-        submitJsonRpcCall(path, INITIAL_RETRY_DELAY);
+        fileStartTimes.put(path, Instant.now());
+        submitJsonRpcCall(path, INITIAL_RETRY_DELAY_DURATION);
       }
 
       log.info("Loaded {} existing JSON files for rej-tx reporting", sortedFiles.size());
@@ -130,7 +132,7 @@ public class JsonRpcManager {
     }
   }
 
-  private void submitJsonRpcCall(final Path jsonFile, final long nextDelay) {
+  private void submitJsonRpcCall(final Path jsonFile, final Duration nextDelay) {
     executorService.submit(
         () -> {
           if (!Files.exists(jsonFile)) {
@@ -156,22 +158,29 @@ public class JsonRpcManager {
         });
   }
 
-  private void scheduleRetry(final Path jsonFile, final long currentDelay) {
-    final Long startTime = fileStartTimes.get(jsonFile);
+  private void scheduleRetry(final Path jsonFile, final Duration currentDelay) {
+    final Instant startTime = fileStartTimes.get(jsonFile);
     if (startTime == null) {
       log.debug("No start time found for file: {}. Skipping retry.", jsonFile);
       return;
     }
 
-    // check if we're still within the maximum retry duration
-    if (System.currentTimeMillis() - startTime < MAX_RETRY_DURATION) {
-      // schedule a retry with exponential backoff
-      long nextDelay = Math.min(currentDelay * 2, TimeUnit.MINUTES.toMillis(1)); // Cap at 1 minute
+    // Check if we're still within the maximum retry duration
+    if (Duration.between(startTime, Instant.now()).compareTo(MAX_RETRY_DURATION) < 0) {
+      // Calculate next delay with exponential backoff, capped at 1 minute
+      final Duration nextDelay =
+          Duration.ofMillis(
+              Math.min(currentDelay.multipliedBy(2).toMillis(), Duration.ofMinutes(1).toMillis()));
+
+      // Schedule a retry
       retrySchedulerService.schedule(
-          () -> submitJsonRpcCall(jsonFile, nextDelay), currentDelay, TimeUnit.MILLISECONDS);
+          () -> submitJsonRpcCall(jsonFile, nextDelay),
+          currentDelay.toMillis(),
+          TimeUnit.MILLISECONDS);
     } else {
       log.error("Exceeded maximum retry duration for rej-tx json-rpc file: {}", jsonFile);
       fileStartTimes.remove(jsonFile);
+      // TODO (review suggestion) : Log that notification is discarded and not sent to endpoint
     }
   }
 
@@ -220,7 +229,7 @@ public class JsonRpcManager {
    * Saves the given JSON content to a file in the rejected transactions RPC directory. The filename
    * is generated using a high-precision timestamp and a UUID to ensure uniqueness.
    *
-   * <p>The file naming format is: rpc_[timestamp]_[uuid].json</p>
+   * <p>The file naming format is: rpc_[timestamp]_[uuid].json
    *
    * @param jsonContent The JSON string to be written to the file.
    * @return The Path object representing the newly created file.
