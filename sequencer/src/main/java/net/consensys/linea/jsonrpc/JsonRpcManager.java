@@ -26,6 +26,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -216,28 +217,29 @@ public class JsonRpcManager {
   }
 
   /**
-   * Saves the JSON content to a file in the rej-tx-rpc directory. The file name is generated based
-   * on a timestamp and an attempt number to allow sorted loading in case of restart.
+   * Saves the given JSON content to a file in the rejected transactions RPC directory. The filename
+   * is generated using a high-precision timestamp and a UUID to ensure uniqueness.
    *
-   * @param jsonContent The JSON content to save
-   * @return The path to the saved file
-   * @throws IOException If an I/O error occurs or failed to save JSON content after 100 attempts
-   *     due to collision
+   * <p>The file naming format is: rpc_[timestamp]_[uuid].json</p>
+   *
+   * @param jsonContent The JSON string to be written to the file.
+   * @return The Path object representing the newly created file.
+   * @throws IOException If an I/O error occurs while writing the file, including unexpected file
+   *     collisions.
    */
   private Path saveJsonToFile(final String jsonContent) throws IOException {
     final String timestamp = generateTimestampWithNanos();
-    // there is a very low chance of collision that multiple rejected tx being notified within same
-    // current timestamp, but we'll retry up to 100 times
-    for (int attempt = 0; attempt < 100; attempt++) {
-      final String fileName = String.format("rpc_%s_%d.json", timestamp, attempt);
-      final Path filePath = rejTxRpcDirectory.resolve(fileName);
-      try {
-        return Files.writeString(filePath, jsonContent, StandardOpenOption.CREATE_NEW);
-      } catch (final FileAlreadyExistsException e) {
-        log.trace("File already exists {}, retrying.", filePath);
-      }
+    final String uuid = UUID.randomUUID().toString();
+    final String fileName = String.format("rpc_%s_%s.json", timestamp, uuid);
+    final Path filePath = rejTxRpcDirectory.resolve(fileName);
+
+    try {
+      return Files.writeString(filePath, jsonContent, StandardOpenOption.CREATE_NEW);
+    } catch (final FileAlreadyExistsException e) {
+      // This should never happen with UUID, but just in case
+      log.warn("Unexpected file collision occurred: {}", filePath);
+      throw new IOException("Unexpected file name collision", e);
     }
-    throw new IOException("Failed to save JSON content after 100 attempts");
   }
 
   private static String generateTimestampWithNanos() {
