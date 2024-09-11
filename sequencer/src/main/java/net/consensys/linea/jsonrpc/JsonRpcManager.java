@@ -136,7 +136,7 @@ public class JsonRpcManager {
     executorService.submit(
         () -> {
           if (!Files.exists(jsonFile)) {
-            log.debug("json-rpc file no longer exists, skipping processing: {}", jsonFile);
+            log.debug("JSON-RPC file {} no longer exists, skipping processing.", jsonFile);
             fileStartTimes.remove(jsonFile);
             return;
           }
@@ -148,11 +148,16 @@ public class JsonRpcManager {
               fileStartTimes.remove(jsonFile);
             } else {
               log.error(
-                  "Failed to send JSON-RPC call to {}, retrying: {}", rejectedTxEndpoint, jsonFile);
+                  "Failed to send JSON-RPC file {} to {}, Scheduling retry ...",
+                  jsonFile,
+                  rejectedTxEndpoint);
               scheduleRetry(jsonFile, nextDelay);
             }
           } catch (final Exception e) {
-            log.error("Failed to process json-rpc file: {}", jsonFile, e);
+            log.error(
+                "Failed to process JSON-RPC file {} due to unexpected error: {}. Scheduling retry ...",
+                jsonFile,
+                e.getMessage());
             scheduleRetry(jsonFile, nextDelay);
           }
         });
@@ -161,7 +166,7 @@ public class JsonRpcManager {
   private void scheduleRetry(final Path jsonFile, final Duration currentDelay) {
     final Instant startTime = fileStartTimes.get(jsonFile);
     if (startTime == null) {
-      log.debug("No start time found for file: {}. Skipping retry.", jsonFile);
+      log.debug("No start time found for JSON-RPC file: {}. Skipping retry.", jsonFile);
       return;
     }
 
@@ -181,6 +186,7 @@ public class JsonRpcManager {
       log.error("Exceeded maximum retry duration for rej-tx json-rpc file: {}", jsonFile);
       fileStartTimes.remove(jsonFile);
       // TODO (review suggestion) : Log that notification is discarded and not sent to endpoint
+      // TODO : Consider moving the file to `failed` directory for manual inspection
     }
   }
 
