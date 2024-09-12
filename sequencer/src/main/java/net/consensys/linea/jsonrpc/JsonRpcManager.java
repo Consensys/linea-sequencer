@@ -276,11 +276,10 @@ public class JsonRpcManager {
     }
   }
 
-  private static String generateTimestampWithNanos() {
-    long millis = System.currentTimeMillis();
-    long nanos = System.nanoTime();
-    long millisPart = millis % 1000;
-    long nanosPart = nanos % 1_000_000;
-    return String.format("%d%03d%06d", millis / 1000, millisPart, nanosPart);
+  static String generateTimestampWithNanos() {
+    final Instant now = Instant.now();
+    final long seconds = now.getEpochSecond();
+    final int nanos = now.getNano();
+    return String.format("%d%09d", seconds, nanos);
   }
 }
