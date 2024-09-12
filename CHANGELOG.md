@@ -1,7 +1,11 @@
 # Changelog
 
-# Next release
+## Next release
 * feat: Report rejected transactions to an external service [#69](https://github.com/Consensys/linea-sequencer/pull/69)
+
+## 0.6.0-rc1.1
+* bump linea-arithmetization version to 0.6.0-rc1 [#71](https://github.com/Consensys/linea-sequencer/pull/71)
+* bump Linea-Besu version to 24.9-delivery32 [#71](https://github.com/Consensys/linea-sequencer/pull/71)
 
 ## 0.3.0-rc2.1
 * bump linea-arithmetization version to 0.3.0-rc2 [#62](https://github.com/Consensys/linea-sequencer/pull/62)
