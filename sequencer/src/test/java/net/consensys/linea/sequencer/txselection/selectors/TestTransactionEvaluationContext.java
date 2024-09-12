@@ -20,30 +20,34 @@ import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationContext;
 
-public class TestTransactionEvaluationContext
-    implements TransactionEvaluationContext<PendingTransaction> {
+class TestTransactionEvaluationContext implements TransactionEvaluationContext<PendingTransaction> {
+  private ProcessableBlockHeader processableBlockHeader;
   private PendingTransaction pendingTransaction;
   private Wei transactionGasPrice;
   private Wei minGasPrice;
-  private ProcessableBlockHeader pendingBlockHeader;
 
   public TestTransactionEvaluationContext(
+      final ProcessableBlockHeader processableBlockHeader,
       final PendingTransaction pendingTransaction,
       final Wei transactionGasPrice,
       final Wei minGasPrice) {
+    this.processableBlockHeader = processableBlockHeader;
     this.pendingTransaction = pendingTransaction;
     this.transactionGasPrice = transactionGasPrice;
     this.minGasPrice = minGasPrice;
   }
 
-  public TestTransactionEvaluationContext(final PendingTransaction pendingTransaction) {
-    this(pendingTransaction, Wei.ONE, Wei.ONE);
+  public TestTransactionEvaluationContext(
+      final ProcessableBlockHeader processableBlockHeader,
+      final PendingTransaction pendingTransaction) {
+    this(processableBlockHeader, pendingTransaction, Wei.ONE, Wei.ONE);
   }
 
   @Override
   public ProcessableBlockHeader getPendingBlockHeader() {
-    return pendingBlockHeader;
+    return processableBlockHeader;
   }
+
 
   @Override
   public PendingTransaction getPendingTransaction() {
@@ -78,12 +82,6 @@ public class TestTransactionEvaluationContext
 
   public TestTransactionEvaluationContext setTransactionGasPrice(final Wei transactionGasPrice) {
     this.transactionGasPrice = transactionGasPrice;
-    return this;
-  }
-
-  public TestTransactionEvaluationContext setPendingBlockHeader(
-      final ProcessableBlockHeader pendingBlockHeader) {
-    this.pendingBlockHeader = pendingBlockHeader;
     return this;
   }
 }
