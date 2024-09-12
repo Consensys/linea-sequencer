@@ -92,8 +92,7 @@ class JsonRpcManagerTest {
                         "{\"jsonrpc\":\"2.0\",\"result\":{ \"status\": \"SAVED\"},\"id\":1}")));
 
     final TestTransactionEvaluationContext context =
-        new TestTransactionEvaluationContext(pendingTransaction)
-            .setPendingBlockHeader(pendingBlockHeader);
+        new TestTransactionEvaluationContext(pendingBlockHeader, pendingTransaction);
     final TransactionSelectionResult result = TransactionSelectionResult.invalid("test");
     final Instant timestamp = Instant.now();
 
@@ -139,8 +138,7 @@ class JsonRpcManagerTest {
 
     // Prepare test data
     final TestTransactionEvaluationContext context =
-        new TestTransactionEvaluationContext(pendingTransaction)
-            .setPendingBlockHeader(pendingBlockHeader);
+        new TestTransactionEvaluationContext(pendingBlockHeader, pendingTransaction);
     final TransactionSelectionResult result = TransactionSelectionResult.invalid("test");
     final Instant timestamp = Instant.now();
 
@@ -183,8 +181,7 @@ class JsonRpcManagerTest {
 
     // Prepare test data
     final TestTransactionEvaluationContext context =
-        new TestTransactionEvaluationContext(pendingTransaction)
-            .setPendingBlockHeader(pendingBlockHeader);
+        new TestTransactionEvaluationContext(pendingBlockHeader, pendingTransaction);
     final TransactionSelectionResult result = TransactionSelectionResult.invalid("test");
     final Instant timestamp = Instant.now();
 
@@ -246,8 +243,7 @@ class JsonRpcManagerTest {
 
     // Prepare test data
     final TestTransactionEvaluationContext context =
-        new TestTransactionEvaluationContext(pendingTransaction)
-            .setPendingBlockHeader(pendingBlockHeader);
+        new TestTransactionEvaluationContext(pendingBlockHeader, pendingTransaction);
     final TransactionSelectionResult result = TransactionSelectionResult.invalid("test");
     final Instant timestamp = Instant.now();
 

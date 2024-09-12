@@ -72,8 +72,7 @@ public class JsonRpcManagerStartTest {
     // JsonRpcManager.start
     for (int i = 0; i < 3; i++) {
       final TestTransactionEvaluationContext context =
-          new TestTransactionEvaluationContext(pendingTransaction)
-              .setPendingBlockHeader(pendingBlockHeader);
+          new TestTransactionEvaluationContext(pendingBlockHeader, pendingTransaction);
       final TransactionSelectionResult result = TransactionSelectionResult.invalid("test" + i);
       final Instant timestamp = Instant.now();
       final String jsonRpcCall =
