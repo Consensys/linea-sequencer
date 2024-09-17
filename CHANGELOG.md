@@ -1,5 +1,12 @@
 # Changelog
 
+## Next release
+* feat: Report rejected transactions to an external service [#69](https://github.com/Consensys/linea-sequencer/pull/69)
+
+## 0.6.0-rc1.1
+* bump linea-arithmetization version to 0.6.0-rc1 [#71](https://github.com/Consensys/linea-sequencer/pull/71)
+* bump Linea-Besu version to 24.9-delivery32 [#71](https://github.com/Consensys/linea-sequencer/pull/71)
+
 ## 0.3.0-rc2.1
 * bump linea-arithmetization version to 0.3.0-rc2 [#62](https://github.com/Consensys/linea-sequencer/pull/62)
 * bump Linea-Besu version to 24.7-develop-c0029e6 (delivery-28) [#62](https://github.com/Consensys/linea-sequencer/pull/62)
@@ -26,6 +33,12 @@ First release of the new series that uses on the ZkTracer as dependency from `li
 * Align linea_estimateGas behavior to geth [#25](https://github.com/Consensys/linea-sequencer/pull/25)
 * Implement linea_setExtraData [#19](https://github.com/Consensys/linea-sequencer/pull/19)
 * Set plugin-linea-tx-pool-simulation-check-api-enabled=false by default [#23](https://github.com/Consensys/linea-sequencer/pull/23)
+
+## 0.1.4-test33
+Test pre-release 33 from branch `release-v0.1.4-testX` with code ported from [temp/issue-248/count-stack-only](https://github.com/Consensys/besu-sequencer-plugins/tree/temp/issue-248/count-stack-only)
+* Set besuVersion=24.9-delivery32
+* Split rpc methods into different plugins [#73](https://github.com/Consensys/linea-sequencer/pull/73)
+* feat: Report discarded transactions to external service [#69](https://github.com/Consensys/linea-sequencer/pull/69)
 
 ## 0.1.4-test32
 Test pre-release 32 from branch `release-v0.1.4-testX` with code ported from [temp/issue-248/count-stack-only](https://github.com/Consensys/besu-sequencer-plugins/tree/temp/issue-248/count-stack-only)
