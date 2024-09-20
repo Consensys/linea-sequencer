@@ -169,6 +169,7 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
               moduleLimitResult.getModuleLineCount(),
               moduleLimitResult.getModuleLineLimit());
       log.warn(txOverflowMsg);
+      log.trace("Transaction details: {}", transaction);
       return txOverflowMsg;
     }
     return "Internal Error: do not know what to do with result: " + moduleLimitResult.getResult();
