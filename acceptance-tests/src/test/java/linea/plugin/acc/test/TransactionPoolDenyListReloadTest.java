@@ -21,7 +21,6 @@ import java.nio.file.Path;
 import java.util.List;
 
 import org.hyperledger.besu.tests.acceptance.dsl.account.Accounts;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.web3j.crypto.Credentials;
@@ -40,15 +39,11 @@ public class TransactionPoolDenyListReloadTest extends LineaPluginTestBase {
   final Credentials denied = Credentials.create(Accounts.GENESIS_ACCOUNT_TWO_PRIVATE_KEY);
 
   @TempDir static Path tempDir;
-  static Path tempDenyList;
-
-  @BeforeEach
-  public void setUp() throws Exception {
-    tempDenyList = tempDir.resolve("denyList.txt");
-  }
+  static Path tempDenyList ;
 
   @Override
   public List<String> getTestCliOptions() {
+    tempDenyList = tempDir.resolve("denyList.txt");
     return new TestCommandLineOptionsBuilder()
         .set("--plugin-linea-deny-list-path=", tempDenyList.toString())
         .build();
@@ -62,7 +57,7 @@ public class TransactionPoolDenyListReloadTest extends LineaPluginTestBase {
     EthSendTransaction transactionResponse =
         transactionManager.sendTransaction(GAS_PRICE, GAS_LIMIT, notDenied.getAddress(), "", VALUE);
     assertThat(transactionResponse.getTransactionHash()).isNotNull();
-    assertThat(transactionResponse.getError().getMessage()).isNull();
+    assertThat(transactionResponse.getError()).isNull();
   }
 
   @Test
