@@ -16,15 +16,20 @@ package linea.plugin.acc.test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
 import org.hyperledger.besu.tests.acceptance.dsl.account.Accounts;
+import org.hyperledger.besu.tests.acceptance.dsl.transaction.NodeRequests;
+import org.hyperledger.besu.tests.acceptance.dsl.transaction.Transaction;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.web3j.crypto.Credentials;
 import org.web3j.protocol.Web3j;
+import org.web3j.protocol.core.Request;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.tx.RawTransactionManager;
 import org.web3j.utils.Convert;
@@ -36,7 +41,7 @@ public class TransactionPoolDenyListReloadTest extends LineaPluginTestBase {
   private static final BigInteger VALUE = BigInteger.ONE; // 1 wei
 
   final Credentials notDenied = Credentials.create(Accounts.GENESIS_ACCOUNT_ONE_PRIVATE_KEY);
-  final Credentials denied = Credentials.create(Accounts.GENESIS_ACCOUNT_TWO_PRIVATE_KEY);
+  final Credentials willbeDenied = Credentials.create(Accounts.GENESIS_ACCOUNT_TWO_PRIVATE_KEY);
 
   @TempDir static Path tempDir;
   static Path tempDenyList ;
@@ -53,18 +58,27 @@ public class TransactionPoolDenyListReloadTest extends LineaPluginTestBase {
   public void emptyDenyList() throws Exception {
     final Web3j miner = minerNode.nodeRequests().eth();
 
-    RawTransactionManager transactionManager = new RawTransactionManager(miner, denied, CHAIN_ID);
-    EthSendTransaction transactionResponse =
-        transactionManager.sendTransaction(GAS_PRICE, GAS_LIMIT, notDenied.getAddress(), "", VALUE);
-    assertThat(transactionResponse.getTransactionHash()).isNotNull();
-    assertThat(transactionResponse.getError()).isNull();
+    RawTransactionManager transactionManager = new RawTransactionManager(miner, willbeDenied, CHAIN_ID);
+    assertAddressAllowed(transactionManager,willbeDenied.getAddress() );
   }
 
   @Test
-  public void senderOnDenyListThenRemoved_CanAddTransactionToPool() throws Exception {
+  public void emptyDenyList_thenDenySender_cannotAddTxToPool() throws Exception {
+    final Web3j miner = minerNode.nodeRequests().eth();
+    RawTransactionManager transactionManager = new RawTransactionManager(miner, willbeDenied, CHAIN_ID);
+
+    assertAddressAllowed(transactionManager, willbeDenied.getAddress());
+    addAddressToDenyList(willbeDenied.getAddress());
+
+    reloadPluginConfig();
+
+    assertAddressNotAllowed(transactionManager, willbeDenied.getAddress());
+  }
+
+  public void senderOnDenyListThenRemoved_canAddTxToPool() throws Exception {
     final Web3j miner = minerNode.nodeRequests().eth();
 
-    RawTransactionManager transactionManager = new RawTransactionManager(miner, denied, CHAIN_ID);
+    RawTransactionManager transactionManager = new RawTransactionManager(miner, willbeDenied, CHAIN_ID);
     EthSendTransaction transactionResponse =
         transactionManager.sendTransaction(GAS_PRICE, GAS_LIMIT, notDenied.getAddress(), "", VALUE);
 
@@ -84,14 +98,13 @@ public class TransactionPoolDenyListReloadTest extends LineaPluginTestBase {
     assertThat(transactionResponse2.getError().getMessage()).isNull();
   }
 
-  @Test
   public void transactionWithRecipientOnDenyListCannotBeAddedToPool() throws Exception {
     final Web3j miner = minerNode.nodeRequests().eth();
 
     RawTransactionManager transactionManager =
         new RawTransactionManager(miner, notDenied, CHAIN_ID);
     EthSendTransaction transactionResponse =
-        transactionManager.sendTransaction(GAS_PRICE, GAS_LIMIT, denied.getAddress(), "", VALUE);
+        transactionManager.sendTransaction(GAS_PRICE, GAS_LIMIT, willbeDenied.getAddress(), "", VALUE);
 
     assertThat(transactionResponse.getTransactionHash()).isNull();
     assertThat(transactionResponse.getError().getMessage())
@@ -99,7 +112,6 @@ public class TransactionPoolDenyListReloadTest extends LineaPluginTestBase {
             "recipient 0x627306090abab3a6e1400e9345bc60c78a8bef57 is blocked as appearing on the SDN or other legally prohibited list");
   }
 
-  @Test
   public void transactionCallingContractOnDenyListCannotBeAddedToPool() throws Exception {
     final Web3j miner = minerNode.nodeRequests().eth();
 
@@ -117,4 +129,56 @@ public class TransactionPoolDenyListReloadTest extends LineaPluginTestBase {
     assertThat(transactionResponse.getError().getMessage())
         .isEqualTo("destination address is a precompile address and cannot receive transactions");
   }
+
+  private void addAddressToDenyList(String address) throws IOException {
+    Files.writeString(tempDenyList, address);
+  }
+
+  private void assertAddressAllowed(RawTransactionManager transactionManager, String address) throws IOException {
+    EthSendTransaction transactionResponse =
+            transactionManager.sendTransaction(GAS_PRICE, GAS_LIMIT, address, "", VALUE);
+    assertThat(transactionResponse.getTransactionHash()).isNotNull();
+    assertThat(transactionResponse.getError()).isNull();
+  }
+
+  private void assertAddressNotAllowed(RawTransactionManager transactionManager, String address) throws IOException {
+    EthSendTransaction transactionResponse =
+            transactionManager.sendTransaction(GAS_PRICE, GAS_LIMIT, address, "", VALUE);
+
+    assertThat(transactionResponse.getTransactionHash()).isNull();
+    assertThat(transactionResponse.getError().getMessage())
+            .isEqualTo(
+                    "recipient "+ address + " is blocked as appearing on the SDN or other legally prohibited list");
+  }
+
+  private void reloadPluginConfig() {
+    final var reqLinea = new ReloadPluginConfigRequest();
+//    System.out.println("88888888"+reqLinea);
+    final var respLinea = reqLinea.execute(minerNode.nodeRequests());
+//    System.out.println("88888888"+respLinea);
+    assertThat(respLinea.booleanValue()).isTrue();
+  }
+
+  static class ReloadPluginConfigRequest implements Transaction<Boolean> {
+
+    public ReloadPluginConfigRequest() {
+    }
+
+    @Override
+    public Boolean execute(final NodeRequests nodeRequests) {
+      try {
+        return new Request<>(
+                "plugins_reloadPluginConfig",
+                List.of(),
+                nodeRequests.getWeb3jService(),
+                ReloadPluginConfigResponse.class)
+                .send()
+                .getResult();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
+  static class ReloadPluginConfigResponse extends org.web3j.protocol.core.Response<Boolean> {}
 }
