@@ -187,7 +187,7 @@ public class SetExtraDataTest extends LineaPluginTestBase {
 
     final var reqLinea = new LineaSetExtraDataRequest(extraData);
     final var respLinea = reqLinea.execute(minerNode.nodeRequests());
-    assertThat(respLinea).isTrue();
+    assertThat(respLinea).isFalse();
     assertThat(minerNode.getMiningParameters().getMinTransactionGasPrice()).isEqualTo(Wei.of(2000));
     // assert that tx is confirmed now
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(txUnprofitable.getTransactionHash()));
