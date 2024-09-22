@@ -68,80 +68,25 @@ public class TransactionPoolDenyListReloadTest extends LineaPluginTestBase {
     RawTransactionManager transactionManager = new RawTransactionManager(miner, willbeDenied, CHAIN_ID);
 
     assertAddressAllowed(transactionManager, willbeDenied.getAddress());
-    addAddressToDenyList(willbeDenied.getAddress());
 
+    addAddressToDenyList(willbeDenied.getAddress());
     reloadPluginConfig();
 
     assertAddressNotAllowed(transactionManager, willbeDenied.getAddress());
   }
 
-  public void senderOnDenyListThenRemoved_canAddTxToPool() throws Exception {
-    final Web3j miner = minerNode.nodeRequests().eth();
-
-    RawTransactionManager transactionManager = new RawTransactionManager(miner, willbeDenied, CHAIN_ID);
-    EthSendTransaction transactionResponse =
-        transactionManager.sendTransaction(GAS_PRICE, GAS_LIMIT, notDenied.getAddress(), "", VALUE);
-
-    assertThat(transactionResponse.getTransactionHash()).isNull();
-    assertThat(transactionResponse.getError().getMessage())
-        .isEqualTo(
-            "sender 0x627306090abab3a6e1400e9345bc60c78a8bef57 is blocked as appearing on the SDN or other legally prohibited list");
-
-    // TODO then remove that account from denyList.txt
-    // TODO assert that denyList.txt is empty
-    // TODO assert that that sender can now send transactions.
-
-    EthSendTransaction transactionResponse2 =
-        transactionManager.sendTransaction(GAS_PRICE, GAS_LIMIT, notDenied.getAddress(), "", VALUE);
-
-    assertThat(transactionResponse2.getTransactionHash()).isNotNull();
-    assertThat(transactionResponse2.getError().getMessage()).isNull();
-  }
-
-  public void transactionWithRecipientOnDenyListCannotBeAddedToPool() throws Exception {
-    final Web3j miner = minerNode.nodeRequests().eth();
-
-    RawTransactionManager transactionManager =
-        new RawTransactionManager(miner, notDenied, CHAIN_ID);
-    EthSendTransaction transactionResponse =
-        transactionManager.sendTransaction(GAS_PRICE, GAS_LIMIT, willbeDenied.getAddress(), "", VALUE);
-
-    assertThat(transactionResponse.getTransactionHash()).isNull();
-    assertThat(transactionResponse.getError().getMessage())
-        .isEqualTo(
-            "recipient 0x627306090abab3a6e1400e9345bc60c78a8bef57 is blocked as appearing on the SDN or other legally prohibited list");
-  }
-
-  public void transactionCallingContractOnDenyListCannotBeAddedToPool() throws Exception {
-    final Web3j miner = minerNode.nodeRequests().eth();
-
-    RawTransactionManager transactionManager =
-        new RawTransactionManager(miner, notDenied, CHAIN_ID);
-    EthSendTransaction transactionResponse =
-        transactionManager.sendTransaction(
-            GAS_PRICE,
-            GAS_LIMIT,
-            "0x000000000000000000000000000000000000000a",
-            "0xdeadbeef",
-            VALUE);
-
-    assertThat(transactionResponse.getTransactionHash()).isNull();
-    assertThat(transactionResponse.getError().getMessage())
-        .isEqualTo("destination address is a precompile address and cannot receive transactions");
-  }
-
-  private void addAddressToDenyList(String address) throws IOException {
+  private void addAddressToDenyList(final String address) throws IOException {
     Files.writeString(tempDenyList, address);
   }
 
-  private void assertAddressAllowed(RawTransactionManager transactionManager, String address) throws IOException {
+  private void assertAddressAllowed(final RawTransactionManager transactionManager, final String address) throws IOException {
     EthSendTransaction transactionResponse =
             transactionManager.sendTransaction(GAS_PRICE, GAS_LIMIT, address, "", VALUE);
     assertThat(transactionResponse.getTransactionHash()).isNotNull();
     assertThat(transactionResponse.getError()).isNull();
   }
 
-  private void assertAddressNotAllowed(RawTransactionManager transactionManager, String address) throws IOException {
+  private void assertAddressNotAllowed(final RawTransactionManager transactionManager, final String address) throws IOException {
     EthSendTransaction transactionResponse =
             transactionManager.sendTransaction(GAS_PRICE, GAS_LIMIT, address, "", VALUE);
 
@@ -152,10 +97,11 @@ public class TransactionPoolDenyListReloadTest extends LineaPluginTestBase {
   }
 
   private void reloadPluginConfig() {
+    System.out.println("GOT HERE ******");
     final var reqLinea = new ReloadPluginConfigRequest();
-//    System.out.println("88888888"+reqLinea);
+    System.out.println("88888888"+reqLinea);
     final var respLinea = reqLinea.execute(minerNode.nodeRequests());
-//    System.out.println("88888888"+respLinea);
+    System.out.println("88888888"+respLinea);
     assertThat(respLinea.booleanValue()).isTrue();
   }
 
