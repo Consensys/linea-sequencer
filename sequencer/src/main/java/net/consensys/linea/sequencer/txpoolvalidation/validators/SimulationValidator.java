@@ -17,12 +17,14 @@ package net.consensys.linea.sequencer.txpoolvalidation.validators;
 import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.MODULE_NOT_DEFINED;
 import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.TX_MODULE_LINE_COUNT_OVERFLOW;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.config.LineaTransactionPoolValidatorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
+import net.consensys.linea.jsonrpc.JsonRpcRequestBuilder;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.sequencer.modulelimit.ModuleLimitsValidationResult;
 import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator;
@@ -95,12 +97,22 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
           transaction, isLocal, hasPriority, maybeSimulationResults, moduleLimitResult);
 
       if (moduleLimitResult.getResult() != ModuleLineCountValidator.ModuleLineCountResult.VALID) {
-        // TODO: Report rejected transactions to the JSON-RPC manager
+        final String reason = handleModuleOverLimit(transaction, moduleLimitResult);
+
+        // Report rejected transactions to the JSON-RPC manager
         rejectedTxJsonRpcManager.ifPresent(
             jsonRpcManager -> {
-              // jsonRpcManager.submitNewJsonRpcCall
+              final String jsonRpcCall =
+                  JsonRpcRequestBuilder.generateSaveRejectedTxJsonRpc(
+                      jsonRpcManager.getNodeType(),
+                      transaction,
+                      Instant.now(),
+                      Optional.empty(), // block number is not available
+                      reason);
+              jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
             });
-        return Optional.of(handleModuleOverLimit(transaction, moduleLimitResult));
+
+        return Optional.of(reason);
       }
 
       if (maybeSimulationResults.isPresent()) {
@@ -110,10 +122,17 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
               "Invalid transaction"
                   + simulationResult.getInvalidReason().map(ir -> ": " + ir).orElse("");
           log.debug(errMsg);
-          // TODO: Report rejected transactions to the JSON-RPC manager
+          // Report rejected transactions to the JSON-RPC manager
           rejectedTxJsonRpcManager.ifPresent(
               jsonRpcManager -> {
-                // jsonRpcManager.submitNewJsonRpcCall
+                final String jsonRpcCall =
+                    JsonRpcRequestBuilder.generateSaveRejectedTxJsonRpc(
+                        jsonRpcManager.getNodeType(),
+                        transaction,
+                        Instant.now(),
+                        Optional.empty(), // block number is not available
+                        errMsg);
+                jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
               });
           return Optional.of(errMsg);
         }
@@ -125,10 +144,17 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
                       .map(rr -> ": " + rr.toHexString())
                       .orElse("");
           log.debug(errMsg);
-          // TODO: Report rejected transactions to the JSON-RPC manager
+          // Report rejected transactions to the JSON-RPC manager
           rejectedTxJsonRpcManager.ifPresent(
               jsonRpcManager -> {
-                // jsonRpcManager.submitNewJsonRpcCall
+                final String jsonRpcCall =
+                    JsonRpcRequestBuilder.generateSaveRejectedTxJsonRpc(
+                        jsonRpcManager.getNodeType(),
+                        transaction,
+                        Instant.now(),
+                        Optional.empty(), // block number is not available
+                        errMsg);
+                jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
               });
           return Optional.of(errMsg);
         }
