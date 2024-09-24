@@ -33,6 +33,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import com.github.tomakehurst.wiremock.http.Fault;
@@ -41,11 +42,8 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import net.consensys.linea.config.LineaNodeType;
 import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
-import net.consensys.linea.sequencer.txselection.selectors.TestTransactionEvaluationContext;
 import org.apache.tuweni.bytes.Bytes;
-import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Transaction;
-import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,15 +59,11 @@ class JsonRpcManagerTest {
   @TempDir private Path tempDataDir;
   private JsonRpcManager jsonRpcManager;
   private final Bytes randomEncodedBytes = Bytes.random(32);
-  @Mock private PendingTransaction pendingTransaction;
-  @Mock private ProcessableBlockHeader pendingBlockHeader;
   @Mock private Transaction transaction;
 
   @BeforeEach
   void init(final WireMockRuntimeInfo wmInfo) {
     // mock stubbing
-    when(pendingBlockHeader.getNumber()).thenReturn(1L);
-    when(pendingTransaction.getTransaction()).thenReturn(transaction);
     when(transaction.encoded()).thenReturn(randomEncodedBytes);
     final LineaRejectedTxReportingConfiguration config =
         LineaRejectedTxReportingConfiguration.builder()
@@ -97,14 +91,18 @@ class JsonRpcManagerTest {
                     .withBody(
                         "{\"jsonrpc\":\"2.0\",\"result\":{ \"status\": \"SAVED\"},\"id\":1}")));
 
-    final TestTransactionEvaluationContext context =
-        new TestTransactionEvaluationContext(pendingBlockHeader, pendingTransaction);
     final TransactionSelectionResult result = TransactionSelectionResult.invalid("test");
     final Instant timestamp = Instant.now();
 
     // method under test
     final String jsonRpcCall =
-        JsonRpcRequestBuilder.buildRejectedTxRequest(context, result, timestamp);
+        JsonRpcRequestBuilder.generateSaveRejectedTxJsonRpc(
+            LineaNodeType.SEQUENCER,
+            transaction,
+            timestamp,
+            Optional.of(1L),
+            result.maybeInvalidReason().orElse(""));
+
     jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
 
     // Use Awaitility to wait for the condition to be met
@@ -143,14 +141,17 @@ class JsonRpcManagerTest {
                         "{\"jsonrpc\":\"2.0\",\"result\":{ \"status\": \"SAVED\"},\"id\":1}")));
 
     // Prepare test data
-    final TestTransactionEvaluationContext context =
-        new TestTransactionEvaluationContext(pendingBlockHeader, pendingTransaction);
     final TransactionSelectionResult result = TransactionSelectionResult.invalid("test");
     final Instant timestamp = Instant.now();
 
     // Generate JSON-RPC call
     final String jsonRpcCall =
-        JsonRpcRequestBuilder.buildRejectedTxRequest(context, result, timestamp);
+        JsonRpcRequestBuilder.generateSaveRejectedTxJsonRpc(
+            LineaNodeType.SEQUENCER,
+            transaction,
+            timestamp,
+            Optional.of(1L),
+            result.maybeInvalidReason().orElse(""));
 
     // Submit the call, the scheduler will retry the failed call
     jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
@@ -186,14 +187,17 @@ class JsonRpcManagerTest {
                         "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32000,\"message\":\"Internal error\"},\"id\":1}")));
 
     // Prepare test data
-    final TestTransactionEvaluationContext context =
-        new TestTransactionEvaluationContext(pendingBlockHeader, pendingTransaction);
     final TransactionSelectionResult result = TransactionSelectionResult.invalid("test");
     final Instant timestamp = Instant.now();
 
     // Generate JSON-RPC call
     final String jsonRpcCall =
-        JsonRpcRequestBuilder.buildRejectedTxRequest(context, result, timestamp);
+        JsonRpcRequestBuilder.generateSaveRejectedTxJsonRpc(
+            LineaNodeType.SEQUENCER,
+            transaction,
+            timestamp,
+            Optional.of(1L),
+            result.maybeInvalidReason().orElse(""));
 
     // Submit the call
     jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
@@ -248,14 +252,17 @@ class JsonRpcManagerTest {
                         "{\"jsonrpc\":\"2.0\",\"result\":{ \"status\": \"SAVED\"},\"id\":1}")));
 
     // Prepare test data
-    final TestTransactionEvaluationContext context =
-        new TestTransactionEvaluationContext(pendingBlockHeader, pendingTransaction);
     final TransactionSelectionResult result = TransactionSelectionResult.invalid("test");
     final Instant timestamp = Instant.now();
 
     // Generate JSON-RPC call
     final String jsonRpcCall =
-        JsonRpcRequestBuilder.buildRejectedTxRequest(context, result, timestamp);
+        JsonRpcRequestBuilder.generateSaveRejectedTxJsonRpc(
+            LineaNodeType.SEQUENCER,
+            transaction,
+            timestamp,
+            Optional.of(1L),
+            result.maybeInvalidReason().orElse(""));
 
     // Submit the call, the scheduler will retry the failed calls
     jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);

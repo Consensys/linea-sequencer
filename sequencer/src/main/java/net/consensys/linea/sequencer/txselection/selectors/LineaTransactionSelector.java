@@ -161,7 +161,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
         jsonRpcManager -> {
           if (transactionSelectionResult.discard()) {
             jsonRpcManager.submitNewJsonRpcCall(
-                JsonRpcRequestBuilder.buildRejectedTxRequest(
+                JsonRpcRequestBuilder.generateSaveRejectedTxJsonRpc(
                     jsonRpcManager.getNodeType(),
                     evaluationContext.getPendingTransaction().getTransaction(),
                     Instant.now(),

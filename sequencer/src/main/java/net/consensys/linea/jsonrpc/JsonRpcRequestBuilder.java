@@ -21,11 +21,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.gson.JsonObject;
 import net.consensys.linea.config.LineaNodeType;
-import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Transaction;
-import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
-import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
-import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationContext;
 
 /**
  * Helper class to build JSON-RPC requests for rejected transactions.
@@ -53,21 +49,19 @@ import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationCon
 public class JsonRpcRequestBuilder {
   private static final AtomicLong idCounter = new AtomicLong(1);
 
-  public static String buildRejectedTxRequest(
-      final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
-      final TransactionSelectionResult transactionSelectionResult,
-      final Instant timestamp) {
-    final PendingTransaction pendingTransaction = evaluationContext.getPendingTransaction();
-    final ProcessableBlockHeader pendingBlockHeader = evaluationContext.getPendingBlockHeader();
-    return buildRejectedTxRequest(
-        LineaNodeType.SEQUENCER,
-        pendingTransaction.getTransaction(),
-        timestamp,
-        Optional.of(pendingBlockHeader.getNumber()),
-        transactionSelectionResult.maybeInvalidReason().orElse(""));
-  }
-
-  public static String buildRejectedTxRequest(
+  /**
+   * Generate linea_saveRejectedTransactionV1 JSON-RPC request from given arguments.
+   *
+   * @param lineaNodeType Linea node type which is reporting the rejected transaction.
+   * @param transaction The rejected transaction. The encoded transaction RLP is used in the
+   *     JSON-RPC request.
+   * @param timestamp The timestamp when the transaction was rejected.
+   * @param blockNumber Optional block number where the transaction was rejected. Used for sequencer
+   *     node.
+   * @param reasonMessage The reason message for the rejection.
+   * @return JSON-RPC request as a string.
+   */
+  public static String generateSaveRejectedTxJsonRpc(
       final LineaNodeType lineaNodeType,
       final Transaction transaction,
       final Instant timestamp,
