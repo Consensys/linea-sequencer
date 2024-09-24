@@ -28,6 +28,7 @@ import java.util.stream.Stream;
 import com.google.auto.service.AutoService;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
+import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.plugin.BesuContext;
@@ -103,11 +104,16 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
           lines.map(l -> Address.fromHexString(l.trim())).collect(Collectors.toUnmodifiableSet());
 
       // start the optional json rpc manager for rejected tx reporting
+      final LineaRejectedTxReportingConfiguration lineaRejectedTxReportingConfiguration =
+          rejectedTxReportingConfiguration();
       rejectedTxJsonRpcManager =
-          Optional.ofNullable(rejectedTxReportingConfiguration().rejectedTxEndpoint())
+          Optional.ofNullable(lineaRejectedTxReportingConfiguration.rejectedTxEndpoint())
               .map(
                   endpoint ->
-                      new JsonRpcManager(besuConfiguration.getDataPath(), endpoint).start());
+                      new JsonRpcManager(
+                              besuConfiguration.getDataPath(),
+                              lineaRejectedTxReportingConfiguration)
+                          .start());
 
       transactionPoolValidatorService.registerPluginTransactionValidatorFactory(
           new LineaTransactionPoolValidatorFactory(

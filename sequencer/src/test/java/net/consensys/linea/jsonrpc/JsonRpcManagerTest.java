@@ -39,6 +39,8 @@ import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
+import net.consensys.linea.config.LineaNodeType;
+import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
 import net.consensys.linea.sequencer.txselection.selectors.TestTransactionEvaluationContext;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.PendingTransaction;
@@ -69,8 +71,12 @@ class JsonRpcManagerTest {
     when(pendingBlockHeader.getNumber()).thenReturn(1L);
     when(pendingTransaction.getTransaction()).thenReturn(transaction);
     when(transaction.encoded()).thenReturn(randomEncodedBytes);
-
-    jsonRpcManager = new JsonRpcManager(tempDataDir, URI.create(wmInfo.getHttpBaseUrl()));
+    final LineaRejectedTxReportingConfiguration config =
+        LineaRejectedTxReportingConfiguration.builder()
+            .rejectedTxEndpoint(URI.create(wmInfo.getHttpBaseUrl()))
+            .lineaNodeType(LineaNodeType.SEQUENCER)
+            .build();
+    jsonRpcManager = new JsonRpcManager(tempDataDir, config);
     jsonRpcManager.start();
   }
 

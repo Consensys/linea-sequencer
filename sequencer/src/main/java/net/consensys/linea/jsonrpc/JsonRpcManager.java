@@ -17,7 +17,7 @@ package net.consensys.linea.jsonrpc;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.net.URI;
+import java.net.MalformedURLException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
@@ -39,7 +39,10 @@ import java.util.concurrent.TimeUnit;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import net.consensys.linea.config.LineaNodeType;
+import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -58,7 +61,7 @@ public class JsonRpcManager {
   private final Map<Path, Instant> fileStartTimes = new ConcurrentHashMap<>();
 
   private final Path rejTxRpcDirectory;
-  private final URI rejectedTxEndpoint;
+  private final LineaRejectedTxReportingConfiguration reportingConfiguration;
   private final ExecutorService executorService;
   private final ScheduledExecutorService retrySchedulerService;
 
@@ -67,11 +70,17 @@ public class JsonRpcManager {
    *
    * @param besuDataDir Path to Besu data directory. The json-rpc files will be stored here under
    *     rej-tx-rpc subdirectory.
-   * @param rejectedTxEndpoint The endpoint to send rejected transactions to
+   * @param reportingConfiguration Instance of LineaRejectedTxReportingConfiguration containing the
+   *     endpoint URI and node type.
    */
-  public JsonRpcManager(final Path besuDataDir, final URI rejectedTxEndpoint) {
+  public JsonRpcManager(
+      @NonNull final Path besuDataDir,
+      @NonNull final LineaRejectedTxReportingConfiguration reportingConfiguration) {
+    if (reportingConfiguration.rejectedTxEndpoint() == null) {
+      throw new IllegalStateException("Rejected transaction endpoint URI is required");
+    }
     this.rejTxRpcDirectory = besuDataDir.resolve("rej_tx_rpc");
-    this.rejectedTxEndpoint = rejectedTxEndpoint;
+    this.reportingConfiguration = reportingConfiguration;
     this.executorService = Executors.newVirtualThreadPerTaskExecutor();
     this.retrySchedulerService = Executors.newSingleThreadScheduledExecutor();
   }
@@ -115,6 +124,10 @@ public class JsonRpcManager {
     submitJsonRpcCall(jsonFile, INITIAL_RETRY_DELAY_DURATION);
   }
 
+  public LineaNodeType getNodeType() {
+    return reportingConfiguration.lineaNodeType();
+  }
+
   private void processExistingJsonFiles() {
     try {
       final TreeSet<Path> sortedFiles = new TreeSet<>(Comparator.comparing(Path::getFileName));
@@ -155,7 +168,7 @@ public class JsonRpcManager {
               log.error(
                   "Failed to send JSON-RPC file {} to {}, Scheduling retry ...",
                   jsonFile,
-                  rejectedTxEndpoint);
+                  reportingConfiguration.rejectedTxEndpoint());
               scheduleRetry(jsonFile, nextDelay);
             }
           } catch (final Exception e) {
@@ -208,8 +221,19 @@ public class JsonRpcManager {
 
   private boolean sendJsonRpcCall(final String jsonContent) {
     final RequestBody body = RequestBody.create(jsonContent, JSON);
-    final Request request =
-        new Request.Builder().url(rejectedTxEndpoint.toString()).post(body).build();
+    final Request request;
+    try {
+      request =
+          new Request.Builder()
+              .url(reportingConfiguration.rejectedTxEndpoint().toURL())
+              .post(body)
+              .build();
+    } catch (final MalformedURLException e) {
+      log.error(
+          "Invalid rejected-tx endpoint URL: {}", reportingConfiguration.rejectedTxEndpoint(), e);
+      return false;
+    }
+
     try (final Response response = client.newCall(request).execute()) {
       if (!response.isSuccessful()) {
         log.error("Unexpected response code from rejected-tx endpoint: {}", response.code());
@@ -242,7 +266,10 @@ public class JsonRpcManager {
       log.warn("Unexpected rejected-tx JSON-RPC response format: {}", responseBody);
       return false;
     } catch (final IOException e) {
-      log.error("Failed to send JSON-RPC call to rejected-tx endpoint {}", rejectedTxEndpoint, e);
+      log.error(
+          "Failed to send JSON-RPC call to rejected-tx endpoint {}",
+          reportingConfiguration.rejectedTxEndpoint(),
+          e);
       return false;
     }
   }

@@ -30,6 +30,9 @@ public class LineaRejectedTxReportingCliOptions implements LineaCliOptions {
   /** The rejected transaction endpoint. */
   public static final String REJECTED_TX_ENDPOINT = "--plugin-linea-rejected-tx-endpoint";
 
+  /** The Linea node type. */
+  public static final String LINEA_NODE_TYPE = "--plugin-linea-node-type";
+
   @CommandLine.Option(
       names = {REJECTED_TX_ENDPOINT},
       hidden = true,
@@ -37,6 +40,14 @@ public class LineaRejectedTxReportingCliOptions implements LineaCliOptions {
       description =
           "Endpoint URI for reporting rejected transactions. Specify a valid URI to enable reporting.")
   private URI rejectedTxEndpoint = null;
+
+  @CommandLine.Option(
+      names = {LINEA_NODE_TYPE},
+      hidden = true,
+      paramLabel = "<NODE_TYPE>",
+      description =
+          "Linea Node type to use when reporting rejected transactions. (default: ${DEFAULT-VALUE}. Valid values: ${COMPLETION-CANDIDATES})")
+  private LineaNodeType lineaNodeType = LineaNodeType.SEQUENCER;
 
   /** Default constructor. */
   private LineaRejectedTxReportingCliOptions() {}
@@ -59,6 +70,7 @@ public class LineaRejectedTxReportingCliOptions implements LineaCliOptions {
       final LineaRejectedTxReportingConfiguration config) {
     final LineaRejectedTxReportingCliOptions options = create();
     options.rejectedTxEndpoint = config.rejectedTxEndpoint();
+    options.lineaNodeType = config.lineaNodeType();
     return options;
   }
 
@@ -66,6 +78,7 @@ public class LineaRejectedTxReportingCliOptions implements LineaCliOptions {
   public LineaRejectedTxReportingConfiguration toDomainObject() {
     return LineaRejectedTxReportingConfiguration.builder()
         .rejectedTxEndpoint(rejectedTxEndpoint)
+        .lineaNodeType(lineaNodeType)
         .build();
   }
 
@@ -73,6 +86,7 @@ public class LineaRejectedTxReportingCliOptions implements LineaCliOptions {
   public String toString() {
     return MoreObjects.toStringHelper(this)
         .add(REJECTED_TX_ENDPOINT, rejectedTxEndpoint)
+        .add(LINEA_NODE_TYPE, lineaNodeType)
         .toString();
   }
 }

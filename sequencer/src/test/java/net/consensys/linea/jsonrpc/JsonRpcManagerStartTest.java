@@ -33,6 +33,8 @@ import java.time.Instant;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import net.consensys.linea.config.LineaNodeType;
+import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
 import net.consensys.linea.sequencer.txselection.selectors.TestTransactionEvaluationContext;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.PendingTransaction;
@@ -81,7 +83,12 @@ public class JsonRpcManagerStartTest {
       JsonRpcManager.saveJsonToDir(jsonRpcCall, rejectedTxDir);
     }
 
-    jsonRpcManager = new JsonRpcManager(tempDataDir, URI.create(wmInfo.getHttpBaseUrl()));
+    final LineaRejectedTxReportingConfiguration config =
+        LineaRejectedTxReportingConfiguration.builder()
+            .rejectedTxEndpoint(URI.create(wmInfo.getHttpBaseUrl()))
+            .lineaNodeType(LineaNodeType.SEQUENCER)
+            .build();
+    jsonRpcManager = new JsonRpcManager(tempDataDir, config);
   }
 
   @AfterEach
