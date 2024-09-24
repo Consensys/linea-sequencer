@@ -15,6 +15,7 @@
 
 package net.consensys.linea.config;
 
+/** Linea node type that is used when reporting rejected transactions. */
 public enum LineaNodeType {
   SEQUENCER,
   RPC,
