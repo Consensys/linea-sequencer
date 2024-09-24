@@ -127,7 +127,8 @@ public class SimulationValidatorTest {
         LineaL1L2BridgeSharedConfiguration.builder()
             .contract(BRIDGE_CONTRACT)
             .topic(BRIDGE_LOG_TOPIC)
-            .build());
+            .build(),
+        Optional.empty());
   }
 
   @Test
