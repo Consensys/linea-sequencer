@@ -109,7 +109,6 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
                       Instant.now(),
                       Optional.empty(), // block number is not available
                       reason);
-              System.out.println("*** Submitting: " + jsonRpcCall);
               jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
             });
 
