@@ -79,7 +79,7 @@ public abstract class AbstractLineaPrivateOptionsPlugin extends AbstractLineaSha
         getConfigurationByKey(LineaTransactionPoolValidatorCliOptions.CONFIG_KEY).optionsConfig();
   }
 
-  public LineaRpcConfiguration rpcConfiguration() {
+  public LineaRpcConfiguration lineaRpcConfiguration() {
     return (LineaRpcConfiguration)
         getConfigurationByKey(LineaRpcCliOptions.CONFIG_KEY).optionsConfig();
   }
