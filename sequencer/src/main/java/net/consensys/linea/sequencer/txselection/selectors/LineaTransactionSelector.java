@@ -156,7 +156,6 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
     selectors.forEach(
         selector ->
             selector.onTransactionNotSelected(evaluationContext, transactionSelectionResult));
-
     rejectedTxJsonRpcManager.ifPresent(
         jsonRpcManager -> {
           if (transactionSelectionResult.discard()) {
@@ -166,7 +165,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
                     evaluationContext.getPendingTransaction().getTransaction(),
                     Instant.now(),
                     Optional.of(evaluationContext.getPendingBlockHeader().getNumber()),
-                    transactionSelectionResult.maybeInvalidReason().orElse(""),
+                    transactionSelectionResult.toString(),
                     List.of()));
           }
         });
