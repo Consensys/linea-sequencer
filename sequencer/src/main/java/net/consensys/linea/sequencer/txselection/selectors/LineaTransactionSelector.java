@@ -156,6 +156,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
     selectors.forEach(
         selector ->
             selector.onTransactionNotSelected(evaluationContext, transactionSelectionResult));
+
     rejectedTxJsonRpcManager.ifPresent(
         jsonRpcManager -> {
           if (transactionSelectionResult.discard()) {
