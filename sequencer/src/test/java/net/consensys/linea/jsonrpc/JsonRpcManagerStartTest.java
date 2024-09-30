@@ -76,7 +76,7 @@ public class JsonRpcManagerStartTest {
               transaction,
               timestamp,
               Optional.of(1L),
-              result.maybeInvalidReason().orElse(""),
+              result.toString(),
               List.of());
 
       JsonRpcManager.saveJsonToDir(jsonRpcCall, rejectedTxDir);
