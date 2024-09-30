@@ -166,7 +166,8 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
                     evaluationContext.getPendingTransaction().getTransaction(),
                     Instant.now(),
                     Optional.of(evaluationContext.getPendingBlockHeader().getNumber()),
-                    transactionSelectionResult.maybeInvalidReason().orElse("")));
+                    transactionSelectionResult.maybeInvalidReason().orElse(""),
+                    List.of()));
           }
         });
   }

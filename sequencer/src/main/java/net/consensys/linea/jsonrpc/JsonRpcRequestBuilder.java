@@ -16,11 +16,14 @@
 package net.consensys.linea.jsonrpc;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import net.consensys.linea.config.LineaNodeType;
+import net.consensys.linea.sequencer.modulelimit.ModuleLimitsValidationResult;
 import org.hyperledger.besu.datatypes.Transaction;
 
 /**
@@ -66,15 +69,27 @@ public class JsonRpcRequestBuilder {
       final Transaction transaction,
       final Instant timestamp,
       final Optional<Long> blockNumber,
-      final String reasonMessage) {
+      final String reasonMessage,
+      final List<ModuleLimitsValidationResult> overflowValidationResults) {
     final JsonObject params = new JsonObject();
     params.addProperty("txRejectionStage", lineaNodeType.name());
     params.addProperty("timestamp", timestamp.toString());
     blockNumber.ifPresent(number -> params.addProperty("blockNumber", number));
     params.addProperty("transactionRLP", transaction.encoded().toHexString());
     params.addProperty("reasonMessage", reasonMessage);
-    // TODO: overflows
 
+    // overflows
+    final JsonArray overflows = new JsonArray();
+    for (ModuleLimitsValidationResult result : overflowValidationResults) {
+      JsonObject overflow = new JsonObject();
+      overflow.addProperty("module", result.getModuleName());
+      overflow.addProperty("count", result.getModuleLineCount());
+      overflow.addProperty("limit", result.getModuleLineLimit());
+      overflows.add(overflow);
+    }
+    params.add("overflows", overflows);
+
+    // request
     final JsonObject request = new JsonObject();
     request.addProperty("jsonrpc", "2.0");
     request.addProperty("method", "linea_saveRejectedTransactionV1");

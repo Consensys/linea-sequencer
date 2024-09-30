@@ -33,6 +33,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -101,7 +102,8 @@ class JsonRpcManagerTest {
             transaction,
             timestamp,
             Optional.of(1L),
-            result.maybeInvalidReason().orElse(""));
+            result.maybeInvalidReason().orElse(""),
+            List.of());
 
     jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
 
@@ -151,7 +153,8 @@ class JsonRpcManagerTest {
             transaction,
             timestamp,
             Optional.of(1L),
-            result.maybeInvalidReason().orElse(""));
+            result.maybeInvalidReason().orElse(""),
+            List.of());
 
     // Submit the call, the scheduler will retry the failed call
     jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
@@ -197,7 +200,8 @@ class JsonRpcManagerTest {
             transaction,
             timestamp,
             Optional.of(1L),
-            result.maybeInvalidReason().orElse(""));
+            result.maybeInvalidReason().orElse(""),
+            List.of());
 
     // Submit the call
     jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
@@ -262,7 +266,8 @@ class JsonRpcManagerTest {
             transaction,
             timestamp,
             Optional.of(1L),
-            result.maybeInvalidReason().orElse(""));
+            result.maybeInvalidReason().orElse(""),
+            List.of());
 
     // Submit the call, the scheduler will retry the failed calls
     jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);

@@ -18,6 +18,7 @@ import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator
 import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.TX_MODULE_LINE_COUNT_OVERFLOW;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -108,7 +109,8 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
                       transaction,
                       Instant.now(),
                       Optional.empty(), // block number is not available
-                      reason);
+                      reason,
+                      List.of());
               jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
             });
 
@@ -131,7 +133,8 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
                         transaction,
                         Instant.now(),
                         Optional.empty(), // block number is not available
-                        errMsg);
+                        errMsg,
+                        List.of());
                 jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
               });
           return Optional.of(errMsg);
@@ -153,7 +156,8 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
                         transaction,
                         Instant.now(),
                         Optional.empty(), // block number is not available
-                        errMsg);
+                        errMsg,
+                        List.of());
                 jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
               });
           return Optional.of(errMsg);

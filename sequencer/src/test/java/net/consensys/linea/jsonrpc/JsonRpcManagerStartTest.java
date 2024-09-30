@@ -30,6 +30,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
@@ -75,7 +76,8 @@ public class JsonRpcManagerStartTest {
               transaction,
               timestamp,
               Optional.of(1L),
-              result.maybeInvalidReason().orElse(""));
+              result.maybeInvalidReason().orElse(""),
+              List.of());
 
       JsonRpcManager.saveJsonToDir(jsonRpcCall, rejectedTxDir);
     }
