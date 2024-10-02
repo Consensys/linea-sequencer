@@ -15,10 +15,12 @@
 package net.consensys.linea.config;
 
 import java.net.URI;
+import java.util.Optional;
 
 import com.google.common.base.MoreObjects;
 import net.consensys.linea.plugins.LineaCliOptions;
-import picocli.CommandLine;
+import picocli.CommandLine.ArgGroup;
+import picocli.CommandLine.Option;
 
 /** The Linea Rejected Transaction Reporting CLI options. */
 public class LineaRejectedTxReportingCliOptions implements LineaCliOptions {
@@ -33,21 +35,28 @@ public class LineaRejectedTxReportingCliOptions implements LineaCliOptions {
   /** The Linea node type. */
   public static final String LINEA_NODE_TYPE = "--plugin-linea-node-type";
 
-  @CommandLine.Option(
-      names = {REJECTED_TX_ENDPOINT},
-      hidden = true,
-      paramLabel = "<URI>",
-      description =
-          "Endpoint URI for reporting rejected transactions. Specify a valid URI to enable reporting.")
-  private URI rejectedTxEndpoint = null;
+  @ArgGroup(exclusive = false)
+  DependentOptions dependentOptions; // will be null if no options from this group are specified
 
-  @CommandLine.Option(
-      names = {LINEA_NODE_TYPE},
-      hidden = true,
-      paramLabel = "<NODE_TYPE>",
-      description =
-          "Linea Node type to use when reporting rejected transactions. (default: ${DEFAULT-VALUE}. Valid values: ${COMPLETION-CANDIDATES})")
-  private LineaNodeType lineaNodeType = LineaNodeType.SEQUENCER;
+  static class DependentOptions {
+    @Option(
+        names = {REJECTED_TX_ENDPOINT},
+        hidden = true,
+        required = true, // required within the group
+        paramLabel = "<URI>",
+        description =
+            "Endpoint URI for reporting rejected transactions. Specify a valid URI to enable reporting.")
+    URI rejectedTxEndpoint = null;
+
+    @Option(
+        names = {LINEA_NODE_TYPE},
+        hidden = true,
+        required = true, // required within the group
+        paramLabel = "<NODE_TYPE>",
+        description =
+            "Linea Node type to use when reporting rejected transactions. (default: ${DEFAULT-VALUE}. Valid values: ${COMPLETION-CANDIDATES})")
+    LineaNodeType lineaNodeType = null;
+  }
 
   /** Default constructor. */
   private LineaRejectedTxReportingCliOptions() {}
@@ -69,13 +78,23 @@ public class LineaRejectedTxReportingCliOptions implements LineaCliOptions {
   public static LineaRejectedTxReportingCliOptions fromConfig(
       final LineaRejectedTxReportingConfiguration config) {
     final LineaRejectedTxReportingCliOptions options = create();
-    options.rejectedTxEndpoint = config.rejectedTxEndpoint();
-    options.lineaNodeType = config.lineaNodeType();
+    // both options are required.
+    if (config.rejectedTxEndpoint() != null && config.lineaNodeType() != null) {
+      final var depOpts = new DependentOptions();
+      depOpts.rejectedTxEndpoint = config.rejectedTxEndpoint();
+      depOpts.lineaNodeType = config.lineaNodeType();
+      options.dependentOptions = depOpts;
+    }
     return options;
   }
 
   @Override
   public LineaRejectedTxReportingConfiguration toDomainObject() {
+    final var rejectedTxEndpoint =
+        Optional.ofNullable(dependentOptions).map(o -> o.rejectedTxEndpoint).orElse(null);
+    final var lineaNodeType =
+        Optional.ofNullable(dependentOptions).map(o -> o.lineaNodeType).orElse(null);
+
     return LineaRejectedTxReportingConfiguration.builder()
         .rejectedTxEndpoint(rejectedTxEndpoint)
         .lineaNodeType(lineaNodeType)
@@ -84,6 +103,11 @@ public class LineaRejectedTxReportingCliOptions implements LineaCliOptions {
 
   @Override
   public String toString() {
+    final var rejectedTxEndpoint =
+        Optional.ofNullable(dependentOptions).map(o -> o.rejectedTxEndpoint).orElse(null);
+    final var lineaNodeType =
+        Optional.ofNullable(dependentOptions).map(o -> o.lineaNodeType).orElse(null);
+
     return MoreObjects.toStringHelper(this)
         .add(REJECTED_TX_ENDPOINT, rejectedTxEndpoint)
         .add(LINEA_NODE_TYPE, lineaNodeType)
