@@ -19,7 +19,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.ProcessBuilder.Redirect;
@@ -37,7 +36,6 @@ import org.hyperledger.besu.tests.acceptance.dsl.condition.eth.EthConditions;
 import org.hyperledger.besu.tests.acceptance.dsl.condition.login.LoginConditions;
 import org.hyperledger.besu.tests.acceptance.dsl.condition.net.NetConditions;
 import org.hyperledger.besu.tests.acceptance.dsl.condition.perm.PermissioningConditions;
-import org.hyperledger.besu.tests.acceptance.dsl.condition.priv.PrivConditions;
 import org.hyperledger.besu.tests.acceptance.dsl.condition.process.ExitedWithCode;
 import org.hyperledger.besu.tests.acceptance.dsl.condition.txpool.TxPoolConditions;
 import org.hyperledger.besu.tests.acceptance.dsl.condition.web3.Web3Conditions;
@@ -55,18 +53,14 @@ import org.hyperledger.besu.tests.acceptance.dsl.transaction.eth.EthTransactions
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.miner.MinerTransactions;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.net.NetTransactions;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.perm.PermissioningTransactions;
-import org.hyperledger.besu.tests.acceptance.dsl.transaction.privacy.PrivacyTransactions;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.txpool.TxPoolTransactions;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.web3.Web3Transactions;
-import org.junit.After;
-import org.junit.Rule;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
-import org.junit.rules.TestName;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
-import org.slf4j.MDC;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 /** Base class for acceptance tests. */
+@ExtendWith(AcceptanceTestBaseTestWatcher.class)
 @Tag("AcceptanceTest")
 @Slf4j
 public class AcceptanceTestBase {
@@ -92,8 +86,6 @@ public class AcceptanceTestBase {
   protected final PermissioningTransactions permissioningTransactions;
   protected final MinerTransactions minerTransactions;
   protected final Web3Conditions web3;
-  protected final PrivConditions priv;
-  protected final PrivacyTransactions privacyTransactions;
   protected final TxPoolConditions txPoolConditions;
   protected final TxPoolTransactions txPoolTransactions;
   protected final ExitedWithCode exitedSuccessfully;
@@ -108,7 +100,6 @@ public class AcceptanceTestBase {
     bftTransactions = new BftTransactions();
     accountTransactions = new AccountTransactions(accounts);
     permissioningTransactions = new PermissioningTransactions();
-    privacyTransactions = new PrivacyTransactions();
     contractTransactions = new ContractTransactions();
     minerTransactions = new MinerTransactions();
 
@@ -120,7 +111,6 @@ public class AcceptanceTestBase {
     net = new NetConditions(new NetTransactions());
     cluster = new Cluster(net);
     perm = new PermissioningConditions(permissioningTransactions);
-    priv = new PrivConditions(privacyTransactions);
     admin = new AdminConditions(adminTransactions);
     web3 = new Web3Conditions(new Web3Transactions());
     besu = new BesuNodeFactory();
@@ -131,9 +121,7 @@ public class AcceptanceTestBase {
     exitedSuccessfully = new ExitedWithCode(0);
   }
 
-  @Rule public final TestName name = new TestName();
-
-  @After
+  @AfterEach
   public void tearDownAcceptanceTestBase() {
     reportMemory();
     cluster.close();
@@ -178,49 +166,6 @@ public class AcceptanceTestBase {
       log.warn("Failed to read output from memory information process: ", e);
     }
   }
-
-  @Rule
-  public TestWatcher logEraser =
-      new TestWatcher() {
-
-        @Override
-        protected void starting(final Description description) {
-          MDC.put("test", description.getMethodName());
-          MDC.put("class", description.getClassName());
-
-          final String errorMessage = "Uncaught exception in thread \"{}\"";
-          Thread.currentThread()
-              .setUncaughtExceptionHandler(
-                  (thread, error) -> log.error(errorMessage, thread.getName(), error));
-          Thread.setDefaultUncaughtExceptionHandler(
-              (thread, error) -> log.error(errorMessage, thread.getName(), error));
-        }
-
-        @Override
-        protected void failed(final Throwable e, final Description description) {
-          // add the result at the end of the log so it is self-sufficient
-          log.error(
-              "==========================================================================================");
-          log.error("Test failed. Reported Throwable at the point of failure:", e);
-          log.error(e.getMessage());
-        }
-
-        @Override
-        protected void succeeded(final Description description) {
-          // if so configured, delete logs of successful tests
-          if (!Boolean.getBoolean("acctests.keepLogsOfPassingTests")) {
-            String pathname =
-                "build/acceptanceTestLogs/"
-                    + description.getClassName()
-                    + "."
-                    + description.getMethodName()
-                    + ".log";
-            log.info("Test successful, deleting log at {}", pathname);
-            File file = new File(pathname);
-            file.delete();
-          }
-        }
-      };
 
   protected void waitForBlockHeight(final Node node, final long blockchainHeight) {
     WaitUtils.waitFor(
