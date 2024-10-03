@@ -234,9 +234,7 @@ public class JsonRpcManager {
 
   private boolean sendJsonRpcCall(final String jsonContent) {
     final RequestBody body = RequestBody.create(jsonContent, JSON);
-    final Request request;
-
-    request =
+    final Request request =
         new Request.Builder().url(reportingConfiguration.rejectedTxEndpoint()).post(body).build();
 
     try (final Response response = client.newCall(request).execute()) {
