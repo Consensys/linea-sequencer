@@ -44,7 +44,7 @@ public class TransactionPoolDenyListReloadTest extends LineaPluginTestBase {
   final Credentials willbeDenied = Credentials.create(Accounts.GENESIS_ACCOUNT_TWO_PRIVATE_KEY);
 
   @TempDir static Path tempDir;
-  static Path tempDenyList ;
+  static Path tempDenyList;
 
   @Override
   public List<String> getTestCliOptions() {
@@ -58,14 +58,16 @@ public class TransactionPoolDenyListReloadTest extends LineaPluginTestBase {
   public void emptyDenyList() throws Exception {
     final Web3j miner = minerNode.nodeRequests().eth();
 
-    RawTransactionManager transactionManager = new RawTransactionManager(miner, willbeDenied, CHAIN_ID);
-    assertAddressAllowed(transactionManager,willbeDenied.getAddress() );
+    RawTransactionManager transactionManager =
+        new RawTransactionManager(miner, willbeDenied, CHAIN_ID);
+    assertAddressAllowed(transactionManager, willbeDenied.getAddress());
   }
 
   @Test
   public void emptyDenyList_thenDenySender_cannotAddTxToPool() throws Exception {
     final Web3j miner = minerNode.nodeRequests().eth();
-    RawTransactionManager transactionManager = new RawTransactionManager(miner, willbeDenied, CHAIN_ID);
+    RawTransactionManager transactionManager =
+        new RawTransactionManager(miner, willbeDenied, CHAIN_ID);
 
     assertAddressAllowed(transactionManager, willbeDenied.getAddress());
 
@@ -79,36 +81,39 @@ public class TransactionPoolDenyListReloadTest extends LineaPluginTestBase {
     Files.writeString(tempDenyList, address);
   }
 
-  private void assertAddressAllowed(final RawTransactionManager transactionManager, final String address) throws IOException {
+  private void assertAddressAllowed(
+      final RawTransactionManager transactionManager, final String address) throws IOException {
     EthSendTransaction transactionResponse =
-            transactionManager.sendTransaction(GAS_PRICE, GAS_LIMIT, address, "", VALUE);
+        transactionManager.sendTransaction(GAS_PRICE, GAS_LIMIT, address, "", VALUE);
     assertThat(transactionResponse.getTransactionHash()).isNotNull();
     assertThat(transactionResponse.getError()).isNull();
   }
 
-  private void assertAddressNotAllowed(final RawTransactionManager transactionManager, final String address) throws IOException {
+  private void assertAddressNotAllowed(
+      final RawTransactionManager transactionManager, final String address) throws IOException {
     EthSendTransaction transactionResponse =
-            transactionManager.sendTransaction(GAS_PRICE, GAS_LIMIT, address, "", VALUE);
+        transactionManager.sendTransaction(GAS_PRICE, GAS_LIMIT, address, "", VALUE);
 
     assertThat(transactionResponse.getTransactionHash()).isNull();
     assertThat(transactionResponse.getError().getMessage())
-            .isEqualTo(
-                    "recipient "+ address + " is blocked as appearing on the SDN or other legally prohibited list");
+        .isEqualTo(
+            "recipient "
+                + address
+                + " is blocked as appearing on the SDN or other legally prohibited list");
   }
 
   private void reloadPluginConfig() {
     System.out.println("GOT HERE ******");
     final var reqLinea = new ReloadPluginConfigRequest();
-    System.out.println("88888888"+reqLinea);
+    System.out.println("88888888" + reqLinea);
     final var respLinea = reqLinea.execute(minerNode.nodeRequests());
-    System.out.println("88888888"+respLinea);
+    System.out.println("88888888" + respLinea);
     assertThat(respLinea.booleanValue()).isTrue();
   }
 
   static class ReloadPluginConfigRequest implements Transaction<Boolean> {
 
-    public ReloadPluginConfigRequest() {
-    }
+    public ReloadPluginConfigRequest() {}
 
     @Override
     public Boolean execute(final NodeRequests nodeRequests) {
@@ -118,8 +123,8 @@ public class TransactionPoolDenyListReloadTest extends LineaPluginTestBase {
                 List.of(),
                 nodeRequests.getWeb3jService(),
                 ReloadPluginConfigResponse.class)
-                .send()
-                .getResult();
+            .send()
+            .getResult();
       } catch (IOException e) {
         throw new RuntimeException(e);
       }

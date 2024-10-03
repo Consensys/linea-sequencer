@@ -126,5 +126,4 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
     loadDenyListAndRegisterPluginTxValidatorFactory();
     return CompletableFuture.completedFuture(null);
   }
-
 }
