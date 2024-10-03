@@ -1,7 +1,7 @@
 # Changelog
 
 ## Next release
-* feat: Report rejected transactions to an external service for SimulationValidator used by LineaTransactionPoolValidatorPlugin [#85](https://github.com/Consensys/linea-sequencer/pull/85)
+* feat: Report rejected transactions to an external service for validators used by LineaTransactionPoolValidatorPlugin [#85](https://github.com/Consensys/linea-sequencer/pull/85)
 * feat: Report rejected transactions to an external service for LineaTransactionSelector used by LineaTransactionSelectorPlugin [#69](https://github.com/Consensys/linea-sequencer/pull/69)
 
 ## 0.6.0-rc1.1

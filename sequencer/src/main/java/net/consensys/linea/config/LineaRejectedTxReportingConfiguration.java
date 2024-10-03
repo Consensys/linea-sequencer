@@ -20,7 +20,7 @@ import java.net.URL;
 import lombok.Builder;
 import net.consensys.linea.plugins.LineaOptionsConfiguration;
 
-/** The Linea RPC configuration. */
+/** Linea Rejected Transactions Reporting Configuration */
 @Builder(toBuilder = true)
 public record LineaRejectedTxReportingConfiguration(
     URL rejectedTxEndpoint, LineaNodeType lineaNodeType) implements LineaOptionsConfiguration {}
