@@ -29,6 +29,8 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -115,17 +117,26 @@ public class JsonRpcManager {
    *
    * @param jsonContent The JSON content to submit
    */
-  public void submitNewJsonRpcCall(final String jsonContent) {
-    final Path jsonFile;
-    try {
-      jsonFile = saveJsonToDir(jsonContent, jsonRpcDir);
-    } catch (final IOException e) {
-      log.error("Failed to save JSON-RPC content", e);
-      return;
-    }
-
-    fileStartTimes.put(jsonFile, Instant.now());
-    submitJsonRpcCall(jsonFile, INITIAL_RETRY_DELAY_DURATION);
+  public void submitNewJsonRpcCallAsync(final String jsonContent) {
+    CompletableFuture.supplyAsync(
+            () -> {
+              try {
+                Path jsonFile = saveJsonToDir(jsonContent, jsonRpcDir);
+                fileStartTimes.put(jsonFile, Instant.now());
+                return jsonFile;
+              } catch (final IOException e) {
+                log.error("Failed to save JSON-RPC content", e);
+                throw new CompletionException(e);
+              }
+            },
+            executorService)
+        .thenAcceptAsync(
+            jsonFile -> submitJsonRpcCall(jsonFile, INITIAL_RETRY_DELAY_DURATION), executorService)
+        .exceptionally(
+            e -> {
+              log.error("Error in submitNewJsonRpcCall", e);
+              return null;
+            });
   }
 
   public LineaNodeType getNodeType() {

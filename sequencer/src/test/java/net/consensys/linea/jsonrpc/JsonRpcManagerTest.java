@@ -107,7 +107,7 @@ class JsonRpcManagerTest {
             result.maybeInvalidReason().orElse(""),
             List.of());
 
-    jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
+    jsonRpcManager.submitNewJsonRpcCallAsync(jsonRpcCall);
 
     // Use Awaitility to wait for the condition to be met
     await()
@@ -159,7 +159,7 @@ class JsonRpcManagerTest {
             List.of());
 
     // Submit the call, the scheduler will retry the failed call
-    jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
+    jsonRpcManager.submitNewJsonRpcCallAsync(jsonRpcCall);
 
     // Use Awaitility to wait for the condition to be met
     await()
@@ -207,7 +207,7 @@ class JsonRpcManagerTest {
             List.of());
 
     // Submit the call
-    jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
+    jsonRpcManager.submitNewJsonRpcCallAsync(jsonRpcCall);
 
     // Use Awaitility to wait for the condition to be met
     await()
@@ -274,7 +274,7 @@ class JsonRpcManagerTest {
             List.of());
 
     // Submit the call, the scheduler will retry the failed calls
-    jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
+    jsonRpcManager.submitNewJsonRpcCallAsync(jsonRpcCall);
 
     // Use Awaitility to wait for the condition to be met
     await()
