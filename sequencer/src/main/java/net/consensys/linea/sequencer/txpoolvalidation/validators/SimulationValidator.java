@@ -99,21 +99,7 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
 
       if (moduleLimitResult.getResult() != ModuleLineCountValidator.ModuleLineCountResult.VALID) {
         final String reason = handleModuleOverLimit(transaction, moduleLimitResult);
-
-        // Report rejected transactions to the JSON-RPC manager
-        rejectedTxJsonRpcManager.ifPresent(
-            jsonRpcManager -> {
-              final String jsonRpcCall =
-                  JsonRpcRequestBuilder.generateSaveRejectedTxJsonRpc(
-                      jsonRpcManager.getNodeType(),
-                      transaction,
-                      Instant.now(),
-                      Optional.empty(), // block number is not available
-                      reason,
-                      List.of());
-              jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
-            });
-
+        reportRejectedTransaction(transaction, reason);
         return Optional.of(reason);
       }
 
@@ -124,19 +110,7 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
               "Invalid transaction"
                   + simulationResult.getInvalidReason().map(ir -> ": " + ir).orElse("");
           log.debug(errMsg);
-          // Report rejected transactions to the JSON-RPC manager
-          rejectedTxJsonRpcManager.ifPresent(
-              jsonRpcManager -> {
-                final String jsonRpcCall =
-                    JsonRpcRequestBuilder.generateSaveRejectedTxJsonRpc(
-                        jsonRpcManager.getNodeType(),
-                        transaction,
-                        Instant.now(),
-                        Optional.empty(), // block number is not available
-                        errMsg,
-                        List.of());
-                jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
-              });
+          reportRejectedTransaction(transaction, errMsg);
           return Optional.of(errMsg);
         }
         if (!simulationResult.isSuccessful()) {
@@ -147,19 +121,7 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
                       .map(rr -> ": " + rr.toHexString())
                       .orElse("");
           log.debug(errMsg);
-          // Report rejected transactions to the JSON-RPC manager
-          rejectedTxJsonRpcManager.ifPresent(
-              jsonRpcManager -> {
-                final String jsonRpcCall =
-                    JsonRpcRequestBuilder.generateSaveRejectedTxJsonRpc(
-                        jsonRpcManager.getNodeType(),
-                        transaction,
-                        Instant.now(),
-                        Optional.empty(), // block number is not available
-                        errMsg,
-                        List.of());
-                jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
-              });
+          reportRejectedTransaction(transaction, errMsg);
           return Optional.of(errMsg);
         }
       }
@@ -174,6 +136,21 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
     }
 
     return Optional.empty();
+  }
+
+  private void reportRejectedTransaction(final Transaction transaction, final String reason) {
+    rejectedTxJsonRpcManager.ifPresent(
+        jsonRpcManager -> {
+          final String jsonRpcCall =
+              JsonRpcRequestBuilder.generateSaveRejectedTxJsonRpc(
+                  jsonRpcManager.getNodeType(),
+                  transaction,
+                  Instant.now(),
+                  Optional.empty(), // block number is not available
+                  reason,
+                  List.of());
+          jsonRpcManager.submitNewJsonRpcCall(jsonRpcCall);
+        });
   }
 
   private void logSimulationResult(
