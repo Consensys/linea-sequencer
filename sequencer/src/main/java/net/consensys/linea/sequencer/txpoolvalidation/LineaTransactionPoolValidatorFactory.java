@@ -80,10 +80,11 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
   public PluginTransactionPoolValidator createTransactionValidator() {
     final var validators =
         new PluginTransactionPoolValidator[] {
-          new AllowedAddressValidator(denied),
-          new GasLimitValidator(txPoolValidatorConf),
-          new CalldataValidator(txPoolValidatorConf),
-          new ProfitabilityValidator(besuConfiguration, blockchainService, profitabilityConf),
+          new AllowedAddressValidator(denied, rejectedTxJsonRpcManager),
+          new GasLimitValidator(txPoolValidatorConf, rejectedTxJsonRpcManager),
+          new CalldataValidator(txPoolValidatorConf, rejectedTxJsonRpcManager),
+          new ProfitabilityValidator(
+              besuConfiguration, blockchainService, profitabilityConf, rejectedTxJsonRpcManager),
           new SimulationValidator(
               blockchainService,
               transactionSimulationService,
