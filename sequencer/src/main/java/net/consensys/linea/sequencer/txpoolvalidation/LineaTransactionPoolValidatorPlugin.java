@@ -111,6 +111,7 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
               .map(
                   endpoint ->
                       new JsonRpcManager(
+                              "linea-tx-pool-validator-plugin",
                               besuConfiguration.getDataPath(),
                               lineaRejectedTxReportingConfiguration)
                           .start());

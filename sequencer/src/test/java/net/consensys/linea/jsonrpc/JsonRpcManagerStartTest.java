@@ -55,12 +55,14 @@ public class JsonRpcManagerStartTest {
   private JsonRpcManager jsonRpcManager;
   private final Bytes randomEncodedBytes = Bytes.random(32);
   @Mock private Transaction transaction;
+  static final String PLUGIN_IDENTIFIER = "linea-start-test-plugin";
 
   @BeforeEach
   void init(final WireMockRuntimeInfo wmInfo) throws IOException {
     // create temp directories
-    final Path rejectedTxDir = tempDataDir.resolve("rej_tx_rpc");
-    Files.createDirectories(rejectedTxDir);
+    final Path jsonRpcDir =
+        tempDataDir.resolve(JsonRpcManager.JSON_RPC_DIR).resolve(PLUGIN_IDENTIFIER);
+    Files.createDirectories(jsonRpcDir);
 
     // mock stubbing
     when(transaction.encoded()).thenReturn(randomEncodedBytes);
@@ -79,7 +81,7 @@ public class JsonRpcManagerStartTest {
               result.toString(),
               List.of());
 
-      JsonRpcManager.saveJsonToDir(jsonRpcCall, rejectedTxDir);
+      JsonRpcManager.saveJsonToDir(jsonRpcCall, jsonRpcDir);
     }
 
     final LineaRejectedTxReportingConfiguration config =
@@ -87,7 +89,7 @@ public class JsonRpcManagerStartTest {
             .rejectedTxEndpoint(URI.create(wmInfo.getHttpBaseUrl()).toURL())
             .lineaNodeType(LineaNodeType.SEQUENCER)
             .build();
-    jsonRpcManager = new JsonRpcManager(tempDataDir, config);
+    jsonRpcManager = new JsonRpcManager(PLUGIN_IDENTIFIER, tempDataDir, config);
   }
 
   @AfterEach

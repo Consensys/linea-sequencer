@@ -89,7 +89,9 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
             .map(
                 endpoint ->
                     new JsonRpcManager(
-                            besuConfiguration.getDataPath(), lineaRejectedTxReportingConfiguration)
+                            "linea-tx-selector-plugin",
+                            besuConfiguration.getDataPath(),
+                            lineaRejectedTxReportingConfiguration)
                         .start());
     transactionSelectionService.registerPluginTransactionSelectorFactory(
         new LineaTransactionSelectorFactory(

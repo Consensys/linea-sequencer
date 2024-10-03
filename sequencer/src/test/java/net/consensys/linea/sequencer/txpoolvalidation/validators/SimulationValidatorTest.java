@@ -137,7 +137,8 @@ public class SimulationValidatorTest {
             .rejectedTxEndpoint(URI.create(wmInfo.getHttpBaseUrl()).toURL())
             .lineaNodeType(LineaNodeType.P2P)
             .build();
-    jsonRpcManager = new JsonRpcManager(tempDataDir, rejectedTxReportingConf).start();
+    jsonRpcManager =
+        new JsonRpcManager("simulation-test", tempDataDir, rejectedTxReportingConf).start();
 
     // rejected tx json-rpc stubbing
     stubFor(

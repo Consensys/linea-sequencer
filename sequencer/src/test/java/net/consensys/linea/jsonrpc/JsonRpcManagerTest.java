@@ -58,6 +58,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @WireMockTest
 @ExtendWith(MockitoExtension.class)
 class JsonRpcManagerTest {
+  static final String PLUGIN_IDENTIFIER = "linea-json-test-plugin";
   @TempDir private Path tempDataDir;
   private JsonRpcManager jsonRpcManager;
   private final Bytes randomEncodedBytes = Bytes.random(32);
@@ -72,7 +73,7 @@ class JsonRpcManagerTest {
             .rejectedTxEndpoint(URI.create(wmInfo.getHttpBaseUrl()).toURL())
             .lineaNodeType(LineaNodeType.SEQUENCER)
             .build();
-    jsonRpcManager = new JsonRpcManager(tempDataDir, config);
+    jsonRpcManager = new JsonRpcManager(PLUGIN_IDENTIFIER, tempDataDir, config);
     jsonRpcManager.start();
   }
 
@@ -82,7 +83,7 @@ class JsonRpcManagerTest {
   }
 
   @Test
-  void rejectedTxIsReported() throws InterruptedException {
+  void rejectedTxIsReported() {
     // json-rpc stubbing
     stubFor(
         post(urlEqualTo("/"))
@@ -171,7 +172,8 @@ class JsonRpcManagerTest {
 
     // Verify that the JSON file no longer exists in the directory (as the second call was
     // successful)
-    Path rejTxRpcDir = tempDataDir.resolve("rej_tx_rpc");
+    final Path rejTxRpcDir =
+        tempDataDir.resolve(JsonRpcManager.JSON_RPC_DIR).resolve(PLUGIN_IDENTIFIER);
     try (Stream<Path> files = Files.list(rejTxRpcDir)) {
       long fileCount = files.filter(path -> path.toString().endsWith(".json")).count();
       assertThat(fileCount).isEqualTo(0);
@@ -179,7 +181,7 @@ class JsonRpcManagerTest {
   }
 
   @Test
-  void serverRespondingWithErrorScenario() throws InterruptedException, IOException {
+  void serverRespondingWithErrorScenario() throws IOException {
     // Stub for error response
     stubFor(
         post(urlEqualTo("/"))
@@ -217,7 +219,8 @@ class JsonRpcManagerTest {
                     postRequestedFor(urlEqualTo("/")).withRequestBody(equalToJson(jsonRpcCall))));
 
     // Verify that the JSON file still exists in the directory (as the call was unsuccessful)
-    final Path rejTxRpcDir = tempDataDir.resolve("rej_tx_rpc");
+    final Path rejTxRpcDir =
+        tempDataDir.resolve(JsonRpcManager.JSON_RPC_DIR).resolve(PLUGIN_IDENTIFIER);
     try (Stream<Path> files = Files.list(rejTxRpcDir)) {
       long fileCount = files.filter(path -> path.toString().endsWith(".json")).count();
       assertThat(fileCount).as("JSON file should exist as server responded with error").isOne();
@@ -284,7 +287,8 @@ class JsonRpcManagerTest {
 
     // Verify that the JSON file no longer exists in the directory (as the second call was
     // successful)
-    Path rejTxRpcDir = tempDataDir.resolve("rej_tx_rpc");
+    final Path rejTxRpcDir =
+        tempDataDir.resolve(JsonRpcManager.JSON_RPC_DIR).resolve(PLUGIN_IDENTIFIER);
     try (Stream<Path> files = Files.list(rejTxRpcDir)) {
       long fileCount = files.filter(path -> path.toString().endsWith(".json")).count();
       assertThat(fileCount).isEqualTo(0);
