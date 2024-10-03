@@ -14,7 +14,7 @@
  */
 package net.consensys.linea.config;
 
-import java.net.URI;
+import java.net.URL;
 import java.util.Optional;
 
 import com.google.common.base.MoreObjects;
@@ -43,10 +43,10 @@ public class LineaRejectedTxReportingCliOptions implements LineaCliOptions {
         names = {REJECTED_TX_ENDPOINT},
         hidden = true,
         required = true, // required within the group
-        paramLabel = "<URI>",
+        paramLabel = "<URL>",
         description =
             "Endpoint URI for reporting rejected transactions. Specify a valid URI to enable reporting.")
-    URI rejectedTxEndpoint = null;
+    URL rejectedTxEndpoint = null;
 
     @Option(
         names = {LINEA_NODE_TYPE},
@@ -85,6 +85,7 @@ public class LineaRejectedTxReportingCliOptions implements LineaCliOptions {
       depOpts.lineaNodeType = config.lineaNodeType();
       options.dependentOptions = depOpts;
     }
+
     return options;
   }
 

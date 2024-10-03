@@ -29,6 +29,7 @@ import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -63,12 +64,12 @@ class JsonRpcManagerTest {
   @Mock private Transaction transaction;
 
   @BeforeEach
-  void init(final WireMockRuntimeInfo wmInfo) {
+  void init(final WireMockRuntimeInfo wmInfo) throws MalformedURLException {
     // mock stubbing
     when(transaction.encoded()).thenReturn(randomEncodedBytes);
     final LineaRejectedTxReportingConfiguration config =
         LineaRejectedTxReportingConfiguration.builder()
-            .rejectedTxEndpoint(URI.create(wmInfo.getHttpBaseUrl()))
+            .rejectedTxEndpoint(URI.create(wmInfo.getHttpBaseUrl()).toURL())
             .lineaNodeType(LineaNodeType.SEQUENCER)
             .build();
     jsonRpcManager = new JsonRpcManager(tempDataDir, config);

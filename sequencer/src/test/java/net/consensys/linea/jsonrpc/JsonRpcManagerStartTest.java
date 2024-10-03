@@ -84,7 +84,7 @@ public class JsonRpcManagerStartTest {
 
     final LineaRejectedTxReportingConfiguration config =
         LineaRejectedTxReportingConfiguration.builder()
-            .rejectedTxEndpoint(URI.create(wmInfo.getHttpBaseUrl()))
+            .rejectedTxEndpoint(URI.create(wmInfo.getHttpBaseUrl()).toURL())
             .lineaNodeType(LineaNodeType.SEQUENCER)
             .build();
     jsonRpcManager = new JsonRpcManager(tempDataDir, config);

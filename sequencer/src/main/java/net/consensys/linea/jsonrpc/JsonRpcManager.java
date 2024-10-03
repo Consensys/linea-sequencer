@@ -17,7 +17,6 @@ package net.consensys.linea.jsonrpc;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.net.MalformedURLException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
@@ -222,17 +221,9 @@ public class JsonRpcManager {
   private boolean sendJsonRpcCall(final String jsonContent) {
     final RequestBody body = RequestBody.create(jsonContent, JSON);
     final Request request;
-    try {
-      request =
-          new Request.Builder()
-              .url(reportingConfiguration.rejectedTxEndpoint().toURL())
-              .post(body)
-              .build();
-    } catch (final MalformedURLException e) {
-      log.error(
-          "Invalid rejected-tx endpoint URL: {}", reportingConfiguration.rejectedTxEndpoint(), e);
-      return false;
-    }
+
+    request =
+        new Request.Builder().url(reportingConfiguration.rejectedTxEndpoint()).post(body).build();
 
     try (final Response response = client.newCall(request).execute()) {
       if (!response.isSuccessful()) {

@@ -32,6 +32,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -121,7 +122,7 @@ public class SimulationValidatorTest {
   }
 
   @BeforeEach
-  public void initialize(final WireMockRuntimeInfo wmInfo) {
+  public void initialize(final WireMockRuntimeInfo wmInfo) throws MalformedURLException {
     final var tracerConf =
         LineaTracerConfiguration.builder()
             .moduleLimitsFilePath(lineLimitsConfPath.toString())
@@ -133,7 +134,7 @@ public class SimulationValidatorTest {
 
     final var rejectedTxReportingConf =
         LineaRejectedTxReportingConfiguration.builder()
-            .rejectedTxEndpoint(URI.create(wmInfo.getHttpBaseUrl()))
+            .rejectedTxEndpoint(URI.create(wmInfo.getHttpBaseUrl()).toURL())
             .lineaNodeType(LineaNodeType.P2P)
             .build();
     jsonRpcManager = new JsonRpcManager(tempDataDir, rejectedTxReportingConf).start();

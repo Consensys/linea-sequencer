@@ -15,7 +15,7 @@
 
 package net.consensys.linea.config;
 
-import java.net.URI;
+import java.net.URL;
 
 import lombok.Builder;
 import net.consensys.linea.plugins.LineaOptionsConfiguration;
@@ -23,4 +23,4 @@ import net.consensys.linea.plugins.LineaOptionsConfiguration;
 /** The Linea RPC configuration. */
 @Builder(toBuilder = true)
 public record LineaRejectedTxReportingConfiguration(
-    URI rejectedTxEndpoint, LineaNodeType lineaNodeType) implements LineaOptionsConfiguration {}
+    URL rejectedTxEndpoint, LineaNodeType lineaNodeType) implements LineaOptionsConfiguration {}
