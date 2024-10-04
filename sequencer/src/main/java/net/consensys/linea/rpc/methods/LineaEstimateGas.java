@@ -476,9 +476,8 @@ public class LineaEstimateGas {
             .signature(FAKE_SIGNATURE_FOR_SIZE_CALCULATION);
 
     if (isBaseFeeTransaction(callParameters)) {
-      callParameters.getMaxFeePerGas().ifPresent(txBuilder::maxFeePerGas);
-      callParameters.getMaxPriorityFeePerGas().ifPresent(txBuilder::maxPriorityFeePerGas);
-      callParameters.getMaxFeePerBlobGas().ifPresent(txBuilder::maxFeePerBlobGas);
+      txBuilder.maxFeePerGas(callParameters.getMaxFeePerGas().orElse(Wei.ZERO));
+      txBuilder.maxPriorityFeePerGas(callParameters.getMaxPriorityFeePerGas().orElse(Wei.ZERO));
     } else {
       txBuilder.gasPrice(
           callParameters.getGasPrice() != null
@@ -487,6 +486,16 @@ public class LineaEstimateGas {
     }
 
     callParameters.getAccessList().ifPresent(txBuilder::accessList);
+
+    callParameters
+        .getChainId()
+        .ifPresentOrElse(
+            txBuilder::chainId,
+            () -> {
+              if (txBuilder.guessType().getTransactionType().requiresChainId()) {
+                blockchainService.getChainId().ifPresent(txBuilder::chainId);
+              }
+            });
 
     return txBuilder.build();
   }

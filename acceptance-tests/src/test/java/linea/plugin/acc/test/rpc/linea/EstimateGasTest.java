@@ -14,6 +14,7 @@
  */
 package linea.plugin.acc.test.rpc.linea;
 
+import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
@@ -25,6 +26,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import linea.plugin.acc.test.LineaPluginTestBase;
 import linea.plugin.acc.test.TestCommandLineOptionsBuilder;
 import linea.plugin.acc.test.tests.web3j.generated.SimpleStorage;
@@ -93,7 +95,15 @@ public class EstimateGasTest extends LineaPluginTestBase {
 
     final CallParams callParams =
         new CallParams(
-            sender.getAddress(), sender.getAddress(), null, Bytes.EMPTY.toHexString(), "0", null);
+            null,
+            sender.getAddress(),
+            sender.getAddress(),
+            null,
+            Bytes.EMPTY.toHexString(),
+            "0",
+            null,
+            null,
+            null);
 
     final var reqEth = new RawEstimateGasRequest(callParams);
     final var reqLinea = new LineaEstimateGasRequest(callParams);
@@ -109,12 +119,84 @@ public class EstimateGasTest extends LineaPluginTestBase {
 
     final CallParams callParams =
         new CallParams(
+            null,
             sender.getAddress(),
             sender.getAddress(),
             null,
             Bytes.EMPTY.toHexString(),
             "0",
-            "0x1234");
+            "0x1234",
+            null,
+            null);
+
+    final var reqLinea = new LineaEstimateGasRequest(callParams);
+    final var respLinea = reqLinea.execute(minerNode.nodeRequests());
+    assertThat(respLinea.hasError()).isFalse();
+    assertThat(respLinea.getResult()).isNotNull();
+  }
+
+  @Test
+  public void passingChainIdFieldWorks() {
+
+    final Account sender = accounts.getSecondaryBenefactor();
+
+    final CallParams callParams =
+        new CallParams(
+            "0x539",
+            sender.getAddress(),
+            sender.getAddress(),
+            null,
+            Bytes.EMPTY.toHexString(),
+            "0",
+            "0x1234",
+            null,
+            null);
+
+    final var reqLinea = new LineaEstimateGasRequest(callParams);
+    final var respLinea = reqLinea.execute(minerNode.nodeRequests());
+    assertThat(respLinea.hasError()).isFalse();
+    assertThat(respLinea.getResult()).isNotNull();
+  }
+
+  @Test
+  public void passingEIP1559FieldsWorks() {
+
+    final Account sender = accounts.getSecondaryBenefactor();
+
+    final CallParams callParams =
+        new CallParams(
+            null,
+            sender.getAddress(),
+            sender.getAddress(),
+            null,
+            Bytes.EMPTY.toHexString(),
+            "0",
+            null,
+            "0x1234",
+            "0x1");
+
+    final var reqLinea = new LineaEstimateGasRequest(callParams);
+    final var respLinea = reqLinea.execute(minerNode.nodeRequests());
+    assertThat(respLinea.hasError()).isFalse();
+    assertThat(respLinea.getResult()).isNotNull();
+  }
+
+  @Test
+  public void passingChainIdAndEIP1559FieldsWorks() {
+
+    final Account sender = accounts.getSecondaryBenefactor();
+
+    final CallParams callParams =
+        new CallParams(
+            "0x539",
+            sender.getAddress(),
+            sender.getAddress(),
+            null,
+            Bytes.EMPTY.toHexString(),
+            "0",
+            null,
+            "0x1234",
+            null);
 
     final var reqLinea = new LineaEstimateGasRequest(callParams);
     final var respLinea = reqLinea.execute(minerNode.nodeRequests());
@@ -140,7 +222,15 @@ public class EstimateGasTest extends LineaPluginTestBase {
 
     final CallParams callParams =
         new CallParams(
-            sender.getAddress(), sender.getAddress(), null, payload.toHexString(), "0", null);
+            null,
+            sender.getAddress(),
+            sender.getAddress(),
+            null,
+            payload.toHexString(),
+            "0",
+            null,
+            null,
+            null);
 
     final var reqLinea = new LineaEstimateGasRequest(callParams);
     final var respLinea = reqLinea.execute(minerNode.nodeRequests()).getResult();
@@ -191,7 +281,16 @@ public class EstimateGasTest extends LineaPluginTestBase {
   public void invalidParametersLineaEstimateGasRequestReturnErrorResponse() {
     final Account sender = accounts.getSecondaryBenefactor();
     final CallParams callParams =
-        new CallParams(sender.getAddress(), null, "", "", String.valueOf(Integer.MAX_VALUE), null);
+        new CallParams(
+            null,
+            sender.getAddress(),
+            null,
+            "",
+            "",
+            String.valueOf(Integer.MAX_VALUE),
+            null,
+            null,
+            null);
     final var reqLinea = new BadLineaEstimateGasRequest(callParams);
     final var respLinea = reqLinea.execute(minerNode.nodeRequests());
     assertThat(respLinea.getCode()).isEqualTo(RpcErrorType.INVALID_PARAMS.getCode());
@@ -205,7 +304,15 @@ public class EstimateGasTest extends LineaPluginTestBase {
     final var reqLinea =
         new BadLineaEstimateGasRequest(
             new CallParams(
-                sender.getAddress(), simpleStorage.getContractAddress(), "", "", "0", null));
+                null,
+                sender.getAddress(),
+                simpleStorage.getContractAddress(),
+                "",
+                "",
+                "0",
+                null,
+                null,
+                null));
     final var respLinea = reqLinea.execute(minerNode.nodeRequests());
     assertThat(respLinea.getCode()).isEqualTo(-32000);
     assertThat(respLinea.getMessage()).isEqualTo("Execution reverted");
@@ -218,11 +325,14 @@ public class EstimateGasTest extends LineaPluginTestBase {
     final var reqLinea =
         new BadLineaEstimateGasRequest(
             new CallParams(
+                null,
                 sender.getAddress(),
                 null,
                 "",
                 Accounts.GENESIS_ACCOUNT_TWO_PRIVATE_KEY,
                 "0",
+                null,
+                null,
                 null));
     final var respLinea = reqLinea.execute(minerNode.nodeRequests());
     assertThat(respLinea.getCode()).isEqualTo(-32000);
@@ -335,6 +445,15 @@ public class EstimateGasTest extends LineaPluginTestBase {
     static class RawEstimateGasResponse extends org.web3j.protocol.core.Response<String> {}
   }
 
+  @JsonInclude(NON_NULL)
   record CallParams(
-      String from, String to, String value, String data, String gas, String gasPrice) {}
+      String chainId,
+      String from,
+      String to,
+      String value,
+      String data,
+      String gas,
+      String gasPrice,
+      String maxFeePerGas,
+      String maxPriorityFeePerGas) {}
 }
