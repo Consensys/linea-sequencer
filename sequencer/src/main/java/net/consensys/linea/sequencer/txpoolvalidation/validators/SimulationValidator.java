@@ -86,9 +86,8 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
       final ModuleLineCountValidator moduleLineCountValidator =
           new ModuleLineCountValidator(moduleLineLimitsMap);
       final var chainHeadHeader = blockchainService.getChainHeadHeader();
-      final BigInteger nonnegativeChainId = blockchainService.getChainId().orElseThrow().abs();
 
-      final var zkTracer = createZkTracer(chainHeadHeader, nonnegativeChainId);
+      final var zkTracer = createZkTracer(chainHeadHeader, blockchainService.getChainId().get());
       final var maybeSimulationResults =
           transactionSimulationService.simulate(
               transaction, chainHeadHeader.getBlockHash(), zkTracer, true);
@@ -172,9 +171,8 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
         .log();
   }
 
-  private ZkTracer createZkTracer(
-      final BlockHeader chainHeadHeader, BigInteger nonnegativeChainId) {
-    var zkTracer = new ZkTracer(l1L2BridgeConfiguration, nonnegativeChainId);
+  private ZkTracer createZkTracer(final BlockHeader chainHeadHeader, BigInteger chainId) {
+    var zkTracer = new ZkTracer(l1L2BridgeConfiguration, chainId);
     zkTracer.traceStartConflation(1L);
     zkTracer.traceStartBlock(chainHeadHeader);
     return zkTracer;

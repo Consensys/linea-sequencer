@@ -270,8 +270,7 @@ public class LineaEstimateGas {
 
     final var estimateGasTracer = new EstimateGasOperationTracer();
     final var chainHeadHeader = blockchainService.getChainHeadHeader();
-    final BigInteger nonnegativeChainId = blockchainService.getChainId().orElseThrow().abs();
-    final var zkTracer = createZkTracer(chainHeadHeader, nonnegativeChainId);
+    final var zkTracer = createZkTracer(chainHeadHeader, blockchainService.getChainId().get());
     final TracerAggregator zkAndGasTracer = TracerAggregator.create(estimateGasTracer, zkTracer);
 
     final var chainHeadHash = chainHeadHeader.getBlockHash();
@@ -492,9 +491,8 @@ public class LineaEstimateGas {
     return txBuilder.build();
   }
 
-  private ZkTracer createZkTracer(
-      final BlockHeader chainHeadHeader, final BigInteger nonnegativeChainId) {
-    var zkTracer = new ZkTracer(l1L2BridgeConfiguration, nonnegativeChainId);
+  private ZkTracer createZkTracer(final BlockHeader chainHeadHeader, final BigInteger chainId) {
+    var zkTracer = new ZkTracer(l1L2BridgeConfiguration, chainId);
     zkTracer.traceStartConflation(1L);
     zkTracer.traceStartBlock(chainHeadHeader);
     return zkTracer;
