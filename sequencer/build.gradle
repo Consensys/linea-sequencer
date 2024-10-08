@@ -67,8 +67,9 @@ dependencies {
   testImplementation "${besuArtifactGroup}.internal:algorithms"
   testImplementation "${besuArtifactGroup}.internal:core"
   testImplementation "${besuArtifactGroup}.internal:rlp"
-  testImplementation "${besuArtifactGroup}.internal:core"
   testImplementation "${besuArtifactGroup}:plugin-api"
+  testImplementation "${besuArtifactGroup}.internal:besu"
+  testImplementation "info.picocli:picocli"
   testImplementation "org.awaitility:awaitility"
 
   // workaround for bug https://github.com/dnsjava/dnsjava/issues/329, remove when upgraded upstream
