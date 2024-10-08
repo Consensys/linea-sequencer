@@ -18,9 +18,7 @@ import java.net.URL;
 
 import com.google.common.base.MoreObjects;
 import net.consensys.linea.plugins.LineaCliOptions;
-import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
-import picocli.CommandLine.Spec;
 
 /** The Linea Rejected Transaction Reporting CLI options. */
 public class LineaRejectedTxReportingCliOptions implements LineaCliOptions {
@@ -34,8 +32,6 @@ public class LineaRejectedTxReportingCliOptions implements LineaCliOptions {
 
   /** The Linea node type. */
   public static final String LINEA_NODE_TYPE = "--plugin-linea-node-type";
-
-  @Spec CommandSpec spec; // injected by picocli
 
   @Option(
       names = {REJECTED_TX_ENDPOINT},
