@@ -41,7 +41,7 @@ public class TransactionPoolDenyListReloadTest extends LineaPluginTestBase {
   private static final BigInteger VALUE = BigInteger.ONE; // 1 wei
 
   final Credentials notDenied = Credentials.create(Accounts.GENESIS_ACCOUNT_ONE_PRIVATE_KEY);
-  final Credentials willbeDenied = Credentials.create(Accounts.GENESIS_ACCOUNT_TWO_PRIVATE_KEY);
+  final Credentials willBeDenied = Credentials.create(Accounts.GENESIS_ACCOUNT_TWO_PRIVATE_KEY);
 
   @TempDir static Path tempDir;
   static Path tempDenyList;
@@ -49,6 +49,14 @@ public class TransactionPoolDenyListReloadTest extends LineaPluginTestBase {
   @Override
   public List<String> getTestCliOptions() {
     tempDenyList = tempDir.resolve("denyList.txt");
+    if (!Files.exists(tempDenyList)) {
+
+      try {
+        Files.createFile(tempDenyList);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
     return new TestCommandLineOptionsBuilder()
         .set("--plugin-linea-deny-list-path=", tempDenyList.toString())
         .build();
@@ -59,22 +67,22 @@ public class TransactionPoolDenyListReloadTest extends LineaPluginTestBase {
     final Web3j miner = minerNode.nodeRequests().eth();
 
     RawTransactionManager transactionManager =
-        new RawTransactionManager(miner, willbeDenied, CHAIN_ID);
-    assertAddressAllowed(transactionManager, willbeDenied.getAddress());
+        new RawTransactionManager(miner, willBeDenied, CHAIN_ID);
+    assertAddressAllowed(transactionManager, willBeDenied.getAddress());
   }
 
   @Test
   public void emptyDenyList_thenDenySender_cannotAddTxToPool() throws Exception {
     final Web3j miner = minerNode.nodeRequests().eth();
     RawTransactionManager transactionManager =
-        new RawTransactionManager(miner, willbeDenied, CHAIN_ID);
+        new RawTransactionManager(miner, willBeDenied, CHAIN_ID);
 
-    assertAddressAllowed(transactionManager, willbeDenied.getAddress());
+    assertAddressAllowed(transactionManager, willBeDenied.getAddress());
 
-    addAddressToDenyList(willbeDenied.getAddress());
+    addAddressToDenyList(willBeDenied.getAddress());
     reloadPluginConfig();
 
-    assertAddressNotAllowed(transactionManager, willbeDenied.getAddress());
+    assertAddressNotAllowed(transactionManager, willBeDenied.getAddress());
   }
 
   private void addAddressToDenyList(final String address) throws IOException {
@@ -97,30 +105,27 @@ public class TransactionPoolDenyListReloadTest extends LineaPluginTestBase {
     assertThat(transactionResponse.getTransactionHash()).isNull();
     assertThat(transactionResponse.getError().getMessage())
         .isEqualTo(
-            "recipient "
+            "sender "
                 + address
                 + " is blocked as appearing on the SDN or other legally prohibited list");
   }
 
   private void reloadPluginConfig() {
-    System.out.println("GOT HERE ******");
     final var reqLinea = new ReloadPluginConfigRequest();
-    System.out.println("88888888" + reqLinea);
     final var respLinea = reqLinea.execute(minerNode.nodeRequests());
-    System.out.println("88888888" + respLinea);
-    assertThat(respLinea.booleanValue()).isTrue();
+    assertThat(respLinea).isEqualTo("Success");
   }
 
-  static class ReloadPluginConfigRequest implements Transaction<Boolean> {
+  static class ReloadPluginConfigRequest implements Transaction<String> {
 
     public ReloadPluginConfigRequest() {}
 
     @Override
-    public Boolean execute(final NodeRequests nodeRequests) {
+    public String execute(final NodeRequests nodeRequests) {
       try {
         return new Request<>(
                 "plugins_reloadPluginConfig",
-                List.of(),
+                List.of("LineaTransactionPoolValidatorPlugin"),
                 nodeRequests.getWeb3jService(),
                 ReloadPluginConfigResponse.class)
             .send()
@@ -131,5 +136,5 @@ public class TransactionPoolDenyListReloadTest extends LineaPluginTestBase {
     }
   }
 
-  static class ReloadPluginConfigResponse extends org.web3j.protocol.core.Response<Boolean> {}
+  static class ReloadPluginConfigResponse extends org.web3j.protocol.core.Response<String> {}
 }
