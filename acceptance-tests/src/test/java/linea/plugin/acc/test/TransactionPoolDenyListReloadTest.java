@@ -123,9 +123,11 @@ public class TransactionPoolDenyListReloadTest extends LineaPluginTestBase {
     @Override
     public String execute(final NodeRequests nodeRequests) {
       try {
+        // plugin name is class name
         return new Request<>(
                 "plugins_reloadPluginConfig",
-                List.of("LineaTransactionPoolValidatorPlugin"),
+                List.of(
+                    "net.consensys.linea.sequencer.txpoolvalidation.LineaTransactionPoolValidatorPlugin"),
                 nodeRequests.getWeb3jService(),
                 ReloadPluginConfigResponse.class)
             .send()
