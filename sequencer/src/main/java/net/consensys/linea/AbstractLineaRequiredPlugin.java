@@ -36,7 +36,10 @@ public abstract class AbstractLineaRequiredPlugin extends AbstractLineaPrivateOp
   public void register(final BesuContext context) {
     super.register(context);
     try {
-      log.info("Registering Linea plugin {}", this.getClass().getName());
+      log.info(
+          "Registering Linea plugin of type {} with name {}",
+          this.getClass().getName(),
+          this.getName());
 
       blockchainService =
           context
