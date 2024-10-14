@@ -22,12 +22,12 @@ import java.util.Optional;
 import com.google.auto.service.AutoService;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
+import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
 import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
-import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.TransactionSelectionService;
 
 /**
@@ -39,7 +39,6 @@ import org.hyperledger.besu.plugin.services.TransactionSelectionService;
 @AutoService(BesuPlugin.class)
 public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin {
   private TransactionSelectionService transactionSelectionService;
-  private BlockchainService blockchainService;
   private Optional<JsonRpcManager> rejectedTxJsonRpcManager = Optional.empty();
   private BesuConfiguration besuConfiguration;
 
@@ -53,14 +52,6 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
                     new RuntimeException(
                         "Failed to obtain TransactionSelectionService from the BesuContext."));
 
-    blockchainService =
-        context
-            .getService(BlockchainService.class)
-            .orElseThrow(
-                () ->
-                    new RuntimeException(
-                        "Failed to obtain BlockchainService from the BesuContext."));
-
     besuConfiguration =
         context
             .getService(BesuConfiguration.class)
@@ -73,11 +64,20 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
   @Override
   public void start() {
     super.start();
+
     final LineaTransactionSelectorConfiguration txSelectorConfiguration =
         transactionSelectorConfiguration();
+    final LineaRejectedTxReportingConfiguration lineaRejectedTxReportingConfiguration =
+        rejectedTxReportingConfiguration();
     rejectedTxJsonRpcManager =
-        Optional.ofNullable(txSelectorConfiguration.rejectedTxEndpoint())
-            .map(endpoint -> new JsonRpcManager(besuConfiguration.getDataPath(), endpoint).start());
+        Optional.ofNullable(lineaRejectedTxReportingConfiguration.rejectedTxEndpoint())
+            .map(
+                endpoint ->
+                    new JsonRpcManager(
+                            "linea-tx-selector-plugin",
+                            besuConfiguration.getDataPath(),
+                            lineaRejectedTxReportingConfiguration)
+                        .start());
     transactionSelectionService.registerPluginTransactionSelectorFactory(
         new LineaTransactionSelectorFactory(
             blockchainService,

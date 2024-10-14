@@ -29,11 +29,12 @@ import java.util.stream.Stream;
 import com.google.auto.service.AutoService;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
+import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
+import net.consensys.linea.jsonrpc.JsonRpcManager;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
-import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.TransactionPoolValidatorService;
 import org.hyperledger.besu.plugin.services.TransactionSimulationService;
 
@@ -47,9 +48,9 @@ import org.hyperledger.besu.plugin.services.TransactionSimulationService;
 @AutoService(BesuPlugin.class)
 public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPlugin {
   private BesuConfiguration besuConfiguration;
-  private BlockchainService blockchainService;
   private TransactionPoolValidatorService transactionPoolValidatorService;
   private TransactionSimulationService transactionSimulationService;
+  private Optional<JsonRpcManager> rejectedTxJsonRpcManager = Optional.empty();
 
   @Override
   public void doRegister(final BesuContext context) {
@@ -60,14 +61,6 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
                 () ->
                     new RuntimeException(
                         "Failed to obtain BesuConfiguration from the BesuContext."));
-
-    blockchainService =
-        context
-            .getService(BlockchainService.class)
-            .orElseThrow(
-                () ->
-                    new RuntimeException(
-                        "Failed to obtain BlockchainService from the BesuContext."));
 
     transactionPoolValidatorService =
         context
@@ -99,6 +92,19 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
       final Set<Address> deniedAddresses =
           lines.map(l -> Address.fromHexString(l.trim())).collect(Collectors.toUnmodifiableSet());
 
+      // start the optional json rpc manager for rejected tx reporting
+      final LineaRejectedTxReportingConfiguration lineaRejectedTxReportingConfiguration =
+          rejectedTxReportingConfiguration();
+      rejectedTxJsonRpcManager =
+          Optional.ofNullable(lineaRejectedTxReportingConfiguration.rejectedTxEndpoint())
+              .map(
+                  endpoint ->
+                      new JsonRpcManager(
+                              "linea-tx-pool-validator-plugin",
+                              besuConfiguration.getDataPath(),
+                              lineaRejectedTxReportingConfiguration)
+                          .start());
+
       transactionPoolValidatorService.registerPluginTransactionValidatorFactory(
           new LineaTransactionPoolValidatorFactory(
               besuConfiguration,
@@ -108,7 +114,8 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
               profitabilityConfiguration(),
               deniedAddresses,
               createLimitModules(tracerConfiguration()),
-              l1L2BridgeSharedConfiguration()));
+              l1L2BridgeSharedConfiguration(),
+              rejectedTxJsonRpcManager));
 
     } catch (Exception e) {
       throw new RuntimeException(e);
@@ -119,5 +126,11 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
   public CompletableFuture<Void> reloadConfiguration() {
     loadDenyListAndRegisterPluginTxValidatorFactory();
     return CompletableFuture.completedFuture(null);
+  }
+
+  @Override
+  public void stop() {
+    super.stop();
+    rejectedTxJsonRpcManager.ifPresent(JsonRpcManager::shutdown);
   }
 }

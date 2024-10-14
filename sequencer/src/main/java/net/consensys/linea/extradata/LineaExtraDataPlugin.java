@@ -21,7 +21,6 @@ import net.consensys.linea.AbstractLineaRequiredPlugin;
 import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.services.BesuEvents;
-import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.RpcEndpointService;
 
 /** This plugin registers handlers that are activated when new blocks are imported */
@@ -30,7 +29,6 @@ import org.hyperledger.besu.plugin.services.RpcEndpointService;
 public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
   private BesuContext besuContext;
   private RpcEndpointService rpcEndpointService;
-  private BlockchainService blockchainService;
 
   @Override
   public void doRegister(final BesuContext context) {
@@ -42,13 +40,6 @@ public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
                 () ->
                     new RuntimeException(
                         "Failed to obtain RpcEndpointService from the BesuContext."));
-    blockchainService =
-        context
-            .getService(BlockchainService.class)
-            .orElseThrow(
-                () ->
-                    new RuntimeException(
-                        "Failed to obtain BlockchainService from the BesuContext."));
   }
 
   /**
