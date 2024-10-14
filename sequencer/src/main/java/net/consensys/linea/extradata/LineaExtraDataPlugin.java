@@ -15,8 +15,6 @@
 
 package net.consensys.linea.extradata;
 
-import java.util.Optional;
-
 import com.google.auto.service.AutoService;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
@@ -30,15 +28,9 @@ import org.hyperledger.besu.plugin.services.RpcEndpointService;
 @Slf4j
 @AutoService(BesuPlugin.class)
 public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
-  public static final String NAME = "linea";
   private BesuContext besuContext;
   private RpcEndpointService rpcEndpointService;
   private BlockchainService blockchainService;
-
-  @Override
-  public Optional<String> getName() {
-    return Optional.of(NAME);
-  }
 
   @Override
   public void doRegister(final BesuContext context) {
