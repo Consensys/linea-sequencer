@@ -21,10 +21,10 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
-import net.consensys.linea.metrics.TransactionProfitabilityMetrics;
-import net.consensys.linea.util.LineaPricingUtils;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
 import net.consensys.linea.jsonrpc.JsonRpcRequestBuilder;
+import net.consensys.linea.metrics.TransactionProfitabilityMetrics;
+import net.consensys.linea.util.LineaPricingUtils;
 import org.apache.tuweni.units.bigints.UInt256s;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.datatypes.Wei;
@@ -56,7 +56,7 @@ public class ProfitabilityValidator implements PluginTransactionPoolValidator {
     this.blockchainService = blockchainService;
     this.profitabilityConf = profitabilityConf;
     this.profitabilityCalculator =
-      new TransactionProfitabilityCalculator(profitabilityConf, profitabilityMetrics);
+        new TransactionProfitabilityCalculator(profitabilityConf, profitabilityMetrics);
     this.rejectedTxJsonRpcManager = rejectedTxJsonRpcManager;
   }
 
@@ -75,7 +75,7 @@ public class ProfitabilityValidator implements PluginTransactionPoolValidator {
 
       final BlockHeader chainHeadHeader = blockchainService.getChainHeadHeader();
       final LineaPricingUtils.PricingData pricingData =
-        LineaPricingUtils.extractPricingFromExtraData(chainHeadHeader.getExtraData());
+          LineaPricingUtils.extractPricingFromExtraData(chainHeadHeader.getExtraData());
 
       final Optional<String> errMsg =
           profitabilityCalculator.isProfitable(
