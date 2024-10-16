@@ -23,6 +23,7 @@ import java.util.Set;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaTransactionPoolValidatorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
+import net.consensys.linea.metrics.TransactionProfitabilityMetrics;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.sequencer.txpoolvalidation.validators.AllowedAddressValidator;
 import net.consensys.linea.sequencer.txpoolvalidation.validators.CalldataValidator;
@@ -32,6 +33,7 @@ import net.consensys.linea.sequencer.txpoolvalidation.validators.SimulationValid
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.BlockchainService;
+import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.TransactionSimulationService;
 import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolValidator;
 import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolValidatorFactory;
@@ -48,6 +50,7 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
   private final Map<String, Integer> moduleLineLimitsMap;
   private final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration;
   private final Optional<JsonRpcManager> rejectedTxJsonRpcManager;
+  private final MetricsSystem metricsSystem;
 
   public LineaTransactionPoolValidatorFactory(
       final BesuConfiguration besuConfiguration,
@@ -58,7 +61,8 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
       final Set<Address> deniedAddresses,
       final Map<String, Integer> moduleLineLimitsMap,
       final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
-      final Optional<JsonRpcManager> rejectedTxJsonRpcManager) {
+      final Optional<JsonRpcManager> rejectedTxJsonRpcManager,
+      final MetricsSystem metricsSystem) {
     this.besuConfiguration = besuConfiguration;
     this.blockchainService = blockchainService;
     this.transactionSimulationService = transactionSimulationService;
@@ -67,6 +71,7 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
     this.denied = deniedAddresses;
     this.moduleLineLimitsMap = moduleLineLimitsMap;
     this.l1L2BridgeConfiguration = l1L2BridgeConfiguration;
+    this.metricsSystem = metricsSystem;
     this.rejectedTxJsonRpcManager = rejectedTxJsonRpcManager;
   }
 
@@ -84,7 +89,7 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
           new GasLimitValidator(txPoolValidatorConf, rejectedTxJsonRpcManager),
           new CalldataValidator(txPoolValidatorConf, rejectedTxJsonRpcManager),
           new ProfitabilityValidator(
-              besuConfiguration, blockchainService, profitabilityConf, rejectedTxJsonRpcManager),
+              besuConfiguration, blockchainService, profitabilityConf, rejectedTxJsonRpcManager, new TransactionProfitabilityMetrics(metricsSystem)),
           new SimulationValidator(
               blockchainService,
               transactionSimulationService,

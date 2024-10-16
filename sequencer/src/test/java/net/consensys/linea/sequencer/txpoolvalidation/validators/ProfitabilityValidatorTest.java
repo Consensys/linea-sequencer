@@ -24,6 +24,7 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.config.LineaProfitabilityCliOptions;
+import net.consensys.linea.metrics.TransactionProfitabilityMetrics;
 import org.apache.tuweni.bytes.Bytes;
 import org.bouncycastle.asn1.sec.SECNamedCurves;
 import org.bouncycastle.asn1.x9.X9ECParameters;
@@ -31,8 +32,10 @@ import org.bouncycastle.crypto.params.ECDomainParameters;
 import org.hyperledger.besu.crypto.SECPSignature;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Wei;
+import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.BlockchainService;
+import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -80,6 +83,10 @@ public class ProfitabilityValidatorTest {
         LineaProfitabilityCliOptions.create().toDomainObject().toBuilder()
             .txPoolMinMargin(TX_POOL_MIN_MARGIN);
 
+    final MetricsSystem metricsSystem = new NoOpMetricsSystem();
+    final TransactionProfitabilityMetrics profitabilityMetrics =
+        new TransactionProfitabilityMetrics(metricsSystem);
+
     profitabilityValidatorAlways =
         new ProfitabilityValidator(
             besuConfiguration,
@@ -88,7 +95,8 @@ public class ProfitabilityValidatorTest {
                 .txPoolCheckP2pEnabled(true)
                 .txPoolCheckApiEnabled(true)
                 .build(),
-            Optional.empty());
+            Optional.empty(),
+            profitabilityMetrics);
 
     profitabilityValidatorNever =
         new ProfitabilityValidator(
@@ -98,7 +106,8 @@ public class ProfitabilityValidatorTest {
                 .txPoolCheckP2pEnabled(false)
                 .txPoolCheckApiEnabled(false)
                 .build(),
-            Optional.empty());
+            Optional.empty(),
+            profitabilityMetrics);
 
     profitabilityValidatorOnlyApi =
         new ProfitabilityValidator(
@@ -108,7 +117,8 @@ public class ProfitabilityValidatorTest {
                 .txPoolCheckP2pEnabled(false)
                 .txPoolCheckApiEnabled(true)
                 .build(),
-            Optional.empty());
+            Optional.empty(),
+            profitabilityMetrics);
 
     profitabilityValidatorOnlyP2p =
         new ProfitabilityValidator(
@@ -118,7 +128,8 @@ public class ProfitabilityValidatorTest {
                 .txPoolCheckP2pEnabled(true)
                 .txPoolCheckApiEnabled(false)
                 .build(),
-            Optional.empty());
+            Optional.empty(),
+            profitabilityMetrics);
   }
 
   @Test

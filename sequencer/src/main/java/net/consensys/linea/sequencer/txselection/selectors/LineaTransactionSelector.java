@@ -25,6 +25,7 @@ import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
 import net.consensys.linea.jsonrpc.JsonRpcRequestBuilder;
+import net.consensys.linea.metrics.TransactionProfitabilityMetrics;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
@@ -41,6 +42,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
   private TraceLineLimitTransactionSelector traceLineLimitTransactionSelector;
   private final List<PluginTransactionSelector> selectors;
   private final Optional<JsonRpcManager> rejectedTxJsonRpcManager;
+  private final TransactionProfitabilityMetrics transactionProfitabilityMetrics;
 
   public LineaTransactionSelector(
       final BlockchainService blockchainService,
@@ -49,8 +51,10 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       final LineaProfitabilityConfiguration profitabilityConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
       final Map<String, Integer> limitsMap,
-      final Optional<JsonRpcManager> rejectedTxJsonRpcManager) {
+      final Optional<JsonRpcManager> rejectedTxJsonRpcManager,
+      final TransactionProfitabilityMetrics transactionProfitabilityMetrics) {
     this.rejectedTxJsonRpcManager = rejectedTxJsonRpcManager;
+    this.transactionProfitabilityMetrics = transactionProfitabilityMetrics;
     selectors =
         createTransactionSelectors(
             blockchainService,
@@ -58,7 +62,8 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
             l1L2BridgeConfiguration,
             profitabilityConfiguration,
             tracerConfiguration,
-            limitsMap);
+            limitsMap,
+            transactionProfitabilityMetrics);
   }
 
   /**
@@ -76,7 +81,8 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
       final LineaProfitabilityConfiguration profitabilityConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
-      final Map<String, Integer> limitsMap) {
+      final Map<String, Integer> limitsMap,
+      final TransactionProfitabilityMetrics transactionProfitabilityMetrics) {
 
     traceLineLimitTransactionSelector =
         new TraceLineLimitTransactionSelector(
@@ -90,7 +96,10 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
         new MaxBlockCallDataTransactionSelector(txSelectorConfiguration.maxBlockCallDataSize()),
         new MaxBlockGasTransactionSelector(txSelectorConfiguration.maxGasPerBlock()),
         new ProfitableTransactionSelector(
-            blockchainService, txSelectorConfiguration, profitabilityConfiguration),
+            blockchainService,
+            txSelectorConfiguration,
+            profitabilityConfiguration,
+            transactionProfitabilityMetrics),
         traceLineLimitTransactionSelector);
   }
 

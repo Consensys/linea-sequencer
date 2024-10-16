@@ -30,10 +30,13 @@ import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
+import net.consensys.linea.metrics.TransactionProfitabilityMetrics;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
+import org.hyperledger.besu.plugin.services.BlockchainService;
+import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.TransactionPoolValidatorService;
 import org.hyperledger.besu.plugin.services.TransactionSimulationService;
 
@@ -48,9 +51,11 @@ import org.hyperledger.besu.plugin.services.TransactionSimulationService;
 public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPlugin {
   public static final String NAME = "linea";
   private BesuConfiguration besuConfiguration;
+  private BlockchainService blockchainService;
   private TransactionPoolValidatorService transactionPoolValidatorService;
   private TransactionSimulationService transactionSimulationService;
   private Optional<JsonRpcManager> rejectedTxJsonRpcManager = Optional.empty();
+  private MetricsSystem metricsSystem;
 
   @Override
   public Optional<String> getName() {
@@ -67,6 +72,14 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
                     new RuntimeException(
                         "Failed to obtain BesuConfiguration from the BesuContext."));
 
+    blockchainService =
+        context
+            .getService(BlockchainService.class)
+            .orElseThrow(
+                () ->
+                    new RuntimeException(
+                        "Failed to obtain BlockchainService from the BesuContext."));
+
     transactionPoolValidatorService =
         context
             .getService(TransactionPoolValidatorService.class)
@@ -82,6 +95,16 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
                 () ->
                     new RuntimeException(
                         "Failed to obtain TransactionSimulatorService from the BesuContext."));
+
+    // Retrieve the MetricsSystem from the context
+    metricsSystem =
+        context
+            .getService(MetricsSystem.class)
+            .orElseThrow(
+                () -> new RuntimeException("Failed to obtain MetricsSystem from the BesuContext."));
+
+    TransactionProfitabilityMetrics transactionProfitabilityMetrics =
+        new TransactionProfitabilityMetrics(metricsSystem);
   }
 
   @Override
@@ -117,7 +140,8 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
               deniedAddresses,
               createLimitModules(tracerConfiguration()),
               l1L2BridgeSharedConfiguration(),
-              rejectedTxJsonRpcManager));
+              rejectedTxJsonRpcManager,
+              metricsSystem));
 
     } catch (Exception e) {
       throw new RuntimeException(e);

@@ -31,13 +31,17 @@ import linea.plugin.acc.test.tests.web3j.generated.SimpleStorage;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaProfitabilityCliOptions;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
+import net.consensys.linea.metrics.TransactionProfitabilityMetrics;
 import net.consensys.linea.rpc.methods.LineaEstimateGas;
+import net.consensys.linea.util.LineaPricingUtils;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt64;
 import org.bouncycastle.crypto.digests.KeccakDigest;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.RpcErrorType;
+import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
+import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Account;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Accounts;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.NodeRequests;
@@ -173,7 +177,19 @@ public class EstimateGasTest extends LineaPluginTestBase {
 
     final var minGasPrice = minerNode.getMiningParameters().getMinTransactionGasPrice();
 
-    final var profitabilityCalculator = new TransactionProfitabilityCalculator(profitabilityConf);
+    final MetricsSystem metricsSystem = new NoOpMetricsSystem();
+    final TransactionProfitabilityMetrics profitabilityMetrics =
+        new TransactionProfitabilityMetrics(metricsSystem);
+
+    final var profitabilityCalculator =
+        new TransactionProfitabilityCalculator(profitabilityConf, profitabilityMetrics);
+
+    // Create a PricingData object using the values from profitabilityConf
+    LineaPricingUtils.PricingData pricingData =
+        new LineaPricingUtils.PricingData(
+            Wei.of(profitabilityConf.fixedCostWei()),
+            Wei.of(profitabilityConf.variableCostWei()),
+            minGasPrice);
 
     assertThat(
             profitabilityCalculator.isProfitable(
@@ -183,7 +199,8 @@ public class EstimateGasTest extends LineaPluginTestBase {
                 baseFee,
                 estimatedMaxGasPrice,
                 estimatedGasLimit,
-                minGasPrice))
+                minGasPrice,
+                pricingData)) // Add the pricingData parameter here
         .isTrue();
   }
 

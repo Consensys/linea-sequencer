@@ -12,6 +12,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+
 package net.consensys.linea.sequencer.txselection.selectors;
 
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_UNPROFITABLE;
@@ -27,6 +28,8 @@ import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
+import net.consensys.linea.metrics.TransactionProfitabilityMetrics;
+import net.consensys.linea.util.LineaPricingUtils;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Transaction;
@@ -53,6 +56,8 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
   private final LineaTransactionSelectorConfiguration txSelectorConf;
   private final LineaProfitabilityConfiguration profitabilityConf;
   private final TransactionProfitabilityCalculator transactionProfitabilityCalculator;
+  private final TransactionProfitabilityMetrics transactionProfitabilityMetrics;
+  private final BlockchainService blockchainService;
   private final Wei baseFee;
 
   private int unprofitableRetries;
@@ -60,11 +65,14 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
   public ProfitableTransactionSelector(
       final BlockchainService blockchainService,
       final LineaTransactionSelectorConfiguration txSelectorConf,
-      final LineaProfitabilityConfiguration profitabilityConf) {
+      final LineaProfitabilityConfiguration profitabilityConf,
+      final TransactionProfitabilityMetrics transactionProfitabilityMetrics) {
     this.txSelectorConf = txSelectorConf;
     this.profitabilityConf = profitabilityConf;
     this.transactionProfitabilityCalculator =
-        new TransactionProfitabilityCalculator(profitabilityConf);
+        new TransactionProfitabilityCalculator(profitabilityConf, transactionProfitabilityMetrics);
+    this.transactionProfitabilityMetrics = transactionProfitabilityMetrics;
+    this.blockchainService = blockchainService;
     this.baseFee =
         blockchainService
             .getNextBlockBaseFee()
@@ -94,6 +102,13 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
       final Transaction transaction = evaluationContext.getPendingTransaction().getTransaction();
       final long gasLimit = transaction.getGasLimit();
 
+      // Extract the block header using the BlockchainService
+      final var chainHeadHeader = blockchainService.getChainHeadHeader();
+
+      // Extract extraData-driven pricing from the chain head header
+      final var pricingData =
+          LineaPricingUtils.extractPricingFromExtraData(chainHeadHeader.getExtraData());
+
       // check the upfront profitability using the gas limit of the tx
       if (!transactionProfitabilityCalculator.isProfitable(
           "PreProcessing",
@@ -102,9 +117,14 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
           baseFee,
           evaluationContext.getTransactionGasPrice(),
           gasLimit,
-          minGasPrice)) {
+          minGasPrice,
+          pricingData)) {
         return TX_UNPROFITABLE_UPFRONT;
       }
+
+      // Emit profitability metrics
+      transactionProfitabilityMetrics.recordPreProcessingProfitability(
+          transaction, baseFee, evaluationContext.getTransactionGasPrice(), gasLimit);
 
       if (unprofitableCache.contains(transaction.getHash())) {
         if (unprofitableRetries >= txSelectorConf.unprofitableRetryLimit()) {
@@ -145,6 +165,13 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
       final Transaction transaction = evaluationContext.getPendingTransaction().getTransaction();
       final long gasUsed = processingResult.getEstimateGasUsedByTransaction();
 
+      // Extract the block header using the BlockchainService
+      final var chainHeadHeader = blockchainService.getChainHeadHeader();
+
+      // Extract extraData-driven pricing from the chain head header
+      final var pricingData =
+          LineaPricingUtils.extractPricingFromExtraData(chainHeadHeader.getExtraData());
+
       if (!transactionProfitabilityCalculator.isProfitable(
           "PostProcessing",
           transaction,
@@ -152,7 +179,8 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
           baseFee,
           evaluationContext.getTransactionGasPrice(),
           gasUsed,
-          evaluationContext.getMinGasPrice())) {
+          evaluationContext.getMinGasPrice(),
+          pricingData)) {
         rememberUnprofitable(transaction);
         return TX_UNPROFITABLE;
       }

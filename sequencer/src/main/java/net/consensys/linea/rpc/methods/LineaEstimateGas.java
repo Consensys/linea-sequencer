@@ -17,6 +17,7 @@ package net.consensys.linea.rpc.methods;
 
 import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.MODULE_NOT_DEFINED;
 import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.TX_MODULE_LINE_COUNT_OVERFLOW;
+import static net.consensys.linea.util.LineaPricingUtils.extractPricingFromExtraData;
 import static org.hyperledger.besu.ethereum.api.jsonrpc.internal.results.Quantity.create;
 
 import java.math.BigDecimal;
@@ -32,10 +33,12 @@ import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaRpcConfiguration;
 import net.consensys.linea.config.LineaTransactionPoolValidatorConfiguration;
+import net.consensys.linea.metrics.TransactionProfitabilityMetrics;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.sequencer.TracerAggregator;
 import net.consensys.linea.sequencer.modulelimit.ModuleLimitsValidationResult;
 import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator;
+import net.consensys.linea.util.LineaPricingUtils;
 import net.consensys.linea.zktracer.ZkTracer;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt256;
@@ -55,6 +58,7 @@ import org.hyperledger.besu.plugin.data.BlockHeader;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.RpcEndpointService;
+import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.TransactionSimulationService;
 import org.hyperledger.besu.plugin.services.exception.PluginRpcEndpointException;
 import org.hyperledger.besu.plugin.services.rpc.PluginRpcRequest;
@@ -111,14 +115,19 @@ public class LineaEstimateGas {
       final LineaTransactionPoolValidatorConfiguration transactionValidatorConfiguration,
       final LineaProfitabilityConfiguration profitabilityConf,
       final Map<String, Integer> limitsMap,
-      final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration) {
+      final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
+      final MetricsSystem metricsSystem) {
     this.rpcConfiguration = rpcConfiguration;
     this.txValidatorConf = transactionValidatorConfiguration;
     this.profitabilityConf = profitabilityConf;
-    this.txProfitabilityCalculator = new TransactionProfitabilityCalculator(profitabilityConf);
     this.l1L2BridgeConfiguration = l1L2BridgeConfiguration;
     this.moduleLineCountValidator = new ModuleLineCountValidator(limitsMap);
     this.maxTxGasLimit = UInt256.valueOf(txValidatorConf.maxTxGasLimit());
+
+    TransactionProfitabilityMetrics profitabilityMetrics =
+        new TransactionProfitabilityMetrics(metricsSystem);
+    this.txProfitabilityCalculator =
+        new TransactionProfitabilityCalculator(profitabilityConf, profitabilityMetrics);
 
     if (l1L2BridgeConfiguration.isEmpty()) {
       log.error("L1L2 bridge settings have not been defined.");
@@ -167,8 +176,13 @@ public class LineaEstimateGas {
                       new PluginRpcEndpointException(
                           RpcErrorType.INVALID_REQUEST, "Not on a baseFee market"));
 
+      final var chainHeadHeader = blockchainService.getChainHeadHeader();
+      final LineaPricingUtils.PricingData pricingData =
+          extractPricingFromExtraData(chainHeadHeader.getExtraData());
+
+      // Use the pricing data to calculate the estimated priority fee
       final Wei estimatedPriorityFee =
-          getEstimatedPriorityFee(transaction, baseFee, minGasPrice, estimatedGasUsed);
+          getEstimatedPriorityFee(transaction, baseFee, minGasPrice, estimatedGasUsed, pricingData);
 
       final var response =
           new Response(create(estimatedGasUsed), create(baseFee), create(estimatedPriorityFee));
@@ -246,7 +260,8 @@ public class LineaEstimateGas {
       final Transaction transaction,
       final Wei baseFee,
       final Wei minGasPrice,
-      final long estimatedGasUsed) {
+      final long estimatedGasUsed,
+      final LineaPricingUtils.PricingData pricingData) {
     final Wei priorityFeeLowerBound = minGasPrice.subtract(baseFee);
 
     if (rpcConfiguration.estimateGasCompatibilityModeEnabled()) {
@@ -260,7 +275,11 @@ public class LineaEstimateGas {
 
     final Wei profitablePriorityFee =
         txProfitabilityCalculator.profitablePriorityFeePerGas(
-            transaction, profitabilityConf.estimateGasMinMargin(), estimatedGasUsed, minGasPrice);
+            transaction,
+            profitabilityConf.estimateGasMinMargin(),
+            estimatedGasUsed,
+            minGasPrice,
+            pricingData);
 
     return profitablePriorityFee;
   }
