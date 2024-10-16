@@ -79,7 +79,10 @@ public class LineaPluginTestBase extends AcceptanceTestBase {
   public void setup() throws Exception {
     minerNode =
         createCliqueNodeWithExtraCliOptionsAndRpcApis(
-            "miner1", LINEA_CLIQUE_OPTIONS, getTestCliOptions(), Set.of("LINEA", "MINER"));
+            "miner1",
+            LINEA_CLIQUE_OPTIONS,
+            getTestCliOptions(),
+            Set.of("LINEA", "MINER", "PLUGINS"));
     minerNode.setTransactionPoolConfiguration(
         ImmutableTransactionPoolConfiguration.builder()
             .from(TransactionPoolConfiguration.DEFAULT)

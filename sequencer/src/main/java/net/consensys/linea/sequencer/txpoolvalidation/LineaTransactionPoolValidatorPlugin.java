@@ -22,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -46,16 +47,10 @@ import org.hyperledger.besu.plugin.services.TransactionSimulationService;
 @Slf4j
 @AutoService(BesuPlugin.class)
 public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPlugin {
-  public static final String NAME = "linea";
   private BesuConfiguration besuConfiguration;
   private TransactionPoolValidatorService transactionPoolValidatorService;
   private TransactionSimulationService transactionSimulationService;
   private Optional<JsonRpcManager> rejectedTxJsonRpcManager = Optional.empty();
-
-  @Override
-  public Optional<String> getName() {
-    return Optional.of(NAME);
-  }
 
   @Override
   public void doRegister(final BesuContext context) {
@@ -87,7 +82,10 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
   @Override
   public void start() {
     super.start();
+    loadDenyListAndRegisterPluginTxValidatorFactory();
+  }
 
+  private void loadDenyListAndRegisterPluginTxValidatorFactory() {
     try (Stream<String> lines =
         Files.lines(
             Path.of(new File(transactionPoolValidatorConfiguration().denyListPath()).toURI()))) {
@@ -122,6 +120,12 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Override
+  public CompletableFuture<Void> reloadConfiguration() {
+    loadDenyListAndRegisterPluginTxValidatorFactory();
+    return CompletableFuture.completedFuture(null);
   }
 
   @Override
