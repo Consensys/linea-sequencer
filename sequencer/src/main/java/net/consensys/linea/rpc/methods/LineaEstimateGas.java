@@ -23,6 +23,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -39,6 +40,7 @@ import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator;
 import net.consensys.linea.zktracer.ZkTracer;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt256;
+import org.apache.tuweni.units.bigints.UInt256s;
 import org.bouncycastle.asn1.sec.SECNamedCurves;
 import org.bouncycastle.asn1.x9.X9ECParameters;
 import org.bouncycastle.crypto.params.ECDomainParameters;
@@ -149,15 +151,6 @@ public class LineaEstimateGas {
       final var callParameters = parseRequest(request.getParams());
       final var minGasPrice = besuConfiguration.getMinGasPrice();
       final var gasLimitUpperBound = calculateGasLimitUpperBound(callParameters, logId);
-      final var transaction = createTransactionForSimulation(callParameters, gasLimitUpperBound);
-      log.atDebug()
-          .setMessage("[{}] Parsed call parameters: {}; Transaction: {}; Gas limit upper bound {}")
-          .addArgument(logId)
-          .addArgument(callParameters)
-          .addArgument(transaction::toTraceLog)
-          .addArgument(gasLimitUpperBound)
-          .log();
-      final var estimatedGasUsed = estimateGasUsed(callParameters, transaction, logId);
 
       final Wei baseFee =
           blockchainService
@@ -166,6 +159,16 @@ public class LineaEstimateGas {
                   () ->
                       new PluginRpcEndpointException(
                           RpcErrorType.INVALID_REQUEST, "Not on a baseFee market"));
+
+      final var transaction = createTransactionForSimulation(callParameters, gasLimitUpperBound, baseFee);
+      log.atDebug()
+          .setMessage("[{}] Parsed call parameters: {}; Transaction: {}; Gas limit upper bound {}")
+          .addArgument(logId)
+          .addArgument(callParameters)
+          .addArgument(transaction::toTraceLog)
+          .addArgument(gasLimitUpperBound)
+          .log();
+      final var estimatedGasUsed = estimateGasUsed(callParameters, transaction, baseFee, logId);
 
       final Wei estimatedPriorityFee =
           getEstimatedPriorityFee(transaction, baseFee, minGasPrice, estimatedGasUsed);
@@ -266,16 +269,15 @@ public class LineaEstimateGas {
   }
 
   private Long estimateGasUsed(
-      final JsonCallParameter callParameters, final Transaction transaction, final long logId) {
+      final JsonCallParameter callParameters, final Transaction transaction, final Wei baseFee, final long logId) {
 
     final var estimateGasTracer = new EstimateGasOperationTracer();
     final var chainHeadHeader = blockchainService.getChainHeadHeader();
     final var zkTracer = createZkTracer(chainHeadHeader, blockchainService.getChainId().get());
     final TracerAggregator zkAndGasTracer = TracerAggregator.create(estimateGasTracer, zkTracer);
 
-    final var chainHeadHash = chainHeadHeader.getBlockHash();
     final var maybeSimulationResults =
-        transactionSimulationService.simulate(transaction, chainHeadHash, zkAndGasTracer, false);
+        transactionSimulationService.simulate(transaction, Optional.empty(), zkAndGasTracer, false);
 
     ModuleLimitsValidationResult moduleLimit =
         moduleLineCountValidator.validate(zkTracer.getModulesLineCount());
@@ -321,10 +323,10 @@ public class LineaEstimateGas {
               final var lowGasEstimation = r.result().getEstimateGasUsedByTransaction();
               final var lowResult =
                   transactionSimulationService.simulate(
-                      createTransactionForSimulation(callParameters, lowGasEstimation),
-                      chainHeadHash,
+                      createTransactionForSimulation(callParameters, lowGasEstimation, baseFee),
+                      Optional.empty(),
                       estimateGasTracer,
-                      true);
+                      false);
 
               return lowResult
                   .map(
@@ -339,7 +341,7 @@ public class LineaEstimateGas {
                           return lowGasEstimation;
                         } else {
                           log.atTrace()
-                              .setMessage("[{}] Low gas estimation {} unsuccessful, result{}")
+                              .setMessage("[{}] Low gas estimation {} unsuccessful, result {}")
                               .addArgument(logId)
                               .addArgument(lowGasEstimation)
                               .addArgument(lr::result)
@@ -356,10 +358,10 @@ public class LineaEstimateGas {
 
                             final var binarySearchResult =
                                 transactionSimulationService.simulate(
-                                    createTransactionForSimulation(callParameters, mid),
-                                    chainHeadHash,
+                                    createTransactionForSimulation(callParameters, mid, baseFee),
+                                    Optional.empty(),
                                     estimateGasTracer,
-                                    true);
+                                    false);
 
                             if (binarySearchResult.isEmpty()
                                 || !binarySearchResult.get().isSuccessful()) {
@@ -381,7 +383,7 @@ public class LineaEstimateGas {
                             } else {
                               log.atTrace()
                                   .setMessage(
-                                      "[{}]-[{}} Binary gas estimation search low={},mid={},high={}, successful")
+                                      "[{}]-[{}] Binary gas estimation search low={},mid={},high={}, successful")
                                   .addArgument(logId)
                                   .addArgument(iterations)
                                   .addArgument(low)
@@ -463,7 +465,7 @@ public class LineaEstimateGas {
   }
 
   private Transaction createTransactionForSimulation(
-      final JsonCallParameter callParameters, final long maxTxGasLimit) {
+      final JsonCallParameter callParameters, final long maxTxGasLimit, final Wei baseFee) {
 
     final var txBuilder =
         Transaction.builder()
@@ -476,17 +478,26 @@ public class LineaEstimateGas {
             .signature(FAKE_SIGNATURE_FOR_SIZE_CALCULATION);
 
     if (isBaseFeeTransaction(callParameters)) {
-      callParameters.getMaxFeePerGas().ifPresent(txBuilder::maxFeePerGas);
-      callParameters.getMaxPriorityFeePerGas().ifPresent(txBuilder::maxPriorityFeePerGas);
-      callParameters.getMaxFeePerBlobGas().ifPresent(txBuilder::maxFeePerBlobGas);
+            final var maxFeePerGas = callParameters.getMaxFeePerGas().orElse(Wei.ZERO);
+            final var maxPriorityFeePerGas = callParameters.getMaxPriorityFeePerGas().orElse(Wei.ZERO);
+            txBuilder.maxFeePerGas(maxFeePerGas);
+            txBuilder.maxPriorityFeePerGas(maxPriorityFeePerGas);
+            txBuilder.gasPrice(UInt256s.min(maxFeePerGas, maxPriorityFeePerGas.add(baseFee)));
     } else {
-      txBuilder.gasPrice(
-          callParameters.getGasPrice() != null
-              ? callParameters.getGasPrice()
-              : blockchainService.getNextBlockBaseFee().orElse(Wei.ZERO));
+      final var gasPrice = callParameters.getGasPrice() != null
+                    ? callParameters.getGasPrice()
+                    : baseFee;
+      txBuilder.gasPrice(gasPrice);
     }
 
     callParameters.getAccessList().ifPresent(txBuilder::accessList);
+
+    callParameters.getChainId().ifPresentOrElse(txBuilder::chainId, () -> {
+      txBuilder.guessType();
+      if(txBuilder.getTransactionType().requiresChainId()) {
+        blockchainService.getChainId().ifPresent(txBuilder::chainId);
+      }
+    });
 
     return txBuilder.build();
   }
