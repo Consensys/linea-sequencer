@@ -23,12 +23,9 @@ import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
 import net.consensys.linea.jsonrpc.JsonRpcRequestBuilder;
-import net.consensys.linea.metrics.TransactionProfitabilityMetrics;
-import net.consensys.linea.util.LineaPricingUtils;
 import org.apache.tuweni.units.bigints.UInt256s;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.datatypes.Wei;
-import org.hyperledger.besu.plugin.data.BlockHeader;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolValidator;
@@ -50,13 +47,11 @@ public class ProfitabilityValidator implements PluginTransactionPoolValidator {
       final BesuConfiguration besuConfiguration,
       final BlockchainService blockchainService,
       final LineaProfitabilityConfiguration profitabilityConf,
-      final Optional<JsonRpcManager> rejectedTxJsonRpcManager,
-      final TransactionProfitabilityMetrics profitabilityMetrics) {
+      final Optional<JsonRpcManager> rejectedTxJsonRpcManager) {
     this.besuConfiguration = besuConfiguration;
     this.blockchainService = blockchainService;
     this.profitabilityConf = profitabilityConf;
-    this.profitabilityCalculator =
-        new TransactionProfitabilityCalculator(profitabilityConf, profitabilityMetrics);
+    this.profitabilityCalculator = new TransactionProfitabilityCalculator(profitabilityConf);
     this.rejectedTxJsonRpcManager = rejectedTxJsonRpcManager;
   }
 
@@ -73,10 +68,6 @@ public class ProfitabilityValidator implements PluginTransactionPoolValidator {
               .getNextBlockBaseFee()
               .orElseThrow(() -> new RuntimeException("We only support a base fee market"));
 
-      final BlockHeader chainHeadHeader = blockchainService.getChainHeadHeader();
-      final LineaPricingUtils.PricingData pricingData =
-          LineaPricingUtils.extractPricingFromExtraData(chainHeadHeader.getExtraData());
-
       final Optional<String> errMsg =
           profitabilityCalculator.isProfitable(
                   "Txpool",
@@ -85,8 +76,7 @@ public class ProfitabilityValidator implements PluginTransactionPoolValidator {
                   baseFee,
                   calculateUpfrontGasPrice(transaction, baseFee),
                   transaction.getGasLimit(),
-                  besuConfiguration.getMinGasPrice(),
-                  pricingData)
+                  besuConfiguration.getMinGasPrice())
               ? Optional.empty()
               : Optional.of("Gas price too low");
       errMsg.ifPresent(s -> reportRejectedTransaction(transaction, s));

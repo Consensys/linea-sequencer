@@ -22,7 +22,6 @@ import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
-import net.consensys.linea.metrics.TransactionProfitabilityMetrics;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.sequencer.txselection.selectors.LineaTransactionSelector;
 import org.hyperledger.besu.plugin.services.BlockchainService;
@@ -40,7 +39,6 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
   private final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration;
   private final LineaProfitabilityConfiguration profitabilityConfiguration;
   private final LineaTracerConfiguration tracerConfiguration;
-  private final TransactionProfitabilityMetrics transactionProfitabilityMetrics;
 
   private final Map<String, Integer> limitsMap;
 
@@ -51,8 +49,7 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
       final LineaProfitabilityConfiguration profitabilityConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
       final Map<String, Integer> limitsMap,
-      final Optional<JsonRpcManager> rejectedTxJsonRpcManager,
-      final TransactionProfitabilityMetrics transactionProfitabilityMetrics) {
+      final Optional<JsonRpcManager> rejectedTxJsonRpcManager) {
     this.blockchainService = blockchainService;
     this.txSelectorConfiguration = txSelectorConfiguration;
     this.l1L2BridgeConfiguration = l1L2BridgeConfiguration;
@@ -60,7 +57,6 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
     this.tracerConfiguration = tracerConfiguration;
     this.limitsMap = limitsMap;
     this.rejectedTxJsonRpcManager = rejectedTxJsonRpcManager;
-    this.transactionProfitabilityMetrics = transactionProfitabilityMetrics;
   }
 
   @Override
@@ -72,7 +68,6 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
         profitabilityConfiguration,
         tracerConfiguration,
         limitsMap,
-        rejectedTxJsonRpcManager,
-        transactionProfitabilityMetrics);
+        rejectedTxJsonRpcManager);
   }
 }

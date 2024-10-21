@@ -25,12 +25,9 @@ import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
-import net.consensys.linea.metrics.TransactionProfitabilityMetrics;
 import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
-import org.hyperledger.besu.plugin.services.BlockchainService;
-import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.TransactionSelectionService;
 
 /**
@@ -43,10 +40,8 @@ import org.hyperledger.besu.plugin.services.TransactionSelectionService;
 public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin {
   public static final String NAME = "linea";
   private TransactionSelectionService transactionSelectionService;
-  private BlockchainService blockchainService;
   private Optional<JsonRpcManager> rejectedTxJsonRpcManager = Optional.empty();
   private BesuConfiguration besuConfiguration;
-  private TransactionProfitabilityMetrics transactionProfitabilityMetrics;
 
   @Override
   public Optional<String> getName() {
@@ -63,14 +58,6 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
                     new RuntimeException(
                         "Failed to obtain TransactionSelectionService from the BesuContext."));
 
-    blockchainService =
-        context
-            .getService(BlockchainService.class)
-            .orElseThrow(
-                () ->
-                    new RuntimeException(
-                        "Failed to obtain BlockchainService from the BesuContext."));
-
     besuConfiguration =
         context
             .getService(BesuConfiguration.class)
@@ -78,15 +65,6 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
                 () ->
                     new RuntimeException(
                         "Failed to obtain BesuConfiguration from the BesuContext."));
-
-    MetricsSystem metricsSystem =
-        context
-            .getService(MetricsSystem.class)
-            .orElseThrow(
-                () -> new RuntimeException("Failed to obtain MetricsSystem from the BesuContext."));
-
-    // Instantiate TransactionProfitabilityMetrics
-    this.transactionProfitabilityMetrics = new TransactionProfitabilityMetrics(metricsSystem);
   }
 
   @Override
@@ -114,8 +92,7 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
             profitabilityConfiguration(),
             tracerConfiguration(),
             createLimitModules(tracerConfiguration()),
-            rejectedTxJsonRpcManager,
-            transactionProfitabilityMetrics));
+            rejectedTxJsonRpcManager));
   }
 
   @Override
