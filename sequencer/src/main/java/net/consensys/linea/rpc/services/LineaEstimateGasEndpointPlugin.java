@@ -24,7 +24,6 @@ import net.consensys.linea.rpc.methods.LineaEstimateGas;
 import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
-import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.RpcEndpointService;
 import org.hyperledger.besu.plugin.services.TransactionSimulationService;
 
@@ -36,7 +35,6 @@ public class LineaEstimateGasEndpointPlugin extends AbstractLineaRequiredPlugin 
   private RpcEndpointService rpcEndpointService;
   private TransactionSimulationService transactionSimulationService;
   private LineaEstimateGas lineaEstimateGasMethod;
-  private MetricsSystem metricsSystem;
 
   /**
    * Register the RPC service.
@@ -73,12 +71,6 @@ public class LineaEstimateGasEndpointPlugin extends AbstractLineaRequiredPlugin 
         new LineaEstimateGas(
             besuConfiguration, transactionSimulationService, blockchainService, rpcEndpointService);
 
-    this.metricsSystem =
-        context
-            .getService(MetricsSystem.class)
-            .orElseThrow(
-                () -> new RuntimeException("Failed to obtain MetricsSystem from the BesuContext."));
-
     rpcEndpointService.registerRPCEndpoint(
         lineaEstimateGasMethod.getNamespace(),
         lineaEstimateGasMethod.getName(),
@@ -93,7 +85,6 @@ public class LineaEstimateGasEndpointPlugin extends AbstractLineaRequiredPlugin 
         transactionPoolValidatorConfiguration(),
         profitabilityConfiguration(),
         createLimitModules(tracerConfiguration()),
-        l1L2BridgeSharedConfiguration(),
-        metricsSystem);
+        l1L2BridgeSharedConfiguration());
   }
 }

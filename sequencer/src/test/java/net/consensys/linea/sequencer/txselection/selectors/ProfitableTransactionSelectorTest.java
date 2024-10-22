@@ -28,7 +28,6 @@ import net.consensys.linea.config.LineaProfitabilityCliOptions;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorCliOptions;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
-import net.consensys.linea.metrics.TransactionProfitabilityMetrics;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.bouncycastle.crypto.digests.KeccakDigest;
@@ -36,15 +35,13 @@ import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.datatypes.Wei;
-import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
-import org.hyperledger.besu.plugin.data.BlockHeader;
+import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 
 public class ProfitableTransactionSelectorTest {
   private static final int FIXED_GAS_COST_WEI = 600_000;
@@ -53,7 +50,6 @@ public class ProfitableTransactionSelectorTest {
   private static final int UNPROFITABLE_CACHE_SIZE = 2;
   private static final Wei BASE_FEE = Wei.of(7);
   private static final int UNPROFITABLE_RETRY_LIMIT = 1;
-
   private final LineaTransactionSelectorConfiguration txSelectorConf =
       LineaTransactionSelectorCliOptions.create().toDomainObject().toBuilder()
           .unprofitableCacheSize(UNPROFITABLE_CACHE_SIZE)
@@ -65,41 +61,19 @@ public class ProfitableTransactionSelectorTest {
           .fixedCostWei(FIXED_GAS_COST_WEI)
           .variableCostWei(VARIABLE_GAS_COST_WEI)
           .build();
-
   private TestableProfitableTransactionSelector transactionSelector;
-
-  @Mock private BlockchainService blockchainService;
-  @Mock private BlockHeader mockBlockHeader; // Proper BlockHeader mock
-  @Mock private Transaction mockTransaction;
-
-  private ProfitableTransactionSelector selector;
 
   @BeforeEach
   public void initialize() {
-    mockBlockHeader = mock(BlockHeader.class);
-    blockchainService = mock(BlockchainService.class);
-    when(blockchainService.getChainHeadHeader()).thenReturn(mockBlockHeader);
-    when(mockBlockHeader.getExtraData()).thenReturn(createValidExtraData());
     transactionSelector = newSelectorForNewBlock();
     transactionSelector.reset();
   }
 
-  private Bytes createValidExtraData() {
-    // Create valid extraData with 13 bytes (1 byte version + 3 fields of 4 bytes each)
-    return Bytes.fromHexString("0x01000000010000000100000001");
-  }
-
   private TestableProfitableTransactionSelector newSelectorForNewBlock() {
-    final BlockchainService blockchainService = mock(BlockchainService.class);
-    BlockHeader mockBlockHeader = mock(BlockHeader.class);
-
-    when(mockBlockHeader.getExtraData()).thenReturn(createValidExtraData());
-
-    when(blockchainService.getChainHeadHeader()).thenReturn(mockBlockHeader);
+    final var blockchainService = mock(BlockchainService.class);
     when(blockchainService.getNextBlockBaseFee()).thenReturn(Optional.of(BASE_FEE));
-
     return new TestableProfitableTransactionSelector(
-        blockchainService, txSelectorConf, profitabilityConf, mockBlockHeader);
+        blockchainService, txSelectorConf, profitabilityConf);
   }
 
   @Test
@@ -388,12 +362,8 @@ public class ProfitableTransactionSelectorTest {
     when(transaction.encoded()).thenReturn(Bytes.wrap(pseudoRandomBytes(size)));
     when(pendingTransaction.getTransaction()).thenReturn(transaction);
     when(pendingTransaction.hasPriority()).thenReturn(hasPriority);
-
     return new TestTransactionEvaluationContext(
-        mockBlockHeader,
-        pendingTransaction,
-        effectiveGasPrice,
-        minGasPrice); // Pass the mocked block header
+        mock(ProcessableBlockHeader.class), pendingTransaction, effectiveGasPrice, minGasPrice);
   }
 
   private byte[] pseudoRandomBytes(int size) {
@@ -437,19 +407,11 @@ public class ProfitableTransactionSelectorTest {
 
   private static class TestableProfitableTransactionSelector extends ProfitableTransactionSelector {
 
-    private final BlockHeader mockBlockHeader;
-
     TestableProfitableTransactionSelector(
         final BlockchainService blockchainService,
         final LineaTransactionSelectorConfiguration txSelectorConf,
-        final LineaProfitabilityConfiguration profitabilityConf,
-        final BlockHeader mockBlockHeader) {
-      super(
-          blockchainService,
-          txSelectorConf,
-          profitabilityConf,
-          new TransactionProfitabilityMetrics(new NoOpMetricsSystem()));
-      this.mockBlockHeader = mockBlockHeader;
+        final LineaProfitabilityConfiguration profitabilityConf) {
+      super(blockchainService, txSelectorConf, profitabilityConf);
     }
 
     boolean isUnprofitableTxCached(final Hash txHash) {

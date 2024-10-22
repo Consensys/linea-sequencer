@@ -50,7 +50,8 @@ public class LineaProfitabilityConfiguration implements LineaOptionsConfiguratio
    * @param variableCostWei variable cost in Wei
    * @param ethGasPriceWei gas price in Wei
    */
-  public synchronized void updateFixedVariableAndGasPrice(final long fixedCostWei, final long variableCostWei, final long ethGasPriceWei) {
+  public synchronized void updateFixedVariableAndGasPrice(
+      final long fixedCostWei, final long variableCostWei, final long ethGasPriceWei) {
     this.fixedCostWei = fixedCostWei;
     this.variableCostWei = variableCostWei;
     this.ethGasPriceWei = ethGasPriceWei;

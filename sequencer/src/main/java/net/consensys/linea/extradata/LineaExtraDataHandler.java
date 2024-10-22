@@ -94,7 +94,8 @@ public class LineaExtraDataHandler {
    *
    * <p>Version 1 has this format:
    *
-   * <p>VERSION (1 byte) FIXED_COST (4 bytes) VARIABLE_COST (4 bytes) ETH_GAS_PRICE (4 bytes) MIN_GAS_PRICE (4 bytes)
+   * <p>VERSION (1 byte) FIXED_COST (4 bytes) VARIABLE_COST (4 bytes) ETH_GAS_PRICE (4 bytes)
+   * MIN_GAS_PRICE (4 bytes)
    */
   @SuppressWarnings("rawtypes")
   private class Version1Consumer implements ExtraDataConsumer {
@@ -103,7 +104,8 @@ public class LineaExtraDataHandler {
     private final FieldConsumer[] fieldsSequence;
     private final MutableLong currFixedCostKWei = new MutableLong();
     private final MutableLong currVariableCostKWei = new MutableLong();
-    private final MutableLong currEthGasPriceKWei = new MutableLong();  // Field to store eth gas price
+    private final MutableLong currEthGasPriceKWei =
+        new MutableLong(); // Field to store eth gas price
 
     public Version1Consumer(final LineaProfitabilityConfiguration profitabilityConf) {
       this.profitabilityConf = profitabilityConf;
@@ -112,15 +114,18 @@ public class LineaExtraDataHandler {
           new FieldConsumer<>(
               "fixedGasCost", 4, ExtraDataConsumer::toLong, currFixedCostKWei::setValue);
       final FieldConsumer variableGasCostField =
-        new FieldConsumer<>(
-          "variableGasCost", 4, ExtraDataConsumer::toLong, currVariableCostKWei::setValue);
+          new FieldConsumer<>(
+              "variableGasCost", 4, ExtraDataConsumer::toLong, currVariableCostKWei::setValue);
       final FieldConsumer ethGasPriceField =
-        new FieldConsumer<>("ethGasPrice", 4, ExtraDataConsumer::toLong, currEthGasPriceKWei::setValue);
+          new FieldConsumer<>(
+              "ethGasPrice", 4, ExtraDataConsumer::toLong, currEthGasPriceKWei::setValue);
       final FieldConsumer minGasPriceField =
           new FieldConsumer<>("minGasPrice", 4, ExtraDataConsumer::toLong, this::updateMinGasPrice);
 
       this.fieldsSequence =
-        new FieldConsumer[] {fixedGasCostField, variableGasCostField, ethGasPriceField, minGasPriceField};
+          new FieldConsumer[] {
+            fixedGasCostField, variableGasCostField, ethGasPriceField, minGasPriceField
+          };
     }
 
     public boolean canConsume(final Bytes rawExtraData) {
@@ -136,9 +141,9 @@ public class LineaExtraDataHandler {
       }
 
       profitabilityConf.updateFixedVariableAndGasPrice(
-        currFixedCostKWei.longValue() * WEI_IN_KWEI,
-        currVariableCostKWei.longValue() * WEI_IN_KWEI,
-        currEthGasPriceKWei.longValue() * WEI_IN_KWEI);
+          currFixedCostKWei.longValue() * WEI_IN_KWEI,
+          currVariableCostKWei.longValue() * WEI_IN_KWEI,
+          currEthGasPriceKWei.longValue() * WEI_IN_KWEI);
     }
 
     void updateMinGasPrice(final Long minGasPriceKWei) {
