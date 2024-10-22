@@ -94,8 +94,7 @@ public class LineaExtraDataHandler {
    *
    * <p>Version 1 has this format:
    *
-   * <p>VERSION (1 byte) FIXED_COST (4 bytes) VARIABLE_COST (4 bytes) ETH_GAS_PRICE (4 bytes)
-   * MIN_GAS_PRICE (4 bytes)
+   * <p>VERSION (1 byte) FIXED_COST (4 bytes) VARIABLE_COST (4 bytes) MIN_GAS_PRICE (4 bytes) ETH_GAS_PRICE (4 bytes)
    */
   @SuppressWarnings("rawtypes")
   private class Version1Consumer implements ExtraDataConsumer {
@@ -104,8 +103,7 @@ public class LineaExtraDataHandler {
     private final FieldConsumer[] fieldsSequence;
     private final MutableLong currFixedCostKWei = new MutableLong();
     private final MutableLong currVariableCostKWei = new MutableLong();
-    private final MutableLong currEthGasPriceKWei =
-        new MutableLong(); // Field to store eth gas price
+    private final MutableLong currEthGasPriceKWei = new MutableLong();
 
     public Version1Consumer(final LineaProfitabilityConfiguration profitabilityConf) {
       this.profitabilityConf = profitabilityConf;
@@ -116,16 +114,13 @@ public class LineaExtraDataHandler {
       final FieldConsumer variableGasCostField =
           new FieldConsumer<>(
               "variableGasCost", 4, ExtraDataConsumer::toLong, currVariableCostKWei::setValue);
-      final FieldConsumer ethGasPriceField =
-          new FieldConsumer<>(
-              "ethGasPrice", 4, ExtraDataConsumer::toLong, currEthGasPriceKWei::setValue);
       final FieldConsumer minGasPriceField =
           new FieldConsumer<>("minGasPrice", 4, ExtraDataConsumer::toLong, this::updateMinGasPrice);
+      final FieldConsumer ethGasPriceField =
+          new FieldConsumer<>("ethGasPrice", 4, ExtraDataConsumer::toLong, currEthGasPriceKWei::setValue);
 
       this.fieldsSequence =
-          new FieldConsumer[] {
-            fixedGasCostField, variableGasCostField, ethGasPriceField, minGasPriceField
-          };
+          new FieldConsumer[] {fixedGasCostField, variableGasCostField, minGasPriceField, ethGasPriceField};
     }
 
     public boolean canConsume(final Bytes rawExtraData) {
