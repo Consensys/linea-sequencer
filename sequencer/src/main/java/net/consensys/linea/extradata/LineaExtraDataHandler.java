@@ -94,7 +94,8 @@ public class LineaExtraDataHandler {
    *
    * <p>Version 1 has this format:
    *
-   * <p>VERSION (1 byte) FIXED_COST (4 bytes) VARIABLE_COST (4 bytes) MIN_GAS_PRICE (4 bytes) ETH_GAS_PRICE (4 bytes)
+   * <p>VERSION (1 byte) FIXED_COST (4 bytes) VARIABLE_COST (4 bytes) MIN_GAS_PRICE (4 bytes)
+   * ETH_GAS_PRICE (4 bytes)
    */
   @SuppressWarnings("rawtypes")
   private class Version1Consumer implements ExtraDataConsumer {
@@ -117,10 +118,13 @@ public class LineaExtraDataHandler {
       final FieldConsumer minGasPriceField =
           new FieldConsumer<>("minGasPrice", 4, ExtraDataConsumer::toLong, this::updateMinGasPrice);
       final FieldConsumer ethGasPriceField =
-          new FieldConsumer<>("ethGasPrice", 4, ExtraDataConsumer::toLong, currEthGasPriceKWei::setValue);
+          new FieldConsumer<>(
+              "ethGasPrice", 4, ExtraDataConsumer::toLong, currEthGasPriceKWei::setValue);
 
       this.fieldsSequence =
-          new FieldConsumer[] {fixedGasCostField, variableGasCostField, minGasPriceField, ethGasPriceField};
+          new FieldConsumer[] {
+            fixedGasCostField, variableGasCostField, minGasPriceField, ethGasPriceField
+          };
     }
 
     public boolean canConsume(final Bytes rawExtraData) {
@@ -136,9 +140,9 @@ public class LineaExtraDataHandler {
       }
 
       profitabilityConf.updateFixedVariableAndGasPrice(
-        currFixedCostKWei.longValue() * WEI_IN_KWEI,
-        currVariableCostKWei.longValue() * WEI_IN_KWEI,
-        currEthGasPriceKWei.longValue() * WEI_IN_KWEI);
+          currFixedCostKWei.longValue() * WEI_IN_KWEI,
+          currVariableCostKWei.longValue() * WEI_IN_KWEI,
+          currEthGasPriceKWei.longValue() * WEI_IN_KWEI);
     }
 
     void updateMinGasPrice(final Long minGasPriceKWei) {
