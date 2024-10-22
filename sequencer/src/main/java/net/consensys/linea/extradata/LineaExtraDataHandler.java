@@ -136,9 +136,9 @@ public class LineaExtraDataHandler {
       }
 
       profitabilityConf.updateFixedVariableAndGasPrice(
-          currFixedCostKWei.longValue() * WEI_IN_KWEI,
-          currVariableCostKWei.longValue() * WEI_IN_KWEI,
-          currEthGasPriceKWei.longValue() * WEI_IN_KWEI);
+        currFixedCostKWei.longValue() * WEI_IN_KWEI,
+        currVariableCostKWei.longValue() * WEI_IN_KWEI,
+        currEthGasPriceKWei.longValue() * WEI_IN_KWEI);
     }
 
     void updateMinGasPrice(final Long minGasPriceKWei) {
