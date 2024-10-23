@@ -144,6 +144,47 @@ public class TransactionProfitabilityCalculator {
     return true;
   }
 
+  public boolean isProfitable(
+      final String context,
+      final Wei profitablePriorityFee,
+      final Transaction transaction,
+      final double minMargin,
+      final Wei baseFee,
+      final Wei payingGasPrice,
+      final long gas,
+      final Wei minGasPriceWei) {
+
+    final Wei profitableGasPrice = baseFee.add(profitablePriorityFee);
+
+    if (payingGasPrice.lessThan(profitableGasPrice)) {
+      log(
+          log.atDebug(),
+          context,
+          transaction,
+          minMargin,
+          payingGasPrice,
+          baseFee,
+          profitablePriorityFee,
+          profitableGasPrice,
+          gas,
+          minGasPriceWei);
+      return false;
+    }
+
+    log(
+        log.atTrace(),
+        context,
+        transaction,
+        minMargin,
+        payingGasPrice,
+        baseFee,
+        profitablePriorityFee,
+        profitableGasPrice,
+        gas,
+        minGasPriceWei);
+    return true;
+  }
+
   /**
    * This method calculates the compressed size of a tx using the native lib
    *

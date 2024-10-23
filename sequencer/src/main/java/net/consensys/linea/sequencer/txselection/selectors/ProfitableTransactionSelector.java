@@ -20,6 +20,7 @@ import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectio
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -53,6 +54,7 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
   private final LineaTransactionSelectorConfiguration txSelectorConf;
   private final LineaProfitabilityConfiguration profitabilityConf;
   private final TransactionProfitabilityCalculator transactionProfitabilityCalculator;
+  private final Map<Hash, Wei> profitablePriorityFeeCache;
   private final Wei baseFee;
 
   private int unprofitableRetries;
@@ -60,11 +62,13 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
   public ProfitableTransactionSelector(
       final BlockchainService blockchainService,
       final LineaTransactionSelectorConfiguration txSelectorConf,
-      final LineaProfitabilityConfiguration profitabilityConf) {
+      final LineaProfitabilityConfiguration profitabilityConf,
+      final Map<Hash, Wei> profitablePriorityFeeCache) {
     this.txSelectorConf = txSelectorConf;
     this.profitabilityConf = profitabilityConf;
     this.transactionProfitabilityCalculator =
         new TransactionProfitabilityCalculator(profitabilityConf);
+    this.profitablePriorityFeeCache = profitablePriorityFeeCache;
     this.baseFee =
         blockchainService
             .getNextBlockBaseFee()
@@ -145,8 +149,16 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
       final Transaction transaction = evaluationContext.getPendingTransaction().getTransaction();
       final long gasUsed = processingResult.getEstimateGasUsedByTransaction();
 
+      final var profitablePriorityFeePerGas =
+          transactionProfitabilityCalculator.profitablePriorityFeePerGas(
+              transaction,
+              profitabilityConf.minMargin(),
+              gasUsed,
+              evaluationContext.getMinGasPrice());
+
       if (!transactionProfitabilityCalculator.isProfitable(
           "PostProcessing",
+          profitablePriorityFeePerGas,
           transaction,
           profitabilityConf.minMargin(),
           baseFee,
@@ -156,6 +168,8 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
         rememberUnprofitable(transaction);
         return TX_UNPROFITABLE;
       }
+
+      profitablePriorityFeeCache.put(transaction.getHash(), profitablePriorityFeePerGas);
     }
     return SELECTED;
   }

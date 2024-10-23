@@ -22,6 +22,8 @@ import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECT
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 import net.consensys.linea.config.LineaProfitabilityCliOptions;
@@ -62,9 +64,11 @@ public class ProfitableTransactionSelectorTest {
           .variableCostWei(VARIABLE_GAS_COST_WEI)
           .build();
   private TestableProfitableTransactionSelector transactionSelector;
+  private Map<Hash, Wei> profitablePriorityFeeCache;
 
   @BeforeEach
   public void initialize() {
+    profitablePriorityFeeCache = new HashMap<>();
     transactionSelector = newSelectorForNewBlock();
     transactionSelector.reset();
   }
@@ -73,7 +77,7 @@ public class ProfitableTransactionSelectorTest {
     final var blockchainService = mock(BlockchainService.class);
     when(blockchainService.getNextBlockBaseFee()).thenReturn(Optional.of(BASE_FEE));
     return new TestableProfitableTransactionSelector(
-        blockchainService, txSelectorConf, profitabilityConf);
+        blockchainService, txSelectorConf, profitabilityConf, profitablePriorityFeeCache);
   }
 
   @Test
@@ -331,6 +335,22 @@ public class ProfitableTransactionSelectorTest {
         SELECTED);
   }
 
+  @Test
+  public void shouldAddToProfitablePriorityFeeWhenSelect() {
+    final var mockTransactionProcessingResult = mockTransactionProcessingResult(21000);
+    final var mockEvaluationContext =
+        mockEvaluationContext(false, 100, Wei.of(1_100_000_000), Wei.of(1_000_000_000), 21000);
+    verifyTransactionSelection(
+        transactionSelector,
+        mockEvaluationContext,
+        mockTransactionProcessingResult,
+        SELECTED,
+        SELECTED);
+
+    assertThat(profitablePriorityFeeCache)
+        .containsOnlyKeys(mockEvaluationContext.getPendingTransaction().getTransaction().getHash());
+  }
+
   private void verifyTransactionSelection(
       final ProfitableTransactionSelector selector,
       final TestTransactionEvaluationContext evaluationContext,
@@ -410,8 +430,9 @@ public class ProfitableTransactionSelectorTest {
     TestableProfitableTransactionSelector(
         final BlockchainService blockchainService,
         final LineaTransactionSelectorConfiguration txSelectorConf,
-        final LineaProfitabilityConfiguration profitabilityConf) {
-      super(blockchainService, txSelectorConf, profitabilityConf);
+        final LineaProfitabilityConfiguration profitabilityConf,
+        final Map<Hash, Wei> profitablePriorityFeeCache) {
+      super(blockchainService, txSelectorConf, profitabilityConf, profitablePriorityFeeCache);
     }
 
     boolean isUnprofitableTxCached(final Hash txHash) {

@@ -17,6 +17,7 @@ package net.consensys.linea.sequencer.txselection;
 
 import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.createLimitModules;
 
+import java.util.HashMap;
 import java.util.Optional;
 
 import com.google.auto.service.AutoService;
@@ -25,6 +26,8 @@ import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
+import org.hyperledger.besu.datatypes.Hash;
+import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
@@ -84,6 +87,9 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
                             besuConfiguration.getDataPath(),
                             lineaRejectedTxReportingConfiguration)
                         .start());
+
+    final var profitablePriorityFeeCache = new HashMap<Hash, Wei>();
+
     transactionSelectionService.registerPluginTransactionSelectorFactory(
         new LineaTransactionSelectorFactory(
             blockchainService,
@@ -92,7 +98,8 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
             profitabilityConfiguration(),
             tracerConfiguration(),
             createLimitModules(tracerConfiguration()),
-            rejectedTxJsonRpcManager));
+            rejectedTxJsonRpcManager,
+            profitablePriorityFeeCache));
   }
 
   @Override
