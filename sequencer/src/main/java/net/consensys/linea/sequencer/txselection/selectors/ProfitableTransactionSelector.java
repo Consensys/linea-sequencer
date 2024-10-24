@@ -170,6 +170,7 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
       }
 
       selectorProfitabilityMetrics.remember(
+          evaluationContext.getPendingBlockHeader().getNumber(),
           transaction.getHash(),
           evaluationContext.getTransactionGasPrice(),
           profitablePriorityFeePerGas);
@@ -206,7 +207,6 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
     if (transactionSelectionResult.discard()) {
       unprofitableCache.remove(txHash);
     }
-    selectorProfitabilityMetrics.forget(txHash);
   }
 
   private void rememberUnprofitable(final Transaction transaction) {
