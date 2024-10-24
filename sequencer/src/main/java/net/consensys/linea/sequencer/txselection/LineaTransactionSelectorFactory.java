@@ -23,9 +23,8 @@ import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
+import net.consensys.linea.sequencer.txselection.metrics.SelectorProfitabilityMetrics;
 import net.consensys.linea.sequencer.txselection.selectors.LineaTransactionSelector;
-import org.hyperledger.besu.datatypes.Hash;
-import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelectorFactory;
@@ -41,7 +40,7 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
   private final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration;
   private final LineaProfitabilityConfiguration profitabilityConfiguration;
   private final LineaTracerConfiguration tracerConfiguration;
-  private final Map<Hash, Wei> profitablePriorityFeeCache;
+  private final SelectorProfitabilityMetrics selectorProfitabilityMetrics;
 
   private final Map<String, Integer> limitsMap;
 
@@ -53,7 +52,7 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
       final LineaTracerConfiguration tracerConfiguration,
       final Map<String, Integer> limitsMap,
       final Optional<JsonRpcManager> rejectedTxJsonRpcManager,
-      final Map<Hash, Wei> profitablePriorityFeeCache) {
+      final SelectorProfitabilityMetrics selectorProfitabilityMetrics) {
     this.blockchainService = blockchainService;
     this.txSelectorConfiguration = txSelectorConfiguration;
     this.l1L2BridgeConfiguration = l1L2BridgeConfiguration;
@@ -61,7 +60,7 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
     this.tracerConfiguration = tracerConfiguration;
     this.limitsMap = limitsMap;
     this.rejectedTxJsonRpcManager = rejectedTxJsonRpcManager;
-    this.profitablePriorityFeeCache = profitablePriorityFeeCache;
+    this.selectorProfitabilityMetrics = selectorProfitabilityMetrics;
   }
 
   @Override
@@ -74,6 +73,6 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
         tracerConfiguration,
         limitsMap,
         rejectedTxJsonRpcManager,
-        profitablePriorityFeeCache);
+        selectorProfitabilityMetrics);
   }
 }
