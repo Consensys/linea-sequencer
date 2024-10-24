@@ -18,7 +18,6 @@ package net.consensys.linea.sequencer.txselection;
 import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.createLimitModules;
 
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 import com.google.auto.service.AutoService;
