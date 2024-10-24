@@ -18,13 +18,12 @@ package net.consensys.linea.sequencer.txselection.metrics;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import lombok.extern.slf4j.Slf4j;
 import org.hyperledger.besu.datatypes.Hash;
-import org.hyperledger.besu.datatypes.Quantity;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.datatypes.Wei;
+import org.hyperledger.besu.plugin.data.BlockHeader;
 
 @Slf4j
 public class SelectorProfitabilityMetrics {
@@ -35,19 +34,28 @@ public class SelectorProfitabilityMetrics {
    * Handles the list of transactions by calculating their profitability based on the supplied cache
    * of profitable priority fees.
    *
-   * @param maybeBaseFee
+   * @param blockHeader the block header
    * @param transactions The list of transactions to process
    */
   public void handleNewBlock(
-      final Optional<? extends Quantity> maybeBaseFee, List<? extends Transaction> transactions) {
+      final BlockHeader blockHeader, List<? extends Transaction> transactions) {
     // if the cache is empty we are not building blocks, so nothing to do
+    log.info(
+        "New block number {}, txProfitabilityDataCache content: {}",
+        blockHeader.getNumber(),
+        txProfitabilityDataCache);
     if (!txProfitabilityDataCache.isEmpty()) {
       final Wei baseFee =
-          maybeBaseFee
+          blockHeader
+              .getBaseFee()
               .map(Wei::fromQuantity)
               .orElseThrow(() -> new IllegalStateException("Base fee market expected"));
       transactions.forEach(tx -> process(baseFee, tx));
     }
+    log.info(
+        "Processed block number {}, txProfitabilityDataCache content: {}",
+        blockHeader.getNumber(),
+        txProfitabilityDataCache);
   }
 
   /**
@@ -62,19 +70,17 @@ public class SelectorProfitabilityMetrics {
       final var effectivePriorityFee =
           selectorProfitabilityData.effectiveGasPrice.subtract(baseFee);
       final var ratio =
-          selectorProfitabilityData
-              .profitablePriorityFee
-              .divide(effectivePriorityFee)
-              .getValue()
-              .doubleValue();
+          selectorProfitabilityData.profitablePriorityFee.getValue().doubleValue()
+              / effectivePriorityFee.getValue().doubleValue();
       log.info(
-          "Tx profitability data found {}, baseFee {}, effectiveGasPrice {}, ratio {}",
+          "Tx {} profitability data found {}, baseFee {}, effectivePayingPriorityFee {}, ratio (calculatedProfitablePriorityFee/effectivePayingPriorityFee) {}",
+          transaction.getHash(),
           selectorProfitabilityData,
           baseFee.toHumanReadableString(),
           effectivePriorityFee.toHumanReadableString(),
           ratio);
     } else {
-      log.info("Error, cached profitability data not found for tx {}", transaction.getHash());
+      log.info("Cached profitability data not found for tx {}", transaction.getHash());
     }
   }
 
@@ -92,9 +98,9 @@ public class SelectorProfitabilityMetrics {
     @Override
     public String toString() {
       return "{"
-          + "effectiveGasPrice="
+          + "effectivePaidGasPrice="
           + effectiveGasPrice.toHumanReadableString()
-          + ", profitablePriorityFee="
+          + ", calculatedProfitablePriorityFee="
           + profitablePriorityFee.toHumanReadableString()
           + '}';
     }

@@ -113,7 +113,7 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
         addedBlockContext -> {
           try {
             selectorProfitabilityMetrics.handleNewBlock(
-                addedBlockContext.getBlockHeader().getBaseFee(),
+                addedBlockContext.getBlockHeader(),
                 addedBlockContext.getBlockBody().getTransactions());
           } catch (final Exception e) {
             log.warn(
