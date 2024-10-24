@@ -20,7 +20,6 @@ import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectio
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 
 import java.util.LinkedHashSet;
-import java.util.Map;
 import java.util.Set;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -28,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
+import net.consensys.linea.sequencer.txselection.metrics.SelectorProfitabilityMetrics;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Transaction;
@@ -54,7 +54,7 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
   private final LineaTransactionSelectorConfiguration txSelectorConf;
   private final LineaProfitabilityConfiguration profitabilityConf;
   private final TransactionProfitabilityCalculator transactionProfitabilityCalculator;
-  private final Map<Hash, Wei> profitablePriorityFeeCache;
+  private final SelectorProfitabilityMetrics selectorProfitabilityMetrics;
   private final Wei baseFee;
 
   private int unprofitableRetries;
@@ -63,12 +63,12 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
       final BlockchainService blockchainService,
       final LineaTransactionSelectorConfiguration txSelectorConf,
       final LineaProfitabilityConfiguration profitabilityConf,
-      final Map<Hash, Wei> profitablePriorityFeeCache) {
+      final SelectorProfitabilityMetrics selectorProfitabilityMetrics) {
     this.txSelectorConf = txSelectorConf;
     this.profitabilityConf = profitabilityConf;
     this.transactionProfitabilityCalculator =
         new TransactionProfitabilityCalculator(profitabilityConf);
-    this.profitablePriorityFeeCache = profitablePriorityFeeCache;
+    this.selectorProfitabilityMetrics = selectorProfitabilityMetrics;
     this.baseFee =
         blockchainService
             .getNextBlockBaseFee()
@@ -169,7 +169,10 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
         return TX_UNPROFITABLE;
       }
 
-      profitablePriorityFeeCache.put(transaction.getHash(), profitablePriorityFeePerGas);
+      selectorProfitabilityMetrics.remember(
+          transaction.getHash(),
+          evaluationContext.getTransactionGasPrice(),
+          profitablePriorityFeePerGas);
     }
     return SELECTED;
   }
@@ -199,10 +202,11 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
   public void onTransactionNotSelected(
       final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
       final TransactionSelectionResult transactionSelectionResult) {
+    final var txHash = evaluationContext.getPendingTransaction().getTransaction().getHash();
     if (transactionSelectionResult.discard()) {
-      unprofitableCache.remove(
-          evaluationContext.getPendingTransaction().getTransaction().getHash());
+      unprofitableCache.remove(txHash);
     }
+    selectorProfitabilityMetrics.forget(txHash);
   }
 
   private void rememberUnprofitable(final Transaction transaction) {

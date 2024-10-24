@@ -17,7 +17,6 @@ package net.consensys.linea.sequencer.txselection;
 
 import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.createLimitModules;
 
-import java.util.HashMap;
 import java.util.Optional;
 
 import com.google.auto.service.AutoService;
@@ -26,11 +25,9 @@ import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
-import org.hyperledger.besu.datatypes.Hash;
-import org.hyperledger.besu.datatypes.Wei;
+import net.consensys.linea.sequencer.txselection.metrics.SelectorProfitabilityMetrics;
 import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
-import org.hyperledger.besu.plugin.data.BlockBody;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.BesuEvents;
 import org.hyperledger.besu.plugin.services.TransactionSelectionService;
@@ -78,8 +75,6 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
   public void start() {
     super.start();
 
-    final var transactionSelectorHandler = new LineaTransactionSelectorHandler();
-
     final LineaTransactionSelectorConfiguration txSelectorConfiguration =
         transactionSelectorConfiguration();
     final LineaRejectedTxReportingConfiguration lineaRejectedTxReportingConfiguration =
@@ -94,7 +89,7 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
                             lineaRejectedTxReportingConfiguration)
                         .start());
 
-    final var profitablePriorityFeeCache = new HashMap<Hash, Wei>();
+    final var selectorProfitabilityMetrics = new SelectorProfitabilityMetrics();
 
     transactionSelectionService.registerPluginTransactionSelectorFactory(
         new LineaTransactionSelectorFactory(
@@ -105,28 +100,29 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
             tracerConfiguration(),
             createLimitModules(tracerConfiguration()),
             rejectedTxJsonRpcManager,
-            profitablePriorityFeeCache));
+            selectorProfitabilityMetrics));
 
     final var besuEventsService =
-      besuContext
-        .getService(BesuEvents.class)
-        .orElseThrow(
-          () -> new RuntimeException("Failed to obtain BesuEvents from the BesuContext."));
+        besuContext
+            .getService(BesuEvents.class)
+            .orElseThrow(
+                () -> new RuntimeException("Failed to obtain BesuEvents from the BesuContext."));
 
     // Add a block added listener to handle profitability calculations when a new block is added
     besuEventsService.addBlockAddedListener(
-      addedBlockContext -> {
-        final BlockBody blockBody = addedBlockContext.getBlockBody();
-        try {
-          transactionSelectorHandler.handle(profitablePriorityFeeCache, blockBody.getTransactions());
-        } catch (final Exception e) {
-          log.warn(
-            "Error calculating transaction profitability for block {}({})",
-            addedBlockContext.getBlockHeader().getNumber(),
-            addedBlockContext.getBlockHeader().getBlockHash(),
-            e);
-        }
-      });
+        addedBlockContext -> {
+          try {
+            selectorProfitabilityMetrics.handleNewBlock(
+                addedBlockContext.getBlockHeader().getBaseFee(),
+                addedBlockContext.getBlockBody().getTransactions());
+          } catch (final Exception e) {
+            log.warn(
+                "Error calculating transaction profitability for block {}({})",
+                addedBlockContext.getBlockHeader().getNumber(),
+                addedBlockContext.getBlockHeader().getBlockHash(),
+                e);
+          }
+        });
   }
 
   @Override
