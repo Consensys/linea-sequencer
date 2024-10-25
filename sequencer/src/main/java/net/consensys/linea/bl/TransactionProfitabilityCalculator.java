@@ -113,35 +113,16 @@ public class TransactionProfitabilityCalculator {
 
     final Wei profitablePriorityFee =
         profitablePriorityFeePerGas(transaction, minMargin, gas, minGasPriceWei);
-    final Wei profitableGasPrice = baseFee.add(profitablePriorityFee);
 
-    if (payingGasPrice.lessThan(profitableGasPrice)) {
-      log(
-          log.atDebug(),
-          context,
-          transaction,
-          minMargin,
-          payingGasPrice,
-          baseFee,
-          profitablePriorityFee,
-          profitableGasPrice,
-          gas,
-          minGasPriceWei);
-      return false;
-    }
-
-    log(
-        log.atTrace(),
+    return isProfitable(
         context,
+        profitablePriorityFee,
         transaction,
         minMargin,
-        payingGasPrice,
         baseFee,
-        profitablePriorityFee,
-        profitableGasPrice,
+        payingGasPrice,
         gas,
         minGasPriceWei);
-    return true;
   }
 
   public boolean isProfitable(

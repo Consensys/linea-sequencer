@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.metrics.LineaMetricCategory;
+import org.hyperledger.besu.metrics.BesuMetricCategory;
 import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.data.AddedBlockContext;
@@ -107,7 +108,7 @@ public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
   private void initMetrics(final LineaProfitabilityConfiguration lineaProfitabilityConfiguration) {
     final var confLabelledGauge =
         metricsSystem.createLabelledGauge(
-            LineaMetricCategory.PROFITABILITY,
+            BesuMetricCategory.ETHEREUM,
             "conf",
             "Profitability configuration values at runtime",
             "field");

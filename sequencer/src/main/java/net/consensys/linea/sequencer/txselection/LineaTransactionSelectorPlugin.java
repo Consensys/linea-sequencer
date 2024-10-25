@@ -29,7 +29,6 @@ import net.consensys.linea.sequencer.txselection.metrics.SelectorProfitabilityMe
 import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
-import org.hyperledger.besu.plugin.services.BesuEvents;
 import org.hyperledger.besu.plugin.services.TransactionSelectionService;
 
 /**
@@ -89,7 +88,7 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
                             lineaRejectedTxReportingConfiguration)
                         .start());
 
-    final var selectorProfitabilityMetrics = new SelectorProfitabilityMetrics();
+    final var selectorProfitabilityMetrics = new SelectorProfitabilityMetrics(metricsSystem);
 
     transactionSelectionService.registerPluginTransactionSelectorFactory(
         new LineaTransactionSelectorFactory(
@@ -101,28 +100,6 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
             createLimitModules(tracerConfiguration()),
             rejectedTxJsonRpcManager,
             selectorProfitabilityMetrics));
-
-    final var besuEventsService =
-        besuContext
-            .getService(BesuEvents.class)
-            .orElseThrow(
-                () -> new RuntimeException("Failed to obtain BesuEvents from the BesuContext."));
-
-    // Add a block added listener to handle profitability calculations when a new block is added
-    besuEventsService.addBlockAddedListener(
-        addedBlockContext -> {
-          try {
-            selectorProfitabilityMetrics.handleNewBlock(
-                addedBlockContext.getBlockHeader(),
-                addedBlockContext.getBlockBody().getTransactions());
-          } catch (final Exception e) {
-            log.warn(
-                "Error calculating transaction profitability for block {}({})",
-                addedBlockContext.getBlockHeader().getNumber(),
-                addedBlockContext.getBlockHeader().getBlockHash(),
-                e);
-          }
-        });
   }
 
   @Override

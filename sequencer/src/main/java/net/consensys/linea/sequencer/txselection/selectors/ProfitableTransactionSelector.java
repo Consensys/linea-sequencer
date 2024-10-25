@@ -17,6 +17,8 @@ package net.consensys.linea.sequencer.txselection.selectors;
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_UNPROFITABLE;
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_UNPROFITABLE_RETRY_LIMIT;
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_UNPROFITABLE_UPFRONT;
+import static net.consensys.linea.sequencer.txselection.metrics.SelectorProfitabilityMetrics.Phase.POST_PROCESSING;
+import static net.consensys.linea.sequencer.txselection.metrics.SelectorProfitabilityMetrics.Phase.PRE_PROCESSING;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 
 import java.util.LinkedHashSet;
@@ -98,9 +100,22 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
       final Transaction transaction = evaluationContext.getPendingTransaction().getTransaction();
       final long gasLimit = transaction.getGasLimit();
 
+      final var profitablePriorityFeePerGas =
+          transactionProfitabilityCalculator.profitablePriorityFeePerGas(
+              transaction, profitabilityConf.minMargin(), gasLimit, minGasPrice);
+
+      selectorProfitabilityMetrics.track(
+          PRE_PROCESSING,
+          evaluationContext.getPendingBlockHeader().getNumber(),
+          transaction,
+          baseFee,
+          evaluationContext.getTransactionGasPrice(),
+          profitablePriorityFeePerGas);
+
       // check the upfront profitability using the gas limit of the tx
       if (!transactionProfitabilityCalculator.isProfitable(
           "PreProcessing",
+          profitablePriorityFeePerGas,
           transaction,
           profitabilityConf.minMargin(),
           baseFee,
@@ -156,6 +171,14 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
               gasUsed,
               evaluationContext.getMinGasPrice());
 
+      selectorProfitabilityMetrics.track(
+          POST_PROCESSING,
+          evaluationContext.getPendingBlockHeader().getNumber(),
+          transaction,
+          baseFee,
+          evaluationContext.getTransactionGasPrice(),
+          profitablePriorityFeePerGas);
+
       if (!transactionProfitabilityCalculator.isProfitable(
           "PostProcessing",
           profitablePriorityFeePerGas,
@@ -168,12 +191,6 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
         rememberUnprofitable(transaction);
         return TX_UNPROFITABLE;
       }
-
-      selectorProfitabilityMetrics.remember(
-          evaluationContext.getPendingBlockHeader().getNumber(),
-          transaction.getHash(),
-          evaluationContext.getTransactionGasPrice(),
-          profitablePriorityFeePerGas);
     }
     return SELECTED;
   }
