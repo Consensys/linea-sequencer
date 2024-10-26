@@ -34,10 +34,7 @@ public abstract class AbstractLineaRequiredPlugin extends AbstractLineaSharedPri
   public void register(final BesuContext context) {
     super.register(context);
     try {
-      log.info(
-          "Registering Linea plugin of type {} with name {}",
-          this.getClass().getName(),
-          this.getName());
+      log.info("Registering Linea plugin {}", this.getClass().getName());
 
       doRegister(context);
 

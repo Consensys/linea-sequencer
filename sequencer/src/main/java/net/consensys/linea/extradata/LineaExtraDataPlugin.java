@@ -15,7 +15,6 @@
 
 package net.consensys.linea.extradata;
 
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.auto.service.AutoService;
