@@ -92,7 +92,8 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
             besuConfiguration, metricsSystem, profitabilityConfiguration());
 
     final var transactionPoolProfitabilityMetrics =
-      new TransactionPoolProfitabilityMetrics(besuConfiguration, metricsSystem, profitabilityConfiguration());
+        new TransactionPoolProfitabilityMetrics(
+            besuConfiguration, metricsSystem, profitabilityConfiguration());
 
     try (Stream<String> lines =
         Files.lines(
@@ -145,15 +146,16 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
           });
 
       besuEventsService.addTransactionAddedListener(
-        transaction -> {
-          try {
-            transactionPoolProfitabilityMetrics.handleTransactionAdded(transaction);
-          } catch (Exception e) {
-            log.warn("Error recording transaction profitability metrics for {}: {}",
-              transaction.getHash(), e.getMessage());
-          }
-        }
-      );
+          transaction -> {
+            try {
+              transactionPoolProfitabilityMetrics.handleTransactionAdded(transaction);
+            } catch (Exception e) {
+              log.warn(
+                  "Error recording transaction profitability metrics for {}: {}",
+                  transaction.getHash(),
+                  e.getMessage());
+            }
+          });
 
     } catch (Exception e) {
       throw new RuntimeException(e);

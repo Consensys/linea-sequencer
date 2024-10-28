@@ -15,6 +15,7 @@
 package net.consensys.linea.sequencer.txpoolvalidation.metrics;
 
 import java.util.concurrent.atomic.AtomicReference;
+
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
@@ -24,20 +25,17 @@ import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.metrics.Counter;
-import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
+import org.hyperledger.besu.plugin.services.metrics.Histogram;
 import org.hyperledger.besu.plugin.services.metrics.LabelledGauge;
-import org.hyperledger.besu.plugin.services.metrics.Summary;
+import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
 
 /**
- * Tracks profitability metrics for transactions in the transaction pool.
- * Specifically monitors the ratio of profitable priority fee to actual priority fee:
+ * Tracks profitability metrics for transactions in the transaction pool. Specifically monitors the
+ * ratio of profitable priority fee to actual priority fee:
  * profitablePriorityFeePerGas/transaction.priorityFeePerGas
- * <p>
- * Provides:
- * - Lowest ratio seen (minimum profitability)
- * - Highest ratio seen (maximum profitability)
- * - Running average ratio (average profitability)
- * - Distribution histogram of ratios
+ *
+ * <p>Provides: - Lowest ratio seen (minimum profitability) - Highest ratio seen (maximum
+ * profitability) - Distribution histogram of ratios
  */
 @Slf4j
 public class TransactionPoolProfitabilityMetrics {
@@ -47,9 +45,7 @@ public class TransactionPoolProfitabilityMetrics {
   private final LineaProfitabilityConfiguration profitabilityConf;
   private final BesuConfiguration besuConfiguration;
 
-  private final LabelledMetric<Counter> profitabilityHistogram;
-
-  private final LabelledMetric<Summary> profitabilityRatioSummary;
+  private final LabelledMetric<Histogram> profitabilityHistogram;
   private final Counter invalidTransactionCount;
 
   // Thread-safe references for gauge values
@@ -57,58 +53,43 @@ public class TransactionPoolProfitabilityMetrics {
   private final AtomicReference<Double> currentHighest = new AtomicReference<>(0.0);
 
   public TransactionPoolProfitabilityMetrics(
-    final BesuConfiguration besuConfiguration,
-    final MetricsSystem metricsSystem,
-    final LineaProfitabilityConfiguration profitabilityConf) {
+      final BesuConfiguration besuConfiguration,
+      final MetricsSystem metricsSystem,
+      final LineaProfitabilityConfiguration profitabilityConf) {
 
     this.besuConfiguration = besuConfiguration;
     this.profitabilityConf = profitabilityConf;
     this.profitabilityCalculator = new TransactionProfitabilityCalculator(profitabilityConf);
 
-    // Distribution histogram
-    this.profitabilityHistogram = metricsSystem.createLabelledCounter(
-      LineaMetricCategory.PROFITABILITY,
-      "txpool_profitability_ratio",
-      "Distribution of transaction profitability ratios in TxPool",
-      "bucket"
-    );
-
-    // Min/Max/Avg gauges with DoubleSupplier
-    LabelledGauge lowestProfitabilityRatio = metricsSystem.createLabelledGauge(
-      LineaMetricCategory.PROFITABILITY,
-      "txpool_profitability_ratio_min",
-      "Lowest profitability ratio seen"
-    );
+    // Min/Max gauges with DoubleSupplier
+    LabelledGauge lowestProfitabilityRatio =
+        metricsSystem.createLabelledGauge(
+            LineaMetricCategory.PROFITABILITY,
+            "txpool_profitability_ratio_min",
+            "Lowest profitability ratio seen");
     lowestProfitabilityRatio.labels(currentLowest::get);
 
-    LabelledGauge highestProfitabilityRatio = metricsSystem.createLabelledGauge(
-      LineaMetricCategory.PROFITABILITY,
-      "txpool_profitability_ratio_max",
-      "Highest profitability ratio seen"
-    );
+    LabelledGauge highestProfitabilityRatio =
+        metricsSystem.createLabelledGauge(
+            LineaMetricCategory.PROFITABILITY,
+            "txpool_profitability_ratio_max",
+            "Highest profitability ratio seen");
     highestProfitabilityRatio.labels(currentHighest::get);
 
-    LabelledGauge averageProfitabilityRatio = metricsSystem.createLabelledGauge(
-      LineaMetricCategory.PROFITABILITY,
-      "txpool_profitability_ratio_avg",
-      "Average profitability ratio"
-    );
-    AtomicReference<Double> currentAverage = new AtomicReference<>(0.0);
-    averageProfitabilityRatio.labels(currentAverage::get);
-
     // Running statistics
-    this.profitabilityRatioSummary = metricsSystem.createLabelledSummary(
-      LineaMetricCategory.PROFITABILITY,
-      "txpool_profitability_ratio_summary",
-      "Summary statistics of profitability ratios",
-      "type"
-    );
+    this.profitabilityHistogram =
+        metricsSystem.createLabelledHistogram(
+            LineaMetricCategory.PROFITABILITY,
+            "txpool_profitability_ratio_summary",
+            "Summary statistics of profitability ratios",
+            HISTOGRAM_BUCKETS,
+            "type");
 
-    this.invalidTransactionCount = metricsSystem.createCounter(
-      LineaMetricCategory.PROFITABILITY,
-      "txpool_invalid_transaction_count",
-      "Number of transactions that couldn't be processed for profitability"
-    );
+    this.invalidTransactionCount =
+        metricsSystem.createCounter(
+            LineaMetricCategory.PROFITABILITY,
+            "txpool_invalid_transaction_count",
+            "Number of transactions that couldn't be processed for profitability");
 
     // Pre-create histogram buckets
     for (double bucket : HISTOGRAM_BUCKETS) {
@@ -124,27 +105,23 @@ public class TransactionPoolProfitabilityMetrics {
         return;
       }
 
-      Wei profitablePriorityFeePerGas = profitabilityCalculator.profitablePriorityFeePerGas(
-        transaction,
-        profitabilityConf.txPoolMinMargin(),
-        transaction.getGasLimit(),
-        besuConfiguration.getMinGasPrice()
-      );
+      Wei profitablePriorityFeePerGas =
+          profitabilityCalculator.profitablePriorityFeePerGas(
+              transaction,
+              profitabilityConf.txPoolMinMargin(),
+              transaction.getGasLimit(),
+              besuConfiguration.getMinGasPrice());
 
       Wei actualPriorityFeePerGas = Wei.fromQuantity(transaction.getMaxPriorityFeePerGas().get());
 
       if (actualPriorityFeePerGas.toLong() > 0) {
-        double ratio = profitablePriorityFeePerGas.toBigInteger().doubleValue() /
-          actualPriorityFeePerGas.toBigInteger().doubleValue();
+        double ratio =
+            profitablePriorityFeePerGas.toBigInteger().doubleValue()
+                / actualPriorityFeePerGas.toBigInteger().doubleValue();
 
         updateRunningStats(ratio);
-        updateHistogramBuckets(ratio);
 
-        log.trace(
-          "Recorded profitability ratio {} for tx {}",
-          ratio,
-          transaction.getHash()
-        );
+        log.trace("Recorded profitability ratio {} for tx {}", ratio, transaction.getHash());
       } else {
         invalidTransactionCount.inc();
         log.trace("Skipping transaction {} - zero priority fee", transaction.getHash());
@@ -152,10 +129,9 @@ public class TransactionPoolProfitabilityMetrics {
     } catch (Exception e) {
       invalidTransactionCount.inc();
       log.warn(
-        "Failed to record profitability metrics for tx {}: {}",
-        transaction.getHash(),
-        e.getMessage()
-      );
+          "Failed to record profitability metrics for tx {}: {}",
+          transaction.getHash(),
+          e.getMessage());
     }
   }
 
@@ -167,14 +143,6 @@ public class TransactionPoolProfitabilityMetrics {
     currentHighest.updateAndGet(current -> Math.max(current, ratio));
 
     // Record the observation in summary
-    profitabilityRatioSummary.labels("profitability").observe(ratio);
-  }
-
-  private void updateHistogramBuckets(double ratio) {
-    for (double bucket : HISTOGRAM_BUCKETS) {
-      if (ratio <= bucket) {
-        profitabilityHistogram.labels(String.format("le_%.1f", bucket)).inc();
-      }
-    }
+    profitabilityHistogram.labels("profitability").observe(ratio);
   }
 }
