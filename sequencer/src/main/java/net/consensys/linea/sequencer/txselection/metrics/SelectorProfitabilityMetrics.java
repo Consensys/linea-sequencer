@@ -16,7 +16,6 @@
 package net.consensys.linea.sequencer.txselection.metrics;
 
 import lombok.extern.slf4j.Slf4j;
-import net.consensys.linea.metrics.LineaMetricCategory;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.metrics.BesuMetricCategory;
