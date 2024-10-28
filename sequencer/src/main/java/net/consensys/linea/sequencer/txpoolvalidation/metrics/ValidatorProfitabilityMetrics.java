@@ -16,6 +16,7 @@
 package net.consensys.linea.sequencer.txpoolvalidation.metrics;
 
 import java.math.BigInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
