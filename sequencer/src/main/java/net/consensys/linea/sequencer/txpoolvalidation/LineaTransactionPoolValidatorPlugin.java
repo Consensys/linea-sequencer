@@ -49,17 +49,11 @@ import org.hyperledger.besu.plugin.services.TransactionSimulationService;
 @Slf4j
 @AutoService(BesuPlugin.class)
 public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPlugin {
-  public static final String NAME = "linea";
   private BesuContext besuContext;
   private BesuConfiguration besuConfiguration;
   private TransactionPoolValidatorService transactionPoolValidatorService;
   private TransactionSimulationService transactionSimulationService;
   private Optional<JsonRpcManager> rejectedTxJsonRpcManager = Optional.empty();
-
-  @Override
-  public Optional<String> getName() {
-    return Optional.of(NAME);
-  }
 
   @Override
   public void doRegister(final BesuContext context) {
