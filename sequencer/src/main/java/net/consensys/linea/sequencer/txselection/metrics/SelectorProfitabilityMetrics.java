@@ -15,19 +15,41 @@
 
 package net.consensys.linea.sequencer.txselection.metrics;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 import lombok.extern.slf4j.Slf4j;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.metrics.BesuMetricCategory;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.metrics.Histogram;
+import org.hyperledger.besu.plugin.services.metrics.LabelledGauge;
 import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
 
 @Slf4j
 public class SelectorProfitabilityMetrics {
   private final LabelledMetric<Histogram> histogram;
 
+  // Thread-safe references for gauge values
+  private final AtomicReference<Double> currentLowest = new AtomicReference<>(0.0);
+  private final AtomicReference<Double> currentHighest = new AtomicReference<>(0.0);
+
   public SelectorProfitabilityMetrics(final MetricsSystem metricsSystem) {
+    // Min/Max/Avg gauges with DoubleSupplier
+    LabelledGauge lowestProfitabilityRatio =
+        metricsSystem.createLabelledGauge(
+            BesuMetricCategory.ETHEREUM,
+            "selection_profitability_ratio_min",
+            "Lowest profitability ratio seen");
+    lowestProfitabilityRatio.labels(currentLowest::get);
+
+    LabelledGauge highestProfitabilityRatio =
+        metricsSystem.createLabelledGauge(
+            BesuMetricCategory.ETHEREUM,
+            "selection_profitability_ratio_max",
+            "Highest profitability ratio seen");
+    highestProfitabilityRatio.labels(currentHighest::get);
+
     this.histogram =
         metricsSystem.createLabelledHistogram(
             BesuMetricCategory.ETHEREUM,
@@ -54,7 +76,7 @@ public class SelectorProfitabilityMetrics {
         effectivePriorityFee.getValue().doubleValue()
             / profitablePriorityFee.getValue().doubleValue();
 
-    histogram.labels(phase.name()).observe(ratio);
+    updateRunningStats(phase, ratio);
 
     log.atTrace()
         .setMessage(
@@ -68,5 +90,16 @@ public class SelectorProfitabilityMetrics {
         .addArgument(profitablePriorityFee::toHumanReadableString)
         .addArgument(ratio)
         .log();
+  }
+
+  private void updateRunningStats(final Phase phase, double ratio) {
+    // Update lowest seen
+    currentLowest.updateAndGet(current -> Math.min(current, ratio));
+
+    // Update highest seen
+    currentHighest.updateAndGet(current -> Math.max(current, ratio));
+
+    // Record the observation in summary
+    histogram.labels(phase.name()).observe(ratio);
   }
 }

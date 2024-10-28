@@ -19,7 +19,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
-import net.consensys.linea.metrics.LineaMetricCategory;
 import org.apache.tuweni.units.bigints.UInt256s;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Transaction;
@@ -28,7 +27,6 @@ import org.hyperledger.besu.metrics.BesuMetricCategory;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
-import org.hyperledger.besu.plugin.services.metrics.Counter;
 import org.hyperledger.besu.plugin.services.metrics.Histogram;
 import org.hyperledger.besu.plugin.services.metrics.LabelledGauge;
 import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
@@ -53,7 +51,6 @@ public class TransactionPoolProfitabilityMetrics {
   private final BlockchainService blockchainService;
 
   private final LabelledMetric<Histogram> profitabilityHistogram;
-  private final Counter invalidTransactionCount;
 
   // Thread-safe references for gauge values
   private final AtomicReference<Double> currentLowest = new AtomicReference<>(0.0);
@@ -75,14 +72,14 @@ public class TransactionPoolProfitabilityMetrics {
     // Min/Max/Avg gauges with DoubleSupplier
     LabelledGauge lowestProfitabilityRatio =
         metricsSystem.createLabelledGauge(
-            LineaMetricCategory.PROFITABILITY,
+            BesuMetricCategory.ETHEREUM,
             "txpool_profitability_ratio_min",
             "Lowest profitability ratio seen");
     lowestProfitabilityRatio.labels(currentLowest::get);
 
     LabelledGauge highestProfitabilityRatio =
         metricsSystem.createLabelledGauge(
-            LineaMetricCategory.PROFITABILITY,
+            BesuMetricCategory.ETHEREUM,
             "txpool_profitability_ratio_max",
             "Highest profitability ratio seen");
     highestProfitabilityRatio.labels(currentHighest::get);
@@ -95,12 +92,6 @@ public class TransactionPoolProfitabilityMetrics {
             "Histogram statistics of profitability ratios",
             HISTOGRAM_BUCKETS,
             "type");
-
-    this.invalidTransactionCount =
-        metricsSystem.createCounter(
-            LineaMetricCategory.PROFITABILITY,
-            "txpool_invalid_transaction_count",
-            "Number of transactions that couldn't be processed for profitability");
   }
 
   public void handleTransaction(final Transaction transaction) {
