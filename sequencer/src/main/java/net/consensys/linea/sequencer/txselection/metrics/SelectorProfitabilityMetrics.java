@@ -20,19 +20,20 @@ import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.metrics.BesuMetricCategory;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
+import org.hyperledger.besu.plugin.services.metrics.Histogram;
 import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
-import org.hyperledger.besu.plugin.services.metrics.Summary;
 
 @Slf4j
 public class SelectorProfitabilityMetrics {
-  private final LabelledMetric<Summary> summaries;
+  private final LabelledMetric<Histogram> histogram;
 
   public SelectorProfitabilityMetrics(final MetricsSystem metricsSystem) {
-    this.summaries =
-        metricsSystem.createLabelledSummary(
+    this.histogram =
+        metricsSystem.createLabelledHistogram(
             BesuMetricCategory.ETHEREUM,
-            "selection_priority_fee_ratio",
-            "The ratio between the effective priority fee and the calculated one",
+            "selection_profitability_ratio",
+            "The profitability of transaction evaluated during block creation",
+            new double[] {0.9, 1.0, 1.2, 2, 5, 10, 100, 1000},
             "phase");
   }
 
@@ -53,7 +54,7 @@ public class SelectorProfitabilityMetrics {
         effectivePriorityFee.getValue().doubleValue()
             / profitablePriorityFee.getValue().doubleValue();
 
-    summaries.labels(phase.name()).observe(ratio);
+    histogram.labels(phase.name()).observe(ratio);
 
     log.atTrace()
         .setMessage(

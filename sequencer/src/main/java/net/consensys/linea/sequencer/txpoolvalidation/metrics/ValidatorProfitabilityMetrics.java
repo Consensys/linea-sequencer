@@ -28,8 +28,8 @@ import org.hyperledger.besu.plugin.data.AddedBlockContext;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.metrics.Counter;
-import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
 import org.hyperledger.besu.plugin.services.metrics.LabelledGauge;
+import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
 
 public class ValidatorProfitabilityMetrics {
 
@@ -58,64 +58,64 @@ public class ValidatorProfitabilityMetrics {
   private final AtomicReference<Double> currentAverage = new AtomicReference<>(0.0);
 
   public ValidatorProfitabilityMetrics(
-    final BesuConfiguration besuConfiguration,
-    final MetricsSystem metricsSystem,
-    final LineaProfitabilityConfiguration profitabilityConf) {
+      final BesuConfiguration besuConfiguration,
+      final MetricsSystem metricsSystem,
+      final LineaProfitabilityConfiguration profitabilityConf) {
 
     this.besuConfiguration = besuConfiguration;
     this.profitabilityConf = profitabilityConf;
     this.profitabilityCalculator = new TransactionProfitabilityCalculator(profitabilityConf);
 
     this.lowProfitabilityCounter =
-      metricsSystem.createCounter(
-        LineaMetricCategory.PROFITABILITY,
-        "tx_pool_profitability_low",
-        "Number of low profitability transactions");
+        metricsSystem.createCounter(
+            LineaMetricCategory.PROFITABILITY,
+            "tx_pool_profitability_low",
+            "Number of low profitability transactions");
 
     this.avgProfitabilityCounter =
-      metricsSystem.createCounter(
-        LineaMetricCategory.PROFITABILITY,
-        "tx_pool_profitability_avg",
-        "Number of average profitability transactions");
+        metricsSystem.createCounter(
+            LineaMetricCategory.PROFITABILITY,
+            "tx_pool_profitability_avg",
+            "Number of average profitability transactions");
 
     this.highProfitabilityCounter =
-      metricsSystem.createCounter(
-        LineaMetricCategory.PROFITABILITY,
-        "tx_pool_profitability_high",
-        "Number of high profitability transactions");
+        metricsSystem.createCounter(
+            LineaMetricCategory.PROFITABILITY,
+            "tx_pool_profitability_high",
+            "Number of high profitability transactions");
 
     // Add new sealed block metrics
-    this.sealedBlockProfitabilityHistogram = metricsSystem.createLabelledCounter(
-      LineaMetricCategory.PROFITABILITY,
-      "sealed_block_profitability_ratio",
-      "Distribution of transaction profitability ratios in last sealed block",
-      "bucket"
-    );
+    this.sealedBlockProfitabilityHistogram =
+        metricsSystem.createLabelledCounter(
+            LineaMetricCategory.PROFITABILITY,
+            "sealed_block_profitability_ratio",
+            "Distribution of transaction profitability ratios in last sealed block",
+            "bucket");
 
     // Initialize histogram buckets
     for (double bucket : HISTOGRAM_BUCKETS) {
       sealedBlockProfitabilityHistogram.labels(String.format("le_%.1f", bucket));
     }
 
-    this.sealedBlockLowestRatio = metricsSystem.createLabelledGauge(
-      LineaMetricCategory.PROFITABILITY,
-      "sealed_block_profitability_min",
-      "Lowest profitability ratio in last sealed block"
-    );
+    this.sealedBlockLowestRatio =
+        metricsSystem.createLabelledGauge(
+            LineaMetricCategory.PROFITABILITY,
+            "sealed_block_profitability_min",
+            "Lowest profitability ratio in last sealed block");
     this.sealedBlockLowestRatio.labels(currentLowest::get);
 
-    this.sealedBlockHighestRatio = metricsSystem.createLabelledGauge(
-      LineaMetricCategory.PROFITABILITY,
-      "sealed_block_profitability_max",
-      "Highest profitability ratio in last sealed block"
-    );
+    this.sealedBlockHighestRatio =
+        metricsSystem.createLabelledGauge(
+            LineaMetricCategory.PROFITABILITY,
+            "sealed_block_profitability_max",
+            "Highest profitability ratio in last sealed block");
     this.sealedBlockHighestRatio.labels(currentHighest::get);
 
-    this.sealedBlockAverageRatio = metricsSystem.createLabelledGauge(
-      LineaMetricCategory.PROFITABILITY,
-      "sealed_block_profitability_avg",
-      "Average profitability ratio in last sealed block"
-    );
+    this.sealedBlockAverageRatio =
+        metricsSystem.createLabelledGauge(
+            LineaMetricCategory.PROFITABILITY,
+            "sealed_block_profitability_avg",
+            "Average profitability ratio in last sealed block");
     this.sealedBlockAverageRatio.labels(currentAverage::get);
   }
 
@@ -142,19 +142,19 @@ public class ValidatorProfitabilityMetrics {
     // Process each transaction
     for (Transaction transaction : blockContext.getBlockBody().getTransactions()) {
       Wei profitablePriorityFeePerGas =
-        profitabilityCalculator.profitablePriorityFeePerGas(
-          transaction,
-          profitabilityConf.txPoolMinMargin(),
-          transaction.getGasLimit(),
-          besuConfiguration.getMinGasPrice());
+          profitabilityCalculator.profitablePriorityFeePerGas(
+              transaction,
+              profitabilityConf.txPoolMinMargin(),
+              transaction.getGasLimit(),
+              besuConfiguration.getMinGasPrice());
 
       Quantity priorityFeePerGas =
-        transaction.getMaxPriorityFeePerGas().map(Quantity.class::cast).orElse(Wei.ZERO);
+          transaction.getMaxPriorityFeePerGas().map(Quantity.class::cast).orElse(Wei.ZERO);
 
       if (!priorityFeePerGas.getAsBigInteger().equals(BigInteger.ZERO)) {
         double profitabilityRatio =
-          profitablePriorityFeePerGas.getAsBigInteger().doubleValue()
-            / priorityFeePerGas.getAsBigInteger().doubleValue();
+            profitablePriorityFeePerGas.getAsBigInteger().doubleValue()
+                / priorityFeePerGas.getAsBigInteger().doubleValue();
 
         // Update legacy metrics
         recordProfitabilityLevel(profitabilityRatio);

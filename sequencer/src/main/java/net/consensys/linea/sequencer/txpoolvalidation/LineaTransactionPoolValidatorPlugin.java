@@ -31,7 +31,6 @@ import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
 import net.consensys.linea.sequencer.txpoolvalidation.metrics.TransactionPoolProfitabilityMetrics;
-import net.consensys.linea.sequencer.txpoolvalidation.metrics.ValidatorProfitabilityMetrics;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
@@ -39,6 +38,7 @@ import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.BesuEvents;
 import org.hyperledger.besu.plugin.services.TransactionPoolValidatorService;
 import org.hyperledger.besu.plugin.services.TransactionSimulationService;
+import org.hyperledger.besu.plugin.services.transactionpool.TransactionPoolService;
 
 /**
  * This class extends the default transaction validation rules for adding transactions to the
@@ -93,12 +93,21 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
   public void start() {
     super.start();
 
-    final var validatorProfitabilityMetrics =
-        new ValidatorProfitabilityMetrics(
-            besuConfiguration, metricsSystem, profitabilityConfiguration());
+    final var transactionPoolService =
+        besuContext
+            .getService(TransactionPoolService.class)
+            .orElseThrow(
+                () ->
+                    new RuntimeException(
+                        "Failed to obtain TransactionPoolService from the BesuContext."));
 
     final var transactionPoolProfitabilityMetrics =
-      new TransactionPoolProfitabilityMetrics(besuConfiguration, metricsSystem, profitabilityConfiguration());
+        new TransactionPoolProfitabilityMetrics(
+            besuConfiguration,
+            metricsSystem,
+            profitabilityConfiguration(),
+            transactionPoolService,
+            blockchainService);
 
     try (Stream<String> lines =
         Files.lines(
@@ -140,7 +149,8 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
       besuEventsService.addBlockAddedListener(
           addedBlockContext -> {
             try {
-              validatorProfitabilityMetrics.handleBlockAdded(addedBlockContext);
+              // on new block let's calculate profitability for every txs in the pool
+              transactionPoolProfitabilityMetrics.recalculate();
             } catch (final Exception e) {
               log.warn(
                   "Error calculating transaction profitability for block {}({})",
@@ -149,17 +159,6 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
                   e);
             }
           });
-
-      besuEventsService.addTransactionAddedListener(
-        transaction -> {
-          try {
-            transactionPoolProfitabilityMetrics.handleTransactionAdded(transaction);
-          } catch (Exception e) {
-            log.warn("Error recording transaction profitability metrics for {}: {}",
-              transaction.getHash(), e.getMessage());
-          }
-        }
-      );
 
     } catch (Exception e) {
       throw new RuntimeException(e);
