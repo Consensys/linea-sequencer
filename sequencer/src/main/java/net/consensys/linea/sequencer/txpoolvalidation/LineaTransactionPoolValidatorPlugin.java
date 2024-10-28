@@ -30,13 +30,10 @@ import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
-import net.consensys.linea.sequencer.txpoolvalidation.metrics.TransactionPoolProfitabilityMetrics;
-import net.consensys.linea.sequencer.txpoolvalidation.metrics.ValidatorProfitabilityMetrics;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
-import org.hyperledger.besu.plugin.services.BesuEvents;
 import org.hyperledger.besu.plugin.services.TransactionPoolValidatorService;
 import org.hyperledger.besu.plugin.services.TransactionSimulationService;
 
@@ -49,7 +46,6 @@ import org.hyperledger.besu.plugin.services.TransactionSimulationService;
 @Slf4j
 @AutoService(BesuPlugin.class)
 public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPlugin {
-  private BesuContext besuContext;
   private BesuConfiguration besuConfiguration;
   private TransactionPoolValidatorService transactionPoolValidatorService;
   private TransactionSimulationService transactionSimulationService;
@@ -57,7 +53,6 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
 
   @Override
   public void doRegister(final BesuContext context) {
-    besuContext = context;
     besuConfiguration =
         context
             .getService(BesuConfiguration.class)
@@ -86,14 +81,6 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
   @Override
   public void start() {
     super.start();
-
-    final var validatorProfitabilityMetrics =
-        new ValidatorProfitabilityMetrics(
-            besuConfiguration, metricsSystem, profitabilityConfiguration());
-
-    final var transactionPoolProfitabilityMetrics =
-        new TransactionPoolProfitabilityMetrics(
-            besuConfiguration, metricsSystem, profitabilityConfiguration());
 
     try (Stream<String> lines =
         Files.lines(
@@ -125,37 +112,6 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
               createLimitModules(tracerConfiguration()),
               l1L2BridgeSharedConfiguration(),
               rejectedTxJsonRpcManager));
-
-      final var besuEventsService =
-          besuContext
-              .getService(BesuEvents.class)
-              .orElseThrow(
-                  () -> new RuntimeException("Failed to obtain BesuEvents from the BesuContext."));
-
-      besuEventsService.addBlockAddedListener(
-          addedBlockContext -> {
-            try {
-              validatorProfitabilityMetrics.handleBlockAdded(addedBlockContext);
-            } catch (final Exception e) {
-              log.warn(
-                  "Error calculating transaction profitability for block {}({})",
-                  addedBlockContext.getBlockHeader().getNumber(),
-                  addedBlockContext.getBlockHeader().getBlockHash(),
-                  e);
-            }
-          });
-
-      besuEventsService.addTransactionAddedListener(
-          transaction -> {
-            try {
-              transactionPoolProfitabilityMetrics.handleTransactionAdded(transaction);
-            } catch (Exception e) {
-              log.warn(
-                  "Error recording transaction profitability metrics for {}: {}",
-                  transaction.getHash(),
-                  e.getMessage());
-            }
-          });
 
     } catch (Exception e) {
       throw new RuntimeException(e);
