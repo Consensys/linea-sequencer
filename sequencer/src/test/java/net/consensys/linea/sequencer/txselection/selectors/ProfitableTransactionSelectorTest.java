@@ -151,15 +151,15 @@ public class ProfitableTransactionSelectorTest {
         SELECTED,
         TX_UNPROFITABLE);
     assertThat(
-        transactionSelector.isUnprofitableTxCached(
-            mockEvaluationContext.getPendingTransaction().getTransaction().getHash()))
+            transactionSelector.isUnprofitableTxCached(
+                mockEvaluationContext.getPendingTransaction().getTransaction().getHash()))
         .isTrue();
     // simulate another block
     newSelectorForNewBlock();
     // we should remember of the unprofitable tx
     assertThat(
-        transactionSelector.isUnprofitableTxCached(
-            mockEvaluationContext.getPendingTransaction().getTransaction().getHash()))
+            transactionSelector.isUnprofitableTxCached(
+                mockEvaluationContext.getPendingTransaction().getTransaction().getHash()))
         .isTrue();
     // second try because we are below the retry limit
     verifyTransactionSelection(
@@ -186,22 +186,22 @@ public class ProfitableTransactionSelectorTest {
           SELECTED,
           TX_UNPROFITABLE);
       assertThat(
-          transactionSelector.isUnprofitableTxCached(
-              mockEvaluationContext.getPendingTransaction().getTransaction().getHash()))
+              transactionSelector.isUnprofitableTxCached(
+                  mockEvaluationContext.getPendingTransaction().getTransaction().getHash()))
           .isTrue();
     }
     // only the last two txs must be in the unprofitable cache, since the first one was evicted
     assertThat(
-        transactionSelector.isUnprofitableTxCached(
-            evaluationContexts[0].getPendingTransaction().getTransaction().getHash()))
+            transactionSelector.isUnprofitableTxCached(
+                evaluationContexts[0].getPendingTransaction().getTransaction().getHash()))
         .isFalse();
     assertThat(
-        transactionSelector.isUnprofitableTxCached(
-            evaluationContexts[1].getPendingTransaction().getTransaction().getHash()))
+            transactionSelector.isUnprofitableTxCached(
+                evaluationContexts[1].getPendingTransaction().getTransaction().getHash()))
         .isTrue();
     assertThat(
-        transactionSelector.isUnprofitableTxCached(
-            evaluationContexts[2].getPendingTransaction().getTransaction().getHash()))
+            transactionSelector.isUnprofitableTxCached(
+                evaluationContexts[2].getPendingTransaction().getTransaction().getHash()))
         .isTrue();
   }
 
@@ -231,12 +231,12 @@ public class ProfitableTransactionSelectorTest {
         TX_UNPROFITABLE);
 
     assertThat(
-        transactionSelector.isUnprofitableTxCached(
-            mockEvaluationContext1.getPendingTransaction().getTransaction().getHash()))
+            transactionSelector.isUnprofitableTxCached(
+                mockEvaluationContext1.getPendingTransaction().getTransaction().getHash()))
         .isTrue();
     assertThat(
-        transactionSelector.isUnprofitableTxCached(
-            mockEvaluationContext2.getPendingTransaction().getTransaction().getHash()))
+            transactionSelector.isUnprofitableTxCached(
+                mockEvaluationContext2.getPendingTransaction().getTransaction().getHash()))
         .isTrue();
 
     // simulate another block
@@ -246,12 +246,12 @@ public class ProfitableTransactionSelectorTest {
 
     // we should remember of the unprofitable txs for the new block
     assertThat(
-        transactionSelector.isUnprofitableTxCached(
-            mockEvaluationContext1.getPendingTransaction().getTransaction().getHash()))
+            transactionSelector.isUnprofitableTxCached(
+                mockEvaluationContext1.getPendingTransaction().getTransaction().getHash()))
         .isTrue();
     assertThat(
-        transactionSelector.isUnprofitableTxCached(
-            mockEvaluationContext2.getPendingTransaction().getTransaction().getHash()))
+            transactionSelector.isUnprofitableTxCached(
+                mockEvaluationContext2.getPendingTransaction().getTransaction().getHash()))
         .isTrue();
 
     // second try of the first tx
@@ -297,12 +297,12 @@ public class ProfitableTransactionSelectorTest {
         SELECTED);
 
     assertThat(
-        transactionSelector.isUnprofitableTxCached(
-            mockEvaluationContext1.getPendingTransaction().getTransaction().getHash()))
+            transactionSelector.isUnprofitableTxCached(
+                mockEvaluationContext1.getPendingTransaction().getTransaction().getHash()))
         .isTrue();
     assertThat(
-        transactionSelector.isUnprofitableTxCached(
-            mockEvaluationContext2.getPendingTransaction().getTransaction().getHash()))
+            transactionSelector.isUnprofitableTxCached(
+                mockEvaluationContext2.getPendingTransaction().getTransaction().getHash()))
         .isFalse();
 
     // simulate another block
@@ -312,8 +312,8 @@ public class ProfitableTransactionSelectorTest {
 
     // we should remember of the unprofitable txs for the new block
     assertThat(
-        transactionSelector.isUnprofitableTxCached(
-            mockEvaluationContext1.getPendingTransaction().getTransaction().getHash()))
+            transactionSelector.isUnprofitableTxCached(
+                mockEvaluationContext1.getPendingTransaction().getTransaction().getHash()))
         .isTrue();
 
     // second try of the first tx
