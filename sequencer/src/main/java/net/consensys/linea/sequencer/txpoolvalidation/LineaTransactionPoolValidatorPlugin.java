@@ -57,11 +57,6 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
   private Optional<JsonRpcManager> rejectedTxJsonRpcManager = Optional.empty();
 
   @Override
-  public Optional<String> getName() {
-    return Optional.of(NAME);
-  }
-
-  @Override
   public void doRegister(final BesuContext context) {
     besuContext = context;
     besuConfiguration =

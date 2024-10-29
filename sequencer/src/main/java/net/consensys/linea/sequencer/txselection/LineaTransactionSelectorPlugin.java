@@ -46,11 +46,6 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
   private BesuConfiguration besuConfiguration;
 
   @Override
-  public Optional<String> getName() {
-    return Optional.of(NAME);
-  }
-
-  @Override
   public void doRegister(final BesuContext context) {
     besuContext = context;
     transactionSelectionService =
