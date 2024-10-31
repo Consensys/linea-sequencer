@@ -25,13 +25,12 @@ import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
 import net.consensys.linea.jsonrpc.JsonRpcRequestBuilder;
+import net.consensys.linea.metrics.HistogramMetrics;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.BlockchainService;
-import org.hyperledger.besu.plugin.services.MetricsSystem;
-import org.hyperledger.besu.plugin.services.metrics.MetricCategoryRegistry;
 import org.hyperledger.besu.plugin.services.tracer.BlockAwareOperationTracer;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
 import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationContext;
@@ -52,8 +51,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       final LineaTracerConfiguration tracerConfiguration,
       final Map<String, Integer> limitsMap,
       final Optional<JsonRpcManager> rejectedTxJsonRpcManager,
-      final MetricsSystem metricsSystem,
-      final MetricCategoryRegistry metricCategoryRegistry) {
+      final Optional<HistogramMetrics> maybeProfitabilityMetrics) {
     this.rejectedTxJsonRpcManager = rejectedTxJsonRpcManager;
     selectors =
         createTransactionSelectors(
@@ -63,8 +61,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
             profitabilityConfiguration,
             tracerConfiguration,
             limitsMap,
-            metricsSystem,
-            metricCategoryRegistry);
+            maybeProfitabilityMetrics);
   }
 
   /**
@@ -74,7 +71,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
    * @param txSelectorConfiguration The configuration to use.
    * @param profitabilityConfiguration The profitability configuration.
    * @param limitsMap The limits map.
-   * @param metricCategoryRegistry
+   * @param maybeProfitabilityMetrics The optional profitability metrics
    * @return A list of selectors.
    */
   private List<PluginTransactionSelector> createTransactionSelectors(
@@ -84,8 +81,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       final LineaProfitabilityConfiguration profitabilityConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
       final Map<String, Integer> limitsMap,
-      final MetricsSystem metricsSystem,
-      final MetricCategoryRegistry metricCategoryRegistry) {
+      final Optional<HistogramMetrics> maybeProfitabilityMetrics) {
 
     traceLineLimitTransactionSelector =
         new TraceLineLimitTransactionSelector(
@@ -102,8 +98,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
             blockchainService,
             txSelectorConfiguration,
             profitabilityConfiguration,
-            metricsSystem,
-            metricCategoryRegistry),
+            maybeProfitabilityMetrics),
         traceLineLimitTransactionSelector);
   }
 

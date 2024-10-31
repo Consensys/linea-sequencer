@@ -28,6 +28,7 @@ import net.consensys.linea.config.LineaProfitabilityCliOptions;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorCliOptions;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
+import net.consensys.linea.metrics.HistogramMetrics;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.bouncycastle.crypto.digests.KeccakDigest;
@@ -35,12 +36,10 @@ import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.datatypes.Wei;
-import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.BlockchainService;
-import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,7 +63,6 @@ public class ProfitableTransactionSelectorTest {
           .variableCostWei(VARIABLE_GAS_COST_WEI)
           .build();
   private TestableProfitableTransactionSelector transactionSelector;
-  private MetricsSystem metricsSystem = new NoOpMetricsSystem();
 
   @BeforeEach
   public void initialize() {
@@ -76,7 +74,7 @@ public class ProfitableTransactionSelectorTest {
     final var blockchainService = mock(BlockchainService.class);
     when(blockchainService.getNextBlockBaseFee()).thenReturn(Optional.of(BASE_FEE));
     return new TestableProfitableTransactionSelector(
-        blockchainService, txSelectorConf, profitabilityConf, metricsSystem);
+        blockchainService, txSelectorConf, profitabilityConf, Optional.empty());
   }
 
   @Test
@@ -414,13 +412,8 @@ public class ProfitableTransactionSelectorTest {
         final BlockchainService blockchainService,
         final LineaTransactionSelectorConfiguration txSelectorConf,
         final LineaProfitabilityConfiguration profitabilityConf,
-        final MetricsSystem metricsSystem) {
-      super(
-          blockchainService,
-          txSelectorConf,
-          profitabilityConf,
-          metricsSystem,
-          metricCategoryRegistry);
+        final Optional<HistogramMetrics> maybeProfitabilityMetrics) {
+      super(blockchainService, txSelectorConf, profitabilityConf, maybeProfitabilityMetrics);
     }
 
     boolean isUnprofitableTxCached(final Hash txHash) {

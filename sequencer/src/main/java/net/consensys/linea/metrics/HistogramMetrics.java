@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.DoubleSupplier;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -32,16 +33,14 @@ import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
 
 @Slf4j
 public class HistogramMetrics {
-
   public interface LabelValue {
     String value();
   }
 
-  private static final double[] DEFAULT_HISTOGRAM_BUCKETS = {0.9, 1.0, 1.2, 2, 5, 10, 100, 1000};
   private static final String LABEL_VALUES_SEPARATOR = "\u2060";
   private final LabelledMetric<Histogram> histogram;
-  private final Map<String, Double> mins;
-  private final Map<String, Double> maxs;
+  private final Map<String, MutableDoubleSupplier> mins;
+  private final Map<String, MutableDoubleSupplier> maxs;
 
   @SafeVarargs
   public HistogramMetrics(
@@ -49,6 +48,7 @@ public class HistogramMetrics {
       final LineaMetricCategory category,
       final String name,
       final String help,
+      final double[] buckets,
       final Class<? extends LabelValue>... labels) {
 
     final var labelNames = getLabelNames(labels);
@@ -64,19 +64,17 @@ public class HistogramMetrics {
     maxs = HashMap.newHashMap(combinations.size());
     for (final var combination : combinations) {
       final var key = String.join(LABEL_VALUES_SEPARATOR, combination);
-      mins.put(key, Double.POSITIVE_INFINITY);
-      minRatio.labels(() -> mins.get(key), combination);
-      maxs.put(key, 0.0);
-      maxRatio.labels(() -> maxs.get(key), combination);
+      final var minSupplier = new MutableDoubleSupplier(Double.POSITIVE_INFINITY);
+      mins.put(key, minSupplier);
+      minRatio.labels(minSupplier, combination);
+      final var maxSupplier = new MutableDoubleSupplier(Double.NEGATIVE_INFINITY);
+      maxs.put(key, maxSupplier);
+      maxRatio.labels(maxSupplier, combination);
     }
 
     this.histogram =
         metricsSystem.createLabelledHistogram(
-            category,
-            name,
-            StringUtils.capitalize(help) + " buckets",
-            DEFAULT_HISTOGRAM_BUCKETS,
-            labelNames);
+            category, name, StringUtils.capitalize(help) + " buckets", buckets, labelNames);
   }
 
   @SafeVarargs
@@ -115,15 +113,40 @@ public class HistogramMetrics {
 
   public void track(final double value, final String... labelValues) {
 
+    // Record the observation
+    histogram.labels(labelValues).observe(value);
+  }
+
+  public void setMinMax(final double min, final double max, final String... labelValues) {
     final var key = String.join(LABEL_VALUES_SEPARATOR, labelValues);
 
     // Update lowest seen
-    mins.compute(key, (unused, currMin) -> Math.min(currMin, value));
+    mins.get(key).set(min);
 
     // Update highest seen
-    maxs.compute(key, (unused, currMax) -> Math.max(currMax, value));
+    maxs.get(key).set(max);
+  }
 
-    // Record the observation
-    histogram.labels(labelValues).observe(value);
+  private static class MutableDoubleSupplier implements DoubleSupplier {
+    private final double initialValue;
+    private volatile double value;
+
+    public MutableDoubleSupplier(final double initialValue) {
+      this.initialValue = initialValue;
+      this.value = initialValue;
+    }
+
+    @Override
+    public double getAsDouble() {
+      return value;
+    }
+
+    public void set(final double value) {
+      this.value = value;
+    }
+
+    public void reset() {
+      value = initialValue;
+    }
   }
 }

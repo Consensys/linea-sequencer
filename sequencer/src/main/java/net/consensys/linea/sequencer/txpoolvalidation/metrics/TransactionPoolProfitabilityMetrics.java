@@ -16,6 +16,8 @@ package net.consensys.linea.sequencer.txpoolvalidation.metrics;
 
 import static net.consensys.linea.metrics.LineaMetricCategory.TX_POOL_PROFITABILITY;
 
+import java.util.stream.Collectors;
+
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
@@ -60,23 +62,40 @@ public class TransactionPoolProfitabilityMetrics {
     this.blockchainService = blockchainService;
     this.histogramMetrics =
         new HistogramMetrics(
-            metricsSystem, TX_POOL_PROFITABILITY, "ratio", "transaction pool profitability ratio");
+            metricsSystem,
+            TX_POOL_PROFITABILITY,
+            "ratio",
+            "transaction pool profitability ratio",
+            profitabilityConf.profitabilityMetricsBuckets());
   }
 
   public void update() {
     final long startTime = System.currentTimeMillis();
     final var txPoolContent = transactionPoolService.getPendingTransactions();
-    txPoolContent.parallelStream()
-        .map(PendingTransaction::getTransaction)
-        .forEach(this::handleTransaction);
+
+    final var ratioStats =
+        txPoolContent.parallelStream()
+            .map(PendingTransaction::getTransaction)
+            .map(
+                tx -> {
+                  final var ratio = handleTransaction(tx);
+                  histogramMetrics.track(ratio);
+                  log.trace("Recorded profitability ratio {} for tx {}", ratio, tx.getHash());
+                  return ratio;
+                })
+            .collect(Collectors.summarizingDouble(Double::doubleValue));
+
+    histogramMetrics.setMinMax(ratioStats.getMin(), ratioStats.getMax());
+
     log.atDebug()
-        .setMessage("Transaction pool profitability metrics processed {}txs in {}ms")
+        .setMessage("Transaction pool profitability metrics processed {}txs in {}ms, statistics {}")
         .addArgument(txPoolContent::size)
         .addArgument(() -> System.currentTimeMillis() - startTime)
+        .addArgument(ratioStats)
         .log();
   }
 
-  private void handleTransaction(final Transaction transaction) {
+  private double handleTransaction(final Transaction transaction) {
     final Wei actualPriorityFeePerGas;
     if (transaction.getMaxPriorityFeePerGas().isEmpty()) {
       actualPriorityFeePerGas =
@@ -102,8 +121,6 @@ public class TransactionPoolProfitabilityMetrics {
         actualPriorityFeePerGas.toBigInteger().doubleValue()
             / profitablePriorityFeePerGas.toBigInteger().doubleValue();
 
-    histogramMetrics.track(ratio);
-
-    log.trace("Recorded profitability ratio {} for tx {}", ratio, transaction.getHash());
+    return ratio;
   }
 }

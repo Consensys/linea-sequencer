@@ -26,6 +26,8 @@ import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
+import net.consensys.linea.metrics.HistogramMetrics;
+import net.consensys.linea.sequencer.txselection.selectors.ProfitableTransactionSelector;
 import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
@@ -85,6 +87,18 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
                             lineaRejectedTxReportingConfiguration)
                         .start());
 
+    final Optional<HistogramMetrics> maybeProfitabilityMetrics =
+        metricCategoryRegistry.isMetricCategoryEnabled(SEQUENCER_PROFITABILITY)
+            ? Optional.of(
+                new HistogramMetrics(
+                    metricsSystem,
+                    SEQUENCER_PROFITABILITY,
+                    "ratio",
+                    "sequencer profitability ratio",
+                    profitabilityConfiguration().profitabilityMetricsBuckets(),
+                    ProfitableTransactionSelector.Phase.class))
+            : Optional.empty();
+
     transactionSelectionService.registerPluginTransactionSelectorFactory(
         new LineaTransactionSelectorFactory(
             blockchainService,
@@ -94,8 +108,7 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
             tracerConfiguration(),
             createLimitModules(tracerConfiguration()),
             rejectedTxJsonRpcManager,
-            metricsSystem,
-            metricCategoryRegistry));
+            maybeProfitabilityMetrics));
   }
 
   @Override

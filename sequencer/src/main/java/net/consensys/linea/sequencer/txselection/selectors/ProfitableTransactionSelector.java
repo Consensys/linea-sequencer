@@ -14,14 +14,15 @@
  */
 package net.consensys.linea.sequencer.txselection.selectors;
 
-import static net.consensys.linea.metrics.LineaMetricCategory.SEQUENCER_PROFITABILITY;
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_UNPROFITABLE;
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_UNPROFITABLE_RETRY_LIMIT;
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_UNPROFITABLE_UPFRONT;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 
+import java.util.EnumMap;
 import java.util.LinkedHashSet;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -39,8 +40,6 @@ import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.BlockchainService;
-import org.hyperledger.besu.plugin.services.MetricsSystem;
-import org.hyperledger.besu.plugin.services.metrics.MetricCategoryRegistry;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
 import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationContext;
 
@@ -55,7 +54,29 @@ import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationCon
  */
 @Slf4j
 public class ProfitableTransactionSelector implements PluginTransactionSelector {
+  public enum Phase implements LabelValue {
+    PRE_PROCESSING,
+    POST_PROCESSING;
+
+    final String value;
+
+    Phase() {
+      this.value = name().toLowerCase(Locale.ROOT);
+    }
+
+    @Override
+    public String value() {
+      return value;
+    }
+  }
+
   @VisibleForTesting protected static Set<Hash> unprofitableCache = new LinkedHashSet<>();
+  protected static Map<Phase, Double> lastBlockMinRatios = new EnumMap<>(Phase.class);
+  protected static Map<Phase, Double> lastBlockMaxRatios = new EnumMap<>(Phase.class);
+
+  static {
+    resetMinMaxRatios();
+  }
 
   private final LineaTransactionSelectorConfiguration txSelectorConf;
   private final LineaProfitabilityConfiguration profitabilityConf;
@@ -69,22 +90,32 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
       final BlockchainService blockchainService,
       final LineaTransactionSelectorConfiguration txSelectorConf,
       final LineaProfitabilityConfiguration profitabilityConf,
-      final MetricsSystem metricsSystem,
-      final MetricCategoryRegistry metricCategoryRegistry) {
+      final Optional<HistogramMetrics> maybeProfitabilityMetrics) {
     this.txSelectorConf = txSelectorConf;
     this.profitabilityConf = profitabilityConf;
     this.transactionProfitabilityCalculator =
         new TransactionProfitabilityCalculator(profitabilityConf);
-    this.maybeProfitabilityMetrics =
-        metricCategoryRegistry.isMetricCategoryEnabled(SEQUENCER_PROFITABILITY)
-            ? Optional.of(
-                new HistogramMetrics(
-                    metricsSystem,
-                    SEQUENCER_PROFITABILITY,
-                    "ratio",
-                    "sequencer profitability ratio",
-                    Phase.class))
-            : Optional.empty();
+    this.maybeProfitabilityMetrics = maybeProfitabilityMetrics;
+    maybeProfitabilityMetrics.ifPresent(
+        histogramMetrics -> {
+          // temporary solution to update min and max metrics
+          // we should do this just after the block is created, but we do not have any API for that
+          // so we postponed the update asap the next block creation starts.
+          histogramMetrics.setMinMax(
+              lastBlockMinRatios.get(Phase.PRE_PROCESSING),
+              lastBlockMaxRatios.get(Phase.PRE_PROCESSING),
+              Phase.PRE_PROCESSING.value());
+          histogramMetrics.setMinMax(
+              lastBlockMinRatios.get(Phase.POST_PROCESSING),
+              lastBlockMaxRatios.get(Phase.POST_PROCESSING),
+              Phase.POST_PROCESSING.value());
+          log.atTrace()
+              .setMessage("Setting profitability ratio metrics for last block to min={}, max={}")
+              .addArgument(lastBlockMinRatios)
+              .addArgument(lastBlockMaxRatios)
+              .log();
+          resetMinMaxRatios();
+        });
 
     this.baseFee =
         blockchainService
@@ -259,6 +290,13 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
 
           histogramMetrics.track(ratio, label.value());
 
+          if (ratio < lastBlockMinRatios.get(label)) {
+            lastBlockMinRatios.put(label, ratio);
+          }
+          if (ratio > lastBlockMaxRatios.get(label)) {
+            lastBlockMaxRatios.put(label, ratio);
+          }
+
           log.atTrace()
               .setMessage(
                   "POST_PROCESSING: block[{}] tx {} , baseFee {}, effectiveGasPrice {}, ratio (effectivePayingPriorityFee {} / calculatedProfitablePriorityFee {}) {}")
@@ -273,19 +311,10 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
         });
   }
 
-  enum Phase implements LabelValue {
-    PRE_PROCESSING,
-    POST_PROCESSING;
-
-    final String value;
-
-    Phase() {
-      this.value = name().toLowerCase(Locale.ROOT);
-    }
-
-    @Override
-    public String value() {
-      return value;
-    }
+  private static void resetMinMaxRatios() {
+    lastBlockMinRatios.put(Phase.PRE_PROCESSING, Double.POSITIVE_INFINITY);
+    lastBlockMinRatios.put(Phase.POST_PROCESSING, Double.POSITIVE_INFINITY);
+    lastBlockMaxRatios.put(Phase.PRE_PROCESSING, Double.NEGATIVE_INFINITY);
+    lastBlockMaxRatios.put(Phase.POST_PROCESSING, Double.NEGATIVE_INFINITY);
   }
 }
