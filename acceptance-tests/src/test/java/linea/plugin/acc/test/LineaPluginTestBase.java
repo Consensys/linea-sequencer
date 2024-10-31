@@ -135,7 +135,7 @@ public class LineaPluginTestBase extends AcceptanceTestBase {
             .metricsConfiguration(
                 MetricsConfiguration.builder()
                     .enabled(true)
-                    .metricCategories(Set.of(LineaMetricCategory.PROFITABILITY))
+                    .metricCategories(Set.of(LineaMetricCategory.SEQUENCER_PROFITABILITY))
                     .build())
             .requestedPlugins(
                 List.of(

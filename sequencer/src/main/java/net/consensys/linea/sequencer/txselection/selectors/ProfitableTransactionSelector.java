@@ -14,14 +14,15 @@
  */
 package net.consensys.linea.sequencer.txselection.selectors;
 
+import static net.consensys.linea.metrics.LineaMetricCategory.SEQUENCER_PROFITABILITY;
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_UNPROFITABLE;
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_UNPROFITABLE_RETRY_LIMIT;
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_UNPROFITABLE_UPFRONT;
-import static net.consensys.linea.sequencer.txselection.metrics.SelectorProfitabilityMetrics.Phase.POST_PROCESSING;
-import static net.consensys.linea.sequencer.txselection.metrics.SelectorProfitabilityMetrics.Phase.PRE_PROCESSING;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 
 import java.util.LinkedHashSet;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -29,7 +30,8 @@ import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
-import net.consensys.linea.sequencer.txselection.metrics.SelectorProfitabilityMetrics;
+import net.consensys.linea.metrics.HistogramMetrics;
+import net.consensys.linea.metrics.HistogramMetrics.LabelValue;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Transaction;
@@ -37,6 +39,8 @@ import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.BlockchainService;
+import org.hyperledger.besu.plugin.services.MetricsSystem;
+import org.hyperledger.besu.plugin.services.metrics.MetricCategoryRegistry;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
 import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationContext;
 
@@ -56,7 +60,7 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
   private final LineaTransactionSelectorConfiguration txSelectorConf;
   private final LineaProfitabilityConfiguration profitabilityConf;
   private final TransactionProfitabilityCalculator transactionProfitabilityCalculator;
-  private final SelectorProfitabilityMetrics selectorProfitabilityMetrics;
+  private final Optional<HistogramMetrics> maybeProfitabilityMetrics;
   private final Wei baseFee;
 
   private int unprofitableRetries;
@@ -65,12 +69,23 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
       final BlockchainService blockchainService,
       final LineaTransactionSelectorConfiguration txSelectorConf,
       final LineaProfitabilityConfiguration profitabilityConf,
-      final SelectorProfitabilityMetrics selectorProfitabilityMetrics) {
+      final MetricsSystem metricsSystem,
+      final MetricCategoryRegistry metricCategoryRegistry) {
     this.txSelectorConf = txSelectorConf;
     this.profitabilityConf = profitabilityConf;
     this.transactionProfitabilityCalculator =
         new TransactionProfitabilityCalculator(profitabilityConf);
-    this.selectorProfitabilityMetrics = selectorProfitabilityMetrics;
+    this.maybeProfitabilityMetrics =
+        metricCategoryRegistry.isMetricCategoryEnabled(SEQUENCER_PROFITABILITY)
+            ? Optional.of(
+                new HistogramMetrics(
+                    metricsSystem,
+                    SEQUENCER_PROFITABILITY,
+                    "ratio",
+                    "sequencer profitability ratio",
+                    Phase.class))
+            : Optional.empty();
+
     this.baseFee =
         blockchainService
             .getNextBlockBaseFee()
@@ -104,13 +119,8 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
           transactionProfitabilityCalculator.profitablePriorityFeePerGas(
               transaction, profitabilityConf.minMargin(), gasLimit, minGasPrice);
 
-      selectorProfitabilityMetrics.track(
-          PRE_PROCESSING,
-          evaluationContext.getPendingBlockHeader().getNumber(),
-          transaction,
-          baseFee,
-          evaluationContext.getTransactionGasPrice(),
-          profitablePriorityFeePerGas);
+      updateMetric(
+          Phase.PRE_PROCESSING, evaluationContext, transaction, profitablePriorityFeePerGas);
 
       // check the upfront profitability using the gas limit of the tx
       if (!transactionProfitabilityCalculator.isProfitable(
@@ -171,13 +181,8 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
               gasUsed,
               evaluationContext.getMinGasPrice());
 
-      selectorProfitabilityMetrics.track(
-          POST_PROCESSING,
-          evaluationContext.getPendingBlockHeader().getNumber(),
-          transaction,
-          baseFee,
-          evaluationContext.getTransactionGasPrice(),
-          profitablePriorityFeePerGas);
+      updateMetric(
+          Phase.POST_PROCESSING, evaluationContext, transaction, profitablePriorityFeePerGas);
 
       if (!transactionProfitabilityCalculator.isProfitable(
           "PostProcessing",
@@ -236,5 +241,51 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
     }
     unprofitableCache.add(transaction.getHash());
     log.atTrace().setMessage("unprofitableCache={}").addArgument(unprofitableCache::size).log();
+  }
+
+  private void updateMetric(
+      final Phase label,
+      final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
+      final Transaction tx,
+      final Wei profitablePriorityFeePerGas) {
+
+    maybeProfitabilityMetrics.ifPresent(
+        histogramMetrics -> {
+          final var effectivePriorityFee =
+              evaluationContext.getTransactionGasPrice().subtract(baseFee);
+          final var ratio =
+              effectivePriorityFee.getValue().doubleValue()
+                  / profitablePriorityFeePerGas.getValue().doubleValue();
+
+          histogramMetrics.track(ratio, label.value());
+
+          log.atTrace()
+              .setMessage(
+                  "POST_PROCESSING: block[{}] tx {} , baseFee {}, effectiveGasPrice {}, ratio (effectivePayingPriorityFee {} / calculatedProfitablePriorityFee {}) {}")
+              .addArgument(evaluationContext.getPendingBlockHeader().getNumber())
+              .addArgument(tx.getHash())
+              .addArgument(baseFee::toHumanReadableString)
+              .addArgument(evaluationContext.getTransactionGasPrice()::toHumanReadableString)
+              .addArgument(effectivePriorityFee::toHumanReadableString)
+              .addArgument(profitablePriorityFeePerGas::toHumanReadableString)
+              .addArgument(ratio)
+              .log();
+        });
+  }
+
+  enum Phase implements LabelValue {
+    PRE_PROCESSING,
+    POST_PROCESSING;
+
+    final String value;
+
+    Phase() {
+      this.value = name().toLowerCase(Locale.ROOT);
+    }
+
+    @Override
+    public String value() {
+      return value;
+    }
   }
 }

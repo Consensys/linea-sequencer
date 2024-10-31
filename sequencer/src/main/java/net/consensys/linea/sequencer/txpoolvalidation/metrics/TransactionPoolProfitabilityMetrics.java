@@ -14,22 +14,19 @@
  */
 package net.consensys.linea.sequencer.txpoolvalidation.metrics;
 
-import java.util.concurrent.atomic.AtomicReference;
+import static net.consensys.linea.metrics.LineaMetricCategory.TX_POOL_PROFITABILITY;
 
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
+import net.consensys.linea.metrics.HistogramMetrics;
 import org.apache.tuweni.units.bigints.UInt256s;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.datatypes.Wei;
-import org.hyperledger.besu.metrics.BesuMetricCategory;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
-import org.hyperledger.besu.plugin.services.metrics.Histogram;
-import org.hyperledger.besu.plugin.services.metrics.LabelledGauge;
-import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
 import org.hyperledger.besu.plugin.services.transactionpool.TransactionPoolService;
 
 /**
@@ -42,19 +39,12 @@ import org.hyperledger.besu.plugin.services.transactionpool.TransactionPoolServi
  */
 @Slf4j
 public class TransactionPoolProfitabilityMetrics {
-  private static final double[] HISTOGRAM_BUCKETS = {0.1, 0.5, 0.8, 1.0, 1.2, 1.5, 2.0, 5.0, 10.0};
-
   private final TransactionProfitabilityCalculator profitabilityCalculator;
   private final LineaProfitabilityConfiguration profitabilityConf;
   private final BesuConfiguration besuConfiguration;
   private final TransactionPoolService transactionPoolService;
   private final BlockchainService blockchainService;
-
-  private final LabelledMetric<Histogram> profitabilityHistogram;
-
-  // Thread-safe references for gauge values
-  private final AtomicReference<Double> currentLowest = new AtomicReference<>(0.0);
-  private final AtomicReference<Double> currentHighest = new AtomicReference<>(0.0);
+  private final HistogramMetrics histogramMetrics;
 
   public TransactionPoolProfitabilityMetrics(
       final BesuConfiguration besuConfiguration,
@@ -68,33 +58,25 @@ public class TransactionPoolProfitabilityMetrics {
     this.profitabilityCalculator = new TransactionProfitabilityCalculator(profitabilityConf);
     this.transactionPoolService = transactionPoolService;
     this.blockchainService = blockchainService;
-
-    // Min/Max/Avg gauges with DoubleSupplier
-    LabelledGauge lowestProfitabilityRatio =
-        metricsSystem.createLabelledGauge(
-            BesuMetricCategory.ETHEREUM,
-            "txpool_profitability_ratio_min",
-            "Lowest profitability ratio seen");
-    lowestProfitabilityRatio.labels(currentLowest::get);
-
-    LabelledGauge highestProfitabilityRatio =
-        metricsSystem.createLabelledGauge(
-            BesuMetricCategory.ETHEREUM,
-            "txpool_profitability_ratio_max",
-            "Highest profitability ratio seen");
-    highestProfitabilityRatio.labels(currentHighest::get);
-
-    // Running statistics
-    this.profitabilityHistogram =
-        metricsSystem.createLabelledHistogram(
-            BesuMetricCategory.ETHEREUM,
-            "txpool_profitability_ratio",
-            "Histogram statistics of profitability ratios",
-            HISTOGRAM_BUCKETS,
-            "type");
+    this.histogramMetrics =
+        new HistogramMetrics(
+            metricsSystem, TX_POOL_PROFITABILITY, "ratio", "transaction pool profitability ratio");
   }
 
-  public void handleTransaction(final Transaction transaction) {
+  public void update() {
+    final long startTime = System.currentTimeMillis();
+    final var txPoolContent = transactionPoolService.getPendingTransactions();
+    txPoolContent.parallelStream()
+        .map(PendingTransaction::getTransaction)
+        .forEach(this::handleTransaction);
+    log.atDebug()
+        .setMessage("Transaction pool profitability metrics processed {}txs in {}ms")
+        .addArgument(txPoolContent::size)
+        .addArgument(() -> System.currentTimeMillis() - startTime)
+        .log();
+  }
+
+  private void handleTransaction(final Transaction transaction) {
     final Wei actualPriorityFeePerGas;
     if (transaction.getMaxPriorityFeePerGas().isEmpty()) {
       actualPriorityFeePerGas =
@@ -109,36 +91,19 @@ public class TransactionPoolProfitabilityMetrics {
               Wei.fromQuantity(transaction.getMaxFeePerGas().orElseThrow()));
     }
 
-    Wei profitablePriorityFeePerGas =
+    final Wei profitablePriorityFeePerGas =
         profitabilityCalculator.profitablePriorityFeePerGas(
             transaction,
             profitabilityConf.txPoolMinMargin(),
             transaction.getGasLimit(),
             besuConfiguration.getMinGasPrice());
 
-    double ratio =
+    final double ratio =
         actualPriorityFeePerGas.toBigInteger().doubleValue()
             / profitablePriorityFeePerGas.toBigInteger().doubleValue();
 
-    updateRunningStats(ratio);
+    histogramMetrics.track(ratio);
 
     log.trace("Recorded profitability ratio {} for tx {}", ratio, transaction.getHash());
-  }
-
-  private void updateRunningStats(double ratio) {
-    // Update lowest seen
-    currentLowest.updateAndGet(current -> Math.min(current, ratio));
-
-    // Update highest seen
-    currentHighest.updateAndGet(current -> Math.max(current, ratio));
-
-    // Record the observation in summary
-    profitabilityHistogram.labels("profitability").observe(ratio);
-  }
-
-  public void recalculate() {
-    transactionPoolService.getPendingTransactions().stream()
-        .map(PendingTransaction::getTransaction)
-        .forEach(this::handleTransaction);
   }
 }

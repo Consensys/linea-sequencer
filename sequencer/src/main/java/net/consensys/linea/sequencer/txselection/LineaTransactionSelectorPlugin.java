@@ -15,6 +15,7 @@
 
 package net.consensys.linea.sequencer.txselection;
 
+import static net.consensys.linea.metrics.LineaMetricCategory.SEQUENCER_PROFITABILITY;
 import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.createLimitModules;
 
 import java.util.Optional;
@@ -25,7 +26,6 @@ import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
-import net.consensys.linea.sequencer.txselection.metrics.SelectorProfitabilityMetrics;
 import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
@@ -63,6 +63,8 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
                 () ->
                     new RuntimeException(
                         "Failed to obtain BesuConfiguration from the BesuContext."));
+
+    metricCategoryRegistry.addMetricCategory(SEQUENCER_PROFITABILITY);
   }
 
   @Override
@@ -83,8 +85,6 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
                             lineaRejectedTxReportingConfiguration)
                         .start());
 
-    final var selectorProfitabilityMetrics = new SelectorProfitabilityMetrics(metricsSystem);
-
     transactionSelectionService.registerPluginTransactionSelectorFactory(
         new LineaTransactionSelectorFactory(
             blockchainService,
@@ -94,7 +94,8 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
             tracerConfiguration(),
             createLimitModules(tracerConfiguration()),
             rejectedTxJsonRpcManager,
-            selectorProfitabilityMetrics));
+            metricsSystem,
+            metricCategoryRegistry));
   }
 
   @Override

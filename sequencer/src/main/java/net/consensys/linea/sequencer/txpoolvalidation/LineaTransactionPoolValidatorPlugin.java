@@ -15,6 +15,7 @@
 
 package net.consensys.linea.sequencer.txpoolvalidation;
 
+import static net.consensys.linea.metrics.LineaMetricCategory.TX_POOL_PROFITABILITY;
 import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.createLimitModules;
 
 import java.io.File;
@@ -49,7 +50,6 @@ import org.hyperledger.besu.plugin.services.transactionpool.TransactionPoolServi
 @Slf4j
 @AutoService(BesuPlugin.class)
 public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPlugin {
-  public static final String NAME = "linea";
   private BesuContext besuContext;
   private BesuConfiguration besuConfiguration;
   private TransactionPoolValidatorService transactionPoolValidatorService;
@@ -82,27 +82,13 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
                 () ->
                     new RuntimeException(
                         "Failed to obtain TransactionSimulatorService from the BesuContext."));
+
+    metricCategoryRegistry.addMetricCategory(TX_POOL_PROFITABILITY);
   }
 
   @Override
   public void start() {
     super.start();
-
-    final var transactionPoolService =
-        besuContext
-            .getService(TransactionPoolService.class)
-            .orElseThrow(
-                () ->
-                    new RuntimeException(
-                        "Failed to obtain TransactionPoolService from the BesuContext."));
-
-    final var transactionPoolProfitabilityMetrics =
-        new TransactionPoolProfitabilityMetrics(
-            besuConfiguration,
-            metricsSystem,
-            profitabilityConfiguration(),
-            transactionPoolService,
-            blockchainService);
 
     try (Stream<String> lines =
         Files.lines(
@@ -135,25 +121,44 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
               l1L2BridgeSharedConfiguration(),
               rejectedTxJsonRpcManager));
 
-      final var besuEventsService =
-          besuContext
-              .getService(BesuEvents.class)
-              .orElseThrow(
-                  () -> new RuntimeException("Failed to obtain BesuEvents from the BesuContext."));
+      if (metricCategoryRegistry.isMetricCategoryEnabled(TX_POOL_PROFITABILITY)) {
+        final var besuEventsService =
+            besuContext
+                .getService(BesuEvents.class)
+                .orElseThrow(
+                    () ->
+                        new RuntimeException("Failed to obtain BesuEvents from the BesuContext."));
 
-      besuEventsService.addBlockAddedListener(
-          addedBlockContext -> {
-            try {
-              // on new block let's calculate profitability for every txs in the pool
-              transactionPoolProfitabilityMetrics.recalculate();
-            } catch (final Exception e) {
-              log.warn(
-                  "Error calculating transaction profitability for block {}({})",
-                  addedBlockContext.getBlockHeader().getNumber(),
-                  addedBlockContext.getBlockHeader().getBlockHash(),
-                  e);
-            }
-          });
+        final var transactionPoolService =
+            besuContext
+                .getService(TransactionPoolService.class)
+                .orElseThrow(
+                    () ->
+                        new RuntimeException(
+                            "Failed to obtain TransactionPoolService from the BesuContext."));
+
+        final var transactionPoolProfitabilityMetrics =
+            new TransactionPoolProfitabilityMetrics(
+                besuConfiguration,
+                metricsSystem,
+                profitabilityConfiguration(),
+                transactionPoolService,
+                blockchainService);
+
+        besuEventsService.addBlockAddedListener(
+            addedBlockContext -> {
+              try {
+                // on new block let's calculate profitability for every txs in the pool
+                transactionPoolProfitabilityMetrics.update();
+              } catch (final Exception e) {
+                log.warn(
+                    "Error calculating transaction profitability for block {}({})",
+                    addedBlockContext.getBlockHeader().getNumber(),
+                    addedBlockContext.getBlockHeader().getBlockHash(),
+                    e);
+              }
+            });
+      }
 
     } catch (Exception e) {
       throw new RuntimeException(e);

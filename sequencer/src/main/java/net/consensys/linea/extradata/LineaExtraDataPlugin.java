@@ -15,13 +15,14 @@
 
 package net.consensys.linea.extradata;
 
+import static net.consensys.linea.metrics.LineaMetricCategory.PRICING_CONF;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.auto.service.AutoService;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
-import org.hyperledger.besu.metrics.BesuMetricCategory;
 import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.data.AddedBlockContext;
@@ -46,6 +47,8 @@ public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
                 () ->
                     new RuntimeException(
                         "Failed to obtain RpcEndpointService from the BesuContext."));
+
+    metricCategoryRegistry.addMetricCategory(PRICING_CONF);
   }
 
   /**
@@ -94,16 +97,15 @@ public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
           });
     }
 
-    initMetrics(profitabilityConfiguration());
+    if (metricCategoryRegistry.isMetricCategoryEnabled(PRICING_CONF)) {
+      initMetrics(profitabilityConfiguration());
+    }
   }
 
   private void initMetrics(final LineaProfitabilityConfiguration lineaProfitabilityConfiguration) {
     final var confLabelledGauge =
         metricsSystem.createLabelledGauge(
-            BesuMetricCategory.ETHEREUM,
-            "conf",
-            "Profitability configuration values at runtime",
-            "field");
+            PRICING_CONF, "values", "Profitability configuration values at runtime", "field");
     confLabelledGauge.labels(lineaProfitabilityConfiguration::fixedCostWei, "fixed_cost_wei");
     confLabelledGauge.labels(lineaProfitabilityConfiguration::variableCostWei, "variable_cost_wei");
     confLabelledGauge.labels(lineaProfitabilityConfiguration::ethGasPriceWei, "eth_gas_price_wei");
