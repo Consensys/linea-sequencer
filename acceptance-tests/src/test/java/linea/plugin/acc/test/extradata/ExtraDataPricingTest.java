@@ -125,17 +125,17 @@ public class ExtraDataPricingTest extends LineaPluginTestBase {
     assertThat(getTxPoolContent()).isEmpty();
 
     final var fixedCostMetric =
-        getMetricValue(PRICING_CONF, "conf", List.of(entry("field", "fixed_cost_wei")));
+        getMetricValue(PRICING_CONF, "values", List.of(entry("field", "fixed_cost_wei")));
 
     assertThat(fixedCostMetric).isEqualTo(MIN_GAS_PRICE.multiply(2).getValue().doubleValue());
 
     final var variableCostMetric =
-        getMetricValue(PRICING_CONF, "conf", List.of(entry("field", "variable_cost_wei")));
+        getMetricValue(PRICING_CONF, "values", List.of(entry("field", "variable_cost_wei")));
 
     assertThat(variableCostMetric).isEqualTo(MIN_GAS_PRICE.getValue().doubleValue());
 
     final var ethGasPriceMetric =
-        getMetricValue(PRICING_CONF, "conf", List.of(entry("field", "eth_gas_price_wei")));
+        getMetricValue(PRICING_CONF, "values", List.of(entry("field", "eth_gas_price_wei")));
 
     assertThat(ethGasPriceMetric).isEqualTo(MIN_GAS_PRICE.getValue().doubleValue());
   }
