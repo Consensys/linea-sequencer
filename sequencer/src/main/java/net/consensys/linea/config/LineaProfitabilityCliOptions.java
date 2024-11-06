@@ -148,7 +148,8 @@ public class LineaProfitabilityCliOptions implements LineaCliOptions {
       hidden = true,
       paramLabel = "<FLOAT[]>",
       description =
-          "List of buckets to use to create the histogram for profitability metrics (default: ${DEFAULT-VALUE})")
+          "List of buckets to use to create the histogram for ratio between the effective priority fee "
+              + "and the calculate profitable priority of the tx (default: ${DEFAULT-VALUE})")
   private double[] profitabilityMetricsBuckets = DEFAULT_PROFITABILITY_METRICS_BUCKETS;
 
   private LineaProfitabilityCliOptions() {}
