@@ -60,7 +60,7 @@ public class LineaProfitabilityCliOptions implements LineaCliOptions {
   public static final String PROFITABILITY_METRICS_BUCKETS =
       "--plugin-linea-profitability-metrics-buckets";
   public static final double[] DEFAULT_PROFITABILITY_METRICS_BUCKETS = {
-    0.9, 1.0, 1.2, 2, 5, 10, 100, 1000
+    0.1, 0.3, 0.5, 0.7, 0.9, 1.0, 1.1, 1.2, 1.5, 2.0, 5.0, 10.0
   };
 
   @Positive
