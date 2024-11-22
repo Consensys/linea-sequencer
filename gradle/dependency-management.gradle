@@ -75,6 +75,7 @@ dependencyManagement {
       entry "eth"
       entry "rlp"
       entry "besu"
+      entry "metrics-core"
     }
 
     dependencySet(group: 'ch.qos.logback', version: '1.5.6') {
