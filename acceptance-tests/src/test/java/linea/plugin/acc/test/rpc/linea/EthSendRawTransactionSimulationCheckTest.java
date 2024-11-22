@@ -80,7 +80,7 @@ public class EthSendRawTransactionSimulationCheckTest extends LineaPluginTestBas
     assertThat(signedTxContractInteractionResp.hasError()).isTrue();
     assertThat(signedTxContractInteractionResp.getError().getMessage())
         .isEqualTo(
-            "Transaction 0xe813560d9a3aedff46be12fc32706d8fe9b6565dd7e2db47457a9c416f2d45d7 line count for module ADD=4818 is above the limit 70");
+            "Transaction 0xe813560d9a3aedff46be12fc32706d8fe9b6565dd7e2db47457a9c416f2d45d7 line count for module ADD=4818 is above the limit 114");
 
     assertThat(getTxPoolContent()).isEmpty();
 
