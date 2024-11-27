@@ -63,7 +63,6 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
     if (rejectedTxJsonRpcManager.isPresent()) {
       rejectedTransactionReasonsMap.add(TX_MODULE_LINE_COUNT_OVERFLOW.toString());
       rejectedTransactionReasonsMap.add(TX_MODULE_LINE_COUNT_OVERFLOW_CACHED.toString());
-      rejectedTransactionReasonsMap.add(BLOCK_MODULE_LINE_COUNT_FULL.toString());
     }
 
     selectors =
