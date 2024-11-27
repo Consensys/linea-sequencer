@@ -48,15 +48,11 @@ public class AllowedAddressValidator implements PluginTransactionPoolValidator {
           Address.fromHexString("0x000000000000000000000000000000000000000a"));
 
   private final Set<Address> denied;
-  private final Optional<JsonRpcManager> rejectedTxJsonRpcManager;
 
   @Override
   public Optional<String> validateTransaction(
       final Transaction transaction, final boolean isLocal, final boolean hasPriority) {
-    final Optional<String> errMsg =
-        validateSender(transaction).or(() -> validateRecipient(transaction));
-    errMsg.ifPresent(reason -> reportRejectedTransaction(transaction, reason));
-    return errMsg;
+    return validateSender(transaction).or(() -> validateRecipient(transaction));
   }
 
   private Optional<String> validateRecipient(final Transaction transaction) {
@@ -89,20 +85,5 @@ public class AllowedAddressValidator implements PluginTransactionPoolValidator {
       return Optional.of(errMsg);
     }
     return Optional.empty();
-  }
-
-  private void reportRejectedTransaction(final Transaction transaction, final String reason) {
-    rejectedTxJsonRpcManager.ifPresent(
-        jsonRpcManager -> {
-          final String jsonRpcCall =
-              JsonRpcRequestBuilder.generateSaveRejectedTxJsonRpc(
-                  jsonRpcManager.getNodeType(),
-                  transaction,
-                  Instant.now(),
-                  Optional.empty(), // block number is not available
-                  reason,
-                  List.of());
-          jsonRpcManager.submitNewJsonRpcCallAsync(jsonRpcCall);
-        });
   }
 }

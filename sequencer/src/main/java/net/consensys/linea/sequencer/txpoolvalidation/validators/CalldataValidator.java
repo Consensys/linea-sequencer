@@ -31,7 +31,6 @@ import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolVal
 @RequiredArgsConstructor
 public class CalldataValidator implements PluginTransactionPoolValidator {
   final LineaTransactionPoolValidatorConfiguration txPoolValidatorConf;
-  final Optional<JsonRpcManager> rejectedTxJsonRpcManager;
 
   @Override
   public Optional<String> validateTransaction(
@@ -41,24 +40,8 @@ public class CalldataValidator implements PluginTransactionPoolValidator {
           "Calldata of transaction is greater than the allowed max of "
               + txPoolValidatorConf.maxTxCalldataSize();
       log.debug(errMsg);
-      reportRejectedTransaction(transaction, errMsg);
       return Optional.of(errMsg);
     }
     return Optional.empty();
-  }
-
-  private void reportRejectedTransaction(final Transaction transaction, final String reason) {
-    rejectedTxJsonRpcManager.ifPresent(
-        jsonRpcManager -> {
-          final String jsonRpcCall =
-              JsonRpcRequestBuilder.generateSaveRejectedTxJsonRpc(
-                  jsonRpcManager.getNodeType(),
-                  transaction,
-                  Instant.now(),
-                  Optional.empty(), // block number is not available
-                  reason,
-                  List.of());
-          jsonRpcManager.submitNewJsonRpcCallAsync(jsonRpcCall);
-        });
   }
 }
