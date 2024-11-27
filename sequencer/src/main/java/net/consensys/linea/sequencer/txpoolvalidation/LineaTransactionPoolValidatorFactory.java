@@ -83,8 +83,7 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
           new AllowedAddressValidator(denied),
           new GasLimitValidator(txPoolValidatorConf),
           new CalldataValidator(txPoolValidatorConf),
-          new ProfitabilityValidator(
-              besuConfiguration, blockchainService, profitabilityConf),
+          new ProfitabilityValidator(besuConfiguration, blockchainService, profitabilityConf),
           new SimulationValidator(
               blockchainService,
               transactionSimulationService,

@@ -14,15 +14,11 @@
  */
 package net.consensys.linea.sequencer.txpoolvalidation.validators;
 
-import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.consensys.linea.jsonrpc.JsonRpcManager;
-import net.consensys.linea.jsonrpc.JsonRpcRequestBuilder;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolValidator;

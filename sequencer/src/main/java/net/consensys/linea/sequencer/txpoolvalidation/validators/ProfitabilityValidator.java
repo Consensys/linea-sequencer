@@ -14,15 +14,11 @@
  */
 package net.consensys.linea.sequencer.txpoolvalidation.validators;
 
-import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
-import net.consensys.linea.jsonrpc.JsonRpcManager;
-import net.consensys.linea.jsonrpc.JsonRpcRequestBuilder;
 import org.apache.tuweni.units.bigints.UInt256s;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.datatypes.Wei;
@@ -66,15 +62,15 @@ public class ProfitabilityValidator implements PluginTransactionPoolValidator {
               .orElseThrow(() -> new RuntimeException("We only support a base fee market"));
 
       return profitabilityCalculator.isProfitable(
-                  "Txpool",
-                  transaction,
-                  profitabilityConf.txPoolMinMargin(),
-                  baseFee,
-                  calculateUpfrontGasPrice(transaction, baseFee),
-                  transaction.getGasLimit(),
-                  besuConfiguration.getMinGasPrice())
-              ? Optional.empty()
-              : Optional.of("Gas price too low");
+              "Txpool",
+              transaction,
+              profitabilityConf.txPoolMinMargin(),
+              baseFee,
+              calculateUpfrontGasPrice(transaction, baseFee),
+              transaction.getGasLimit(),
+              besuConfiguration.getMinGasPrice())
+          ? Optional.empty()
+          : Optional.of("Gas price too low");
     }
 
     return Optional.empty();
