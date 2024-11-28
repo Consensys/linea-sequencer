@@ -28,8 +28,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.metrics.Histogram;
-import org.hyperledger.besu.plugin.services.metrics.LabelledGauge;
 import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
+import org.hyperledger.besu.plugin.services.metrics.LabelledSuppliedMetric;
 
 @Slf4j
 public class HistogramMetrics {
@@ -53,11 +53,13 @@ public class HistogramMetrics {
 
     final var labelNames = getLabelNames(labels);
 
-    final LabelledGauge minRatio =
-        metricsSystem.createLabelledGauge(category, name + "_min", "Lowest " + help, labelNames);
+    final LabelledSuppliedMetric minRatio =
+        metricsSystem.createLabelledSuppliedGauge(
+            category, name + "_min", "Lowest " + help, labelNames);
 
-    final LabelledGauge maxRatio =
-        metricsSystem.createLabelledGauge(category, name + "_max", "Highest " + help, labelNames);
+    final LabelledSuppliedMetric maxRatio =
+        metricsSystem.createLabelledSuppliedGauge(
+            category, name + "_max", "Highest " + help, labelNames);
 
     final var combinations = getLabelValuesCombinations(labels);
     mins = HashMap.newHashMap(combinations.size());
