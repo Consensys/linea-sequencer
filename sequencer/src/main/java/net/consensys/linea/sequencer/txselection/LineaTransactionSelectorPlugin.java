@@ -28,8 +28,8 @@ import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
 import net.consensys.linea.metrics.HistogramMetrics;
 import net.consensys.linea.sequencer.txselection.selectors.ProfitableTransactionSelector;
-import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
+import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.TransactionSelectionService;
 
@@ -42,30 +42,29 @@ import org.hyperledger.besu.plugin.services.TransactionSelectionService;
 @AutoService(BesuPlugin.class)
 public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin {
   public static final String NAME = "linea";
-  private BesuContext besuContext;
+  private ServiceManager serviceManager;
   private TransactionSelectionService transactionSelectionService;
   private Optional<JsonRpcManager> rejectedTxJsonRpcManager = Optional.empty();
   private BesuConfiguration besuConfiguration;
 
   @Override
-  public void doRegister(final BesuContext context) {
-    besuContext = context;
+  public void doRegister(final ServiceManager serviceManager) {
+    this.serviceManager = serviceManager;
     transactionSelectionService =
-        context
+        serviceManager
             .getService(TransactionSelectionService.class)
             .orElseThrow(
                 () ->
                     new RuntimeException(
-                        "Failed to obtain TransactionSelectionService from the BesuContext."));
+                        "Failed to obtain TransactionSelectionService from the ServiceManager."));
 
     besuConfiguration =
-        context
+        serviceManager
             .getService(BesuConfiguration.class)
             .orElseThrow(
                 () ->
                     new RuntimeException(
-                        "Failed to obtain BesuConfiguration from the BesuContext."));
-
+                        "Failed to obtain BesuConfiguration from the ServiceManager."));
     metricCategoryRegistry.addMetricCategory(SEQUENCER_PROFITABILITY);
   }
 

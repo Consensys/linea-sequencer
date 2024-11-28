@@ -23,8 +23,8 @@ import com.google.auto.service.AutoService;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
-import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
+import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.data.AddedBlockContext;
 import org.hyperledger.besu.plugin.services.BesuEvents;
 import org.hyperledger.besu.plugin.services.BesuEvents.InitialSyncCompletionListener;
@@ -34,19 +34,19 @@ import org.hyperledger.besu.plugin.services.RpcEndpointService;
 @Slf4j
 @AutoService(BesuPlugin.class)
 public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
-  private BesuContext besuContext;
+  private ServiceManager serviceManager;
   private RpcEndpointService rpcEndpointService;
 
   @Override
-  public void doRegister(final BesuContext context) {
-    besuContext = context;
+  public void doRegister(final ServiceManager context) {
+    serviceManager = context;
     rpcEndpointService =
         context
             .getService(RpcEndpointService.class)
             .orElseThrow(
                 () ->
                     new RuntimeException(
-                        "Failed to obtain RpcEndpointService from the BesuContext."));
+                        "Failed to obtain RpcEndpointService from the ServiceManager."));
 
     metricCategoryRegistry.addMetricCategory(PRICING_CONF);
   }
@@ -61,10 +61,11 @@ public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
     super.start();
     if (profitabilityConfiguration().extraDataPricingEnabled()) {
       final var besuEventsService =
-          besuContext
+          serviceManager
               .getService(BesuEvents.class)
               .orElseThrow(
-                  () -> new RuntimeException("Failed to obtain BesuEvents from the BesuContext."));
+                  () ->
+                      new RuntimeException("Failed to obtain BesuEvents from the ServiceManager."));
 
       // assume that we are in sync by default to support reading extra data at genesis
       final AtomicBoolean inSync = new AtomicBoolean(true);
@@ -104,7 +105,7 @@ public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
 
   private void initMetrics(final LineaProfitabilityConfiguration lineaProfitabilityConfiguration) {
     final var confLabelledGauge =
-        metricsSystem.createLabelledGauge(
+        metricsSystem.createLabelledSuppliedGauge(
             PRICING_CONF, "values", "Profitability configuration values at runtime", "field");
     confLabelledGauge.labels(lineaProfitabilityConfiguration::fixedCostWei, "fixed_cost_wei");
     confLabelledGauge.labels(lineaProfitabilityConfiguration::variableCostWei, "variable_cost_wei");
