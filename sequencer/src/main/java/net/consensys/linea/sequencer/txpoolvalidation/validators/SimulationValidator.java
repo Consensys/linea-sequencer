@@ -110,7 +110,6 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
               "Invalid transaction"
                   + simulationResult.getInvalidReason().map(ir -> ": " + ir).orElse("");
           log.debug(errMsg);
-          reportRejectedTransaction(transaction, errMsg);
           return Optional.of(errMsg);
         }
       }

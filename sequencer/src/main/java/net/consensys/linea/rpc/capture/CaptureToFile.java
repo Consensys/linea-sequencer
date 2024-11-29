@@ -18,7 +18,7 @@ package net.consensys.linea.rpc.capture;
 import com.google.common.base.Stopwatch;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.blockcapture.BlockCapturer;
-import org.hyperledger.besu.plugin.BesuContext;
+import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.TraceService;
 import org.hyperledger.besu.plugin.services.rpc.PluginRpcRequest;
 
@@ -30,11 +30,11 @@ import org.hyperledger.besu.plugin.services.rpc.PluginRpcRequest;
  */
 @Slf4j
 public class CaptureToFile {
-  private final BesuContext besuContext;
+  private final ServiceManager serviceManager;
   private TraceService traceService;
 
-  public CaptureToFile(final BesuContext besuContext) {
-    this.besuContext = besuContext;
+  public CaptureToFile(final ServiceManager serviceManager) {
+    this.serviceManager = serviceManager;
   }
 
   public String getNamespace() {
@@ -76,7 +76,7 @@ public class CaptureToFile {
   }
 
   private TraceService getTraceService() {
-    return this.besuContext
+    return this.serviceManager
         .getService(TraceService.class)
         .orElseThrow(
             () ->

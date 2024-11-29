@@ -23,7 +23,7 @@ import com.google.common.cache.CacheBuilder;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.zktracer.ZkTracer;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.RpcErrorType;
-import org.hyperledger.besu.plugin.BesuContext;
+import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.TraceService;
 import org.hyperledger.besu.plugin.services.exception.PluginRpcEndpointException;
 import org.hyperledger.besu.plugin.services.rpc.PluginRpcRequest;
@@ -35,16 +35,16 @@ public class GenerateCountersV0 {
   static final Cache<Long, Map<String, Integer>> cache =
       CacheBuilder.newBuilder().maximumSize(CACHE_SIZE).build();
 
-  private final BesuContext besuContext;
+  private final ServiceManager serviceManager;
   private TraceService traceService;
 
   /**
    * Constructor for RollupGenerateCountersV0.
    *
-   * @param besuContext the BesuContext to be used.
+   * @param serviceManager the ServiceManager to be used.
    */
-  public GenerateCountersV0(final BesuContext besuContext) {
-    this.besuContext = besuContext;
+  public GenerateCountersV0(final ServiceManager serviceManager) {
+    this.serviceManager = serviceManager;
   }
 
   public String getNamespace() {
@@ -108,7 +108,7 @@ public class GenerateCountersV0 {
    * @return the initialized TraceService.
    */
   private TraceService initTraceService() {
-    return besuContext
+    return serviceManager
         .getService(TraceService.class)
         .orElseThrow(
             () ->

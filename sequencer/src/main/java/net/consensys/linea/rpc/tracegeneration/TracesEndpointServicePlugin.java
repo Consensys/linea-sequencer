@@ -18,8 +18,8 @@ package net.consensys.linea.rpc.tracegeneration;
 import com.google.auto.service.AutoService;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaSharedOptionsPlugin;
-import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
+import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.RpcEndpointService;
 
 /**
@@ -31,31 +31,31 @@ import org.hyperledger.besu.plugin.services.RpcEndpointService;
 @AutoService(BesuPlugin.class)
 @Slf4j
 public class TracesEndpointServicePlugin extends AbstractLineaSharedOptionsPlugin {
-  private BesuContext besuContext;
+  private ServiceManager serviceManager;
   private RpcEndpointService rpcEndpointService;
 
   /**
    * Register the RPC service.
    *
-   * @param context the BesuContext to be used.
+   * @param serviceManager the ServiceManager to be used.
    */
   @Override
-  public void register(final BesuContext context) {
-    super.register(context);
-    besuContext = context;
+  public void register(final ServiceManager serviceManager) {
+    super.register(serviceManager);
+    this.serviceManager = serviceManager;
     rpcEndpointService =
-        context
+        serviceManager
             .getService(RpcEndpointService.class)
             .orElseThrow(
                 () ->
                     new RuntimeException(
-                        "Failed to obtain RpcEndpointService from the BesuContext."));
+                        "Failed to obtain RpcEndpointService from the ServiceManager."));
   }
 
   @Override
   public void beforeExternalServices() {
     super.beforeExternalServices();
-    GenerateConflatedTracesV0 method = new GenerateConflatedTracesV0(besuContext);
+    GenerateConflatedTracesV0 method = new GenerateConflatedTracesV0(serviceManager);
 
     createAndRegister(method, rpcEndpointService);
   }

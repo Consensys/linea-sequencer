@@ -23,7 +23,7 @@ import com.google.common.base.Stopwatch;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.zktracer.ZkTracer;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.RpcErrorType;
-import org.hyperledger.besu.plugin.BesuContext;
+import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.TraceService;
 import org.hyperledger.besu.plugin.services.exception.PluginRpcEndpointException;
@@ -37,12 +37,12 @@ import org.hyperledger.besu.plugin.services.rpc.PluginRpcRequest;
  */
 @Slf4j
 public class GenerateConflatedTracesV0 {
-  private final BesuContext besuContext;
+  private final ServiceManager serviceManager;
   private Path tracesPath;
   private TraceService traceService;
 
-  public GenerateConflatedTracesV0(final BesuContext besuContext) {
-    this.besuContext = besuContext;
+  public GenerateConflatedTracesV0(final ServiceManager serviceManager) {
+    this.serviceManager = serviceManager;
   }
 
   public String getNamespace() {
@@ -93,7 +93,7 @@ public class GenerateConflatedTracesV0 {
   private Path getTracesPath() {
     final String envVar = System.getenv("TRACES_DIR");
     if (envVar == null) {
-      return this.besuContext
+      return this.serviceManager
           .getService(BesuConfiguration.class)
           .map(BesuConfiguration::getDataPath)
           .map(x -> x.resolve("traces"))
@@ -107,7 +107,7 @@ public class GenerateConflatedTracesV0 {
   }
 
   private TraceService getTraceService() {
-    return this.besuContext
+    return this.serviceManager
         .getService(TraceService.class)
         .orElseThrow(
             () ->
