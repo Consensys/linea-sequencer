@@ -3,8 +3,8 @@
 ## Shared components
 
 ### Profitability calculator
-The profitability calculator is a shared component, that is used to check if a tx is profitable.
-It's applied, with different configuration to:
+The profitability calculator is a shared component that is used to check if a tx is profitable.
+It's applied with different configuration to:
 1. `linea_estimateGas` endpoint
 2. Tx validation for the txpool (if tx profitability check is enabled)
 3. Tx selection during block creation

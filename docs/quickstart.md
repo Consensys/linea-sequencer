@@ -3,9 +3,9 @@
 - compile linea-plugins `gradlew installDist`
 - copy jar file to besu runtime plugins/ directory (where you will run Besu from, not where you're building Besu)
 - add `LINEA` to besu config to enable the plugin RPC methods
-  - rpc-http-api=\["ADMIN","ETH","NET","WEB3","LINEA"\]
+  - rpc-http-api=\["ADMIN", "ETH", "NET", "WEB3", "LINEA"\]
 - start besu (command line or from IDE) and you should see plugins registered at startup
-- call the RPC endpoint eg:
+- call the RPC endpoint e.g.:
 
 ```shell
   curl --location --request POST 'http://localhost:8545' --data-raw '{
@@ -33,9 +33,9 @@ Linux/MacOs
 Windows
 * Requirement [Docker Desktop WSL 2 backend on Windows](https://docs.docker.com/desktop/wsl/)
 
-On release native libs are built for all the supported platforms,
-if you want to test this process locally run `./gradlew -PreleaseNativeLibs jar`,
-jar is generated in `sequencer/build/libs`.
+On release, native libs are built for all the supported platforms,
+if you want to test this process locally, run `./gradlew -PreleaseNativeLibs jar`.
+The jar is generated in `sequencer/build/libs`.
 
 ### Run tests
 
