@@ -63,6 +63,7 @@ dependencies {
   testImplementation "${besuArtifactGroup}.internal:core"
   testImplementation "${besuArtifactGroup}.internal:dsl"
   testImplementation "${besuArtifactGroup}.internal:eth"
+  testImplementation "${besuArtifactGroup}.internal:metrics-core"
 
   testImplementation 'io.tmio:tuweni-bytes'
   testImplementation 'io.tmio:tuweni-units'
