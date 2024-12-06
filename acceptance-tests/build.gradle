@@ -56,8 +56,6 @@ dependencies {
   testImplementation project(":sequencer")
 
   testImplementation "${besuArtifactGroup}.internal:dsl"
-  testImplementation "${besuArtifactGroup}.internal:eth"
-  testImplementation "${besuArtifactGroup}.internal:metrics-core"
 
   testImplementation 'net.consensys.linea.zktracer:arithmetization'
 
