@@ -35,7 +35,7 @@ dependencies {
   compileOnly "${besuArtifactGroup}:besu-datatypes"
   compileOnly "${besuArtifactGroup}:evm"
   compileOnly "${besuArtifactGroup}:plugin-api"
-  compileOnly "${besuArtifactGroup}.internal:algorithms"
+  implementation "${besuArtifactGroup}.internal:algorithms"
   compileOnly "${besuArtifactGroup}.internal:api"
   compileOnly "${besuArtifactGroup}.internal:core"
   compileOnly "${besuArtifactGroup}.internal:rlp"
@@ -43,7 +43,7 @@ dependencies {
   compileOnly 'com.google.auto.service:auto-service'
   compileOnly 'com.google.auto.service:auto-service-annotations'
 
-  compileOnly 'info.picocli:picocli'
+  implementation 'info.picocli:picocli'
 
   compileOnly 'io.vertx:vertx-core'
 
