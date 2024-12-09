@@ -16,11 +16,11 @@
 package net.consensys.linea;
 
 import lombok.extern.slf4j.Slf4j;
-import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
+import org.hyperledger.besu.plugin.ServiceManager;
 
 @Slf4j
-public abstract class AbstractLineaRequiredPlugin extends AbstractLineaPrivateOptionsPlugin {
+public abstract class AbstractLineaRequiredPlugin extends AbstractLineaSharedPrivateOptionsPlugin {
 
   /**
    * Linea plugins extending this class will halt startup of Besu in case of exception during
@@ -28,15 +28,15 @@ public abstract class AbstractLineaRequiredPlugin extends AbstractLineaPrivateOp
    *
    * <p>If that's NOT desired, the plugin should implement {@link BesuPlugin} directly.
    *
-   * @param context
+   * @param serviceManager the ServiceManager to be used.
    */
   @Override
-  public void register(final BesuContext context) {
-    super.register(context);
+  public void register(final ServiceManager serviceManager) {
+    super.register(serviceManager);
     try {
-      log.info("Registering Linea plugin " + this.getClass().getName());
+      log.info("Registering Linea plugin {}", this.getClass().getName());
 
-      doRegister(context);
+      doRegister(serviceManager);
 
     } catch (Exception e) {
       log.error("Halting Besu startup: exception in plugin registration: ", e);
@@ -49,7 +49,7 @@ public abstract class AbstractLineaRequiredPlugin extends AbstractLineaPrivateOp
   /**
    * Linea plugins need to implement this method. Called by {@link BesuPlugin} register method
    *
-   * @param context
+   * @param serviceManager the ServiceManager to be used.
    */
-  public abstract void doRegister(final BesuContext context);
+  public abstract void doRegister(final ServiceManager serviceManager);
 }

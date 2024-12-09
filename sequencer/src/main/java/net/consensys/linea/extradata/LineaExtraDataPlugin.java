@@ -15,48 +15,40 @@
 
 package net.consensys.linea.extradata;
 
-import java.util.Optional;
+import static net.consensys.linea.metrics.LineaMetricCategory.PRICING_CONF;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.auto.service.AutoService;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
-import org.hyperledger.besu.plugin.BesuContext;
+import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import org.hyperledger.besu.plugin.BesuPlugin;
+import org.hyperledger.besu.plugin.ServiceManager;
+import org.hyperledger.besu.plugin.data.AddedBlockContext;
 import org.hyperledger.besu.plugin.services.BesuEvents;
-import org.hyperledger.besu.plugin.services.BlockchainService;
+import org.hyperledger.besu.plugin.services.BesuEvents.InitialSyncCompletionListener;
 import org.hyperledger.besu.plugin.services.RpcEndpointService;
 
 /** This plugin registers handlers that are activated when new blocks are imported */
 @Slf4j
 @AutoService(BesuPlugin.class)
 public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
-  public static final String NAME = "linea";
-  private BesuContext besuContext;
+  private ServiceManager serviceManager;
   private RpcEndpointService rpcEndpointService;
-  private BlockchainService blockchainService;
 
   @Override
-  public Optional<String> getName() {
-    return Optional.of(NAME);
-  }
-
-  @Override
-  public void doRegister(final BesuContext context) {
-    besuContext = context;
+  public void doRegister(final ServiceManager context) {
+    serviceManager = context;
     rpcEndpointService =
         context
             .getService(RpcEndpointService.class)
             .orElseThrow(
                 () ->
                     new RuntimeException(
-                        "Failed to obtain RpcEndpointService from the BesuContext."));
-    blockchainService =
-        context
-            .getService(BlockchainService.class)
-            .orElseThrow(
-                () ->
-                    new RuntimeException(
-                        "Failed to obtain BlockchainService from the BesuContext."));
+                        "Failed to obtain RpcEndpointService from the ServiceManager."));
+
+    metricCategoryRegistry.addMetricCategory(PRICING_CONF);
   }
 
   /**
@@ -68,43 +60,103 @@ public class LineaExtraDataPlugin extends AbstractLineaRequiredPlugin {
   public void start() {
     super.start();
     if (profitabilityConfiguration().extraDataPricingEnabled()) {
-      final var extraDataHandler =
-          new LineaExtraDataHandler(rpcEndpointService, profitabilityConfiguration());
+      final var besuEventsService =
+          serviceManager
+              .getService(BesuEvents.class)
+              .orElseThrow(
+                  () ->
+                      new RuntimeException("Failed to obtain BesuEvents from the ServiceManager."));
+
+      // assume that we are in sync by default to support reading extra data at genesis
+      final AtomicBoolean inSync = new AtomicBoolean(true);
+
+      besuEventsService.addSyncStatusListener(
+          maybeSyncStatus ->
+              inSync.set(
+                  maybeSyncStatus
+                      .map(
+                          syncStatus ->
+                              syncStatus.getHighestBlock() - syncStatus.getCurrentBlock() < 5)
+                      .orElse(true)));
+
+      // wait for the initial sync phase to complete before starting parsing extra data
+      // to avoid parsing errors
+      besuEventsService.addInitialSyncCompletionListener(
+          new InitialSyncCompletionListener() {
+            long blockAddedListenerId = -1;
+
+            @Override
+            public synchronized void onInitialSyncCompleted() {
+              blockAddedListenerId = enableExtraDataHandling(besuEventsService, inSync);
+            }
+
+            @Override
+            public synchronized void onInitialSyncRestart() {
+              besuEventsService.removeBlockAddedListener(blockAddedListenerId);
+              blockAddedListenerId = -1;
+            }
+          });
+    }
+
+    if (metricCategoryRegistry.isMetricCategoryEnabled(PRICING_CONF)) {
+      initMetrics(profitabilityConfiguration());
+    }
+  }
+
+  private void initMetrics(final LineaProfitabilityConfiguration lineaProfitabilityConfiguration) {
+    final var confLabelledGauge =
+        metricsSystem.createLabelledSuppliedGauge(
+            PRICING_CONF, "values", "Profitability configuration values at runtime", "field");
+    confLabelledGauge.labels(lineaProfitabilityConfiguration::fixedCostWei, "fixed_cost_wei");
+    confLabelledGauge.labels(lineaProfitabilityConfiguration::variableCostWei, "variable_cost_wei");
+    confLabelledGauge.labels(lineaProfitabilityConfiguration::ethGasPriceWei, "eth_gas_price_wei");
+  }
+
+  private long enableExtraDataHandling(
+      final BesuEvents besuEventsService, final AtomicBoolean inSync) {
+
+    final var extraDataHandler =
+        new LineaExtraDataHandler(rpcEndpointService, profitabilityConfiguration());
+
+    if (inSync.get()) {
       final var chainHeadHeader = blockchainService.getChainHeadHeader();
       final var initialExtraData = chainHeadHeader.getExtraData();
       try {
         extraDataHandler.handle(initialExtraData);
       } catch (final Exception e) {
-        log.warn(
+        // this could normally happen if for example the genesis block has not a valid extra data
+        // field so we keep this log at debug
+        log.debug(
             "Failed setting initial pricing conf from extra data field ({}) of the chain head block {}({})",
             initialExtraData,
             chainHeadHeader.getNumber(),
             chainHeadHeader.getBlockHash(),
             e);
       }
+    }
 
-      final var besuEventsService =
-          besuContext
-              .getService(BesuEvents.class)
-              .orElseThrow(
-                  () -> new RuntimeException("Failed to obtain BesuEvents from the BesuContext."));
+    return besuEventsService.addBlockAddedListener(
+        addedBlockContext -> {
+          if (inSync.get()) {
+            processNewBlock(extraDataHandler, addedBlockContext);
+          }
+        });
+  }
 
-      besuEventsService.addBlockAddedListener(
-          addedBlockContext -> {
-            final var importedBlockHeader = addedBlockContext.getBlockHeader();
-            final var latestExtraData = importedBlockHeader.getExtraData();
+  private void processNewBlock(
+      final LineaExtraDataHandler extraDataHandler, final AddedBlockContext addedBlockContext) {
+    final var importedBlockHeader = addedBlockContext.getBlockHeader();
+    final var latestExtraData = importedBlockHeader.getExtraData();
 
-            try {
-              extraDataHandler.handle(latestExtraData);
-            } catch (final Exception e) {
-              log.warn(
-                  "Failed setting pricing conf from extra data field ({}) of latest imported block {}({})",
-                  latestExtraData,
-                  importedBlockHeader.getNumber(),
-                  importedBlockHeader.getBlockHash(),
-                  e);
-            }
-          });
+    try {
+      extraDataHandler.handle(latestExtraData);
+    } catch (final Exception e) {
+      log.warn(
+          "Failed setting pricing conf from extra data field ({}) of latest imported block {}({})",
+          latestExtraData,
+          importedBlockHeader.getNumber(),
+          importedBlockHeader.getBlockHash(),
+          e);
     }
   }
 }

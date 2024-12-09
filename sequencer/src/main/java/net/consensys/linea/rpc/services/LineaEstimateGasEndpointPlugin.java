@@ -21,10 +21,9 @@ import com.google.auto.service.AutoService;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.rpc.methods.LineaEstimateGas;
-import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
+import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
-import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.RpcEndpointService;
 import org.hyperledger.besu.plugin.services.TransactionSimulationService;
 
@@ -35,47 +34,38 @@ public class LineaEstimateGasEndpointPlugin extends AbstractLineaRequiredPlugin 
   private BesuConfiguration besuConfiguration;
   private RpcEndpointService rpcEndpointService;
   private TransactionSimulationService transactionSimulationService;
-  private BlockchainService blockchainService;
   private LineaEstimateGas lineaEstimateGasMethod;
 
   /**
    * Register the RPC service.
    *
-   * @param context the BesuContext to be used.
+   * @param serviceManager the BesuContext to be used.
    */
   @Override
-  public void doRegister(final BesuContext context) {
+  public void doRegister(final ServiceManager serviceManager) {
     besuConfiguration =
-        context
+        serviceManager
             .getService(BesuConfiguration.class)
             .orElseThrow(
                 () ->
                     new RuntimeException(
-                        "Failed to obtain BesuConfiguration from the BesuContext."));
+                        "Failed to obtain BesuConfiguration from the ServiceManager."));
 
     rpcEndpointService =
-        context
+        serviceManager
             .getService(RpcEndpointService.class)
             .orElseThrow(
                 () ->
                     new RuntimeException(
-                        "Failed to obtain RpcEndpointService from the BesuContext."));
+                        "Failed to obtain RpcEndpointService from the ServiceManager."));
 
     transactionSimulationService =
-        context
+        serviceManager
             .getService(TransactionSimulationService.class)
             .orElseThrow(
                 () ->
                     new RuntimeException(
-                        "Failed to obtain TransactionSimulatorService from the BesuContext."));
-
-    blockchainService =
-        context
-            .getService(BlockchainService.class)
-            .orElseThrow(
-                () ->
-                    new RuntimeException(
-                        "Failed to obtain BlockchainService from the BesuContext."));
+                        "Failed to obtain TransactionSimulatorService from the ServiceManager."));
 
     lineaEstimateGasMethod =
         new LineaEstimateGas(

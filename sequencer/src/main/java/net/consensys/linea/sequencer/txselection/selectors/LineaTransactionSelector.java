@@ -14,10 +14,15 @@
  */
 package net.consensys.linea.sequencer.txselection.selectors;
 
+import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_MODULE_LINE_COUNT_OVERFLOW;
+import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_MODULE_LINE_COUNT_OVERFLOW_CACHED;
+
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
@@ -25,6 +30,7 @@ import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
 import net.consensys.linea.jsonrpc.JsonRpcRequestBuilder;
+import net.consensys.linea.metrics.HistogramMetrics;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
@@ -41,6 +47,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
   private TraceLineLimitTransactionSelector traceLineLimitTransactionSelector;
   private final List<PluginTransactionSelector> selectors;
   private final Optional<JsonRpcManager> rejectedTxJsonRpcManager;
+  private final Set<String> rejectedTransactionReasonsMap = new HashSet<>();
 
   public LineaTransactionSelector(
       final BlockchainService blockchainService,
@@ -49,8 +56,16 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       final LineaProfitabilityConfiguration profitabilityConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
       final Map<String, Integer> limitsMap,
-      final Optional<JsonRpcManager> rejectedTxJsonRpcManager) {
+      final Optional<JsonRpcManager> rejectedTxJsonRpcManager,
+      final Optional<HistogramMetrics> maybeProfitabilityMetrics) {
     this.rejectedTxJsonRpcManager = rejectedTxJsonRpcManager;
+
+    // only report rejected transaction selection result from TraceLineLimitTransactionSelector
+    if (rejectedTxJsonRpcManager.isPresent()) {
+      rejectedTransactionReasonsMap.add(TX_MODULE_LINE_COUNT_OVERFLOW.toString());
+      rejectedTransactionReasonsMap.add(TX_MODULE_LINE_COUNT_OVERFLOW_CACHED.toString());
+    }
+
     selectors =
         createTransactionSelectors(
             blockchainService,
@@ -58,7 +73,8 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
             l1L2BridgeConfiguration,
             profitabilityConfiguration,
             tracerConfiguration,
-            limitsMap);
+            limitsMap,
+            maybeProfitabilityMetrics);
   }
 
   /**
@@ -68,6 +84,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
    * @param txSelectorConfiguration The configuration to use.
    * @param profitabilityConfiguration The profitability configuration.
    * @param limitsMap The limits map.
+   * @param maybeProfitabilityMetrics The optional profitability metrics
    * @return A list of selectors.
    */
   private List<PluginTransactionSelector> createTransactionSelectors(
@@ -76,17 +93,25 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
       final LineaProfitabilityConfiguration profitabilityConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
-      final Map<String, Integer> limitsMap) {
+      final Map<String, Integer> limitsMap,
+      final Optional<HistogramMetrics> maybeProfitabilityMetrics) {
 
     traceLineLimitTransactionSelector =
         new TraceLineLimitTransactionSelector(
-            limitsMap, txSelectorConfiguration, l1L2BridgeConfiguration, tracerConfiguration);
+            blockchainService.getChainId().get(),
+            limitsMap,
+            txSelectorConfiguration,
+            l1L2BridgeConfiguration,
+            tracerConfiguration);
 
     return List.of(
         new MaxBlockCallDataTransactionSelector(txSelectorConfiguration.maxBlockCallDataSize()),
         new MaxBlockGasTransactionSelector(txSelectorConfiguration.maxGasPerBlock()),
         new ProfitableTransactionSelector(
-            blockchainService, txSelectorConfiguration, profitabilityConfiguration),
+            blockchainService,
+            txSelectorConfiguration,
+            profitabilityConfiguration,
+            maybeProfitabilityMetrics),
         traceLineLimitTransactionSelector);
   }
 
@@ -159,7 +184,8 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
 
     rejectedTxJsonRpcManager.ifPresent(
         jsonRpcManager -> {
-          if (transactionSelectionResult.discard()) {
+          if (transactionSelectionResult.discard()
+              && rejectedTransactionReasonsMap.contains(transactionSelectionResult.toString())) {
             jsonRpcManager.submitNewJsonRpcCallAsync(
                 JsonRpcRequestBuilder.generateSaveRejectedTxJsonRpc(
                     jsonRpcManager.getNodeType(),

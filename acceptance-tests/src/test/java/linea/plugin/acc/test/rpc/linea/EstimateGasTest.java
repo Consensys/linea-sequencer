@@ -24,7 +24,9 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import linea.plugin.acc.test.LineaPluginTestBase;
@@ -205,6 +207,39 @@ public class EstimateGasTest extends LineaPluginTestBase {
   }
 
   @Test
+  public void passingStateOverridesWorks() {
+
+    final Account sender = accounts.getSecondaryBenefactor();
+
+    final var actualBalance = minerNode.execute(ethTransactions.getBalance(sender));
+
+    assertThat(actualBalance).isGreaterThan(BigInteger.ONE);
+
+    final CallParams callParams =
+        new CallParams(
+            "0x539",
+            sender.getAddress(),
+            sender.getAddress(),
+            "1",
+            Bytes.EMPTY.toHexString(),
+            "0",
+            "0x1234",
+            null,
+            null);
+
+    final var zeroBalance = Map.of("balance", Wei.ZERO.toHexString());
+
+    final var stateOverrides = Map.of(accounts.getSecondaryBenefactor().getAddress(), zeroBalance);
+
+    final var reqLinea = new LineaEstimateGasRequest(callParams, stateOverrides);
+    final var respLinea = reqLinea.execute(minerNode.nodeRequests());
+    assertThat(respLinea.hasError()).isTrue();
+    assertThat(respLinea.getError().getMessage())
+        .isEqualTo(
+            "transaction up-front cost 0x208cbab601 exceeds transaction sender account balance 0x0");
+  }
+
+  @Test
   public void lineaEstimateGasIsProfitable() {
 
     final Account sender = accounts.getSecondaryBenefactor();
@@ -368,9 +403,16 @@ public class EstimateGasTest extends LineaPluginTestBase {
   static class LineaEstimateGasRequest
       implements Transaction<LineaEstimateGasRequest.LineaEstimateGasResponse> {
     private final CallParams callParams;
+    private final Map<String, Map<String, String>> stateOverrides;
 
     public LineaEstimateGasRequest(final CallParams callParams) {
+      this(callParams, null);
+    }
+
+    public LineaEstimateGasRequest(
+        final CallParams callParams, final Map<String, Map<String, String>> stateOverrides) {
       this.callParams = callParams;
+      this.stateOverrides = stateOverrides;
     }
 
     @Override
@@ -378,7 +420,7 @@ public class EstimateGasTest extends LineaPluginTestBase {
       try {
         return new Request<>(
                 "linea_estimateGas",
-                List.of(callParams),
+                Arrays.asList(callParams, stateOverrides),
                 nodeRequests.getWeb3jService(),
                 LineaEstimateGasResponse.class)
             .send();
@@ -456,4 +498,6 @@ public class EstimateGasTest extends LineaPluginTestBase {
       String gasPrice,
       String maxFeePerGas,
       String maxPriorityFeePerGas) {}
+
+  record StateOverride(String account, String balance) {}
 }
