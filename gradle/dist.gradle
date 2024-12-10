@@ -30,15 +30,6 @@ version = project.hasProperty('releaseVersion') ? project.getProperty('releaseVe
 jar {
   archiveBaseName = distributionIdentifier
 
-  manifest {
-    attributes(
-      'Specification-Title': archiveBaseName.get(),
-      'Specification-Version': rootProject.version,
-      'Implementation-Title': archiveBaseName.get(),
-      'Implementation-Version': calculateVersion()
-    )
-  }
-
  from {
     configurations.runtimeClasspath.filter( {! (it.name =~ /log4j.*\.jar/ )} )
             .collect {it.isDirectory() ? it : zipTree(it) }
