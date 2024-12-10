@@ -88,8 +88,7 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
 
       final var zkTracer = createZkTracer(chainHeadHeader);
       final var maybeSimulationResults =
-          transactionSimulationService.simulate(
-              transaction, chainHeadHeader.getBlockHash(), zkTracer, true);
+          transactionSimulationService.simulate(transaction, Optional.empty(), zkTracer, true);
 
       ModuleLimitsValidationResult moduleLimitResult =
           moduleLineCountValidator.validate(zkTracer.getModulesLineCount());
