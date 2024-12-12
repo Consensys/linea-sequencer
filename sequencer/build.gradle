@@ -15,11 +15,12 @@
 
 plugins {
   id 'java'
+  id 'java-library-distribution'
   id 'common-plugins'
+  id 'de.undercouch.download'
 }
 
 group = 'net.consensys.linea.besu.plugin'
-version = rootProject.version
 
 apply from: rootProject.file("gradle/java.gradle")
 apply from: rootProject.file("gradle/dependency-management.gradle")
@@ -46,11 +47,11 @@ dependencies {
 
   implementation 'com.google.code.gson:gson'
 
-  implementation 'info.picocli:picocli'
-
   implementation 'io.tmio:tuweni-bytes'
   implementation 'io.tmio:tuweni-units'
   implementation 'io.tmio:tuweni-toml'
+
+  implementation 'info.picocli:picocli'
 
   implementation 'net.consensys.linea.zktracer:arithmetization'
 
@@ -58,19 +59,7 @@ dependencies {
 
   testImplementation "${besuArtifactGroup}.internal:besu"
 
-
-
   testImplementation 'org.awaitility:awaitility'
 }
 
-configurations {
-  installedJars {
-    transitive = false
-  }
-}
-
 apply from: rootProject.file("gradle/dist.gradle")
-
-jar {
-  zip64=true
-}
