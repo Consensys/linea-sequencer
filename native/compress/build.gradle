@@ -23,10 +23,7 @@ apply from: rootProject.file("gradle/dependency-management.gradle")
 apply from: rootProject.file('gradle/common-dependencies.gradle')
 apply from: rootProject.file("gradle/build-aliases.gradle")
 apply from: rootProject.file("gradle/lint.gradle")
-
-test {
-  useJUnitPlatform()
-}
+apply from: rootProject.file("gradle/tests.gradle")
 
 tasks.register('buildJNI', Exec) {
   if(project.hasProperty("releaseNativeLibs")) {
@@ -86,5 +83,3 @@ jar {
   version = calculateVersion()
   includeEmptyDirs = false
 }
-
-jar.dependsOn(buildJNI)
