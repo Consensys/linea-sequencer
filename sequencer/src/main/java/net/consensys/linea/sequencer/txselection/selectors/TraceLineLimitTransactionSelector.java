@@ -62,7 +62,6 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
   private final Map<String, Integer> moduleLimits;
   private final int overLimitCacheSize;
   private final ModuleLineCountValidator moduleLineCountAccumulator;
-  private Map<String, Integer> currCumulatedLineCount;
 
   public TraceLineLimitTransactionSelector(
       final BigInteger chainId,
@@ -116,6 +115,8 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
   public void onTransactionNotSelected(
       final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
       final TransactionSelectionResult transactionSelectionResult) {
+    moduleLineCountAccumulator.discard(
+        evaluationContext.getPendingTransaction().getTransaction().getHash());
     zkTracer.popTransaction(evaluationContext.getPendingTransaction());
   }
 
@@ -123,7 +124,8 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
   public void onTransactionSelected(
       final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
       final TransactionProcessingResult processingResult) {
-    moduleLineCountAccumulator.updateAccumulatedLineCounts(currCumulatedLineCount);
+    moduleLineCountAccumulator.confirm(
+        evaluationContext.getPendingTransaction().getTransaction().getHash());
   }
 
   /**
@@ -141,12 +143,12 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
       final TransactionProcessingResult processingResult) {
 
     // check that we are not exceeding line number for any module
-    currCumulatedLineCount = zkTracer.getModulesLineCount();
+    final Map<String, Integer> currCumulatedLineCount = zkTracer.getModulesLineCount();
     final Transaction transaction = evaluationContext.getPendingTransaction().getTransaction();
     log.atTrace()
         .setMessage("Tx {} line count per module: {}")
         .addArgument(transaction::getHash)
-        .addArgument(this::logTxLineCount)
+        .addArgument(() -> logTxLineCount(currCumulatedLineCount))
         .log();
 
     ModuleLimitsValidationResult result =
@@ -178,6 +180,11 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
       default:
         break;
     }
+    // optimistically append to the accumulator, will be reverted in case the tx is not selected for
+    // other reasons
+    moduleLineCountAccumulator.appendAccumulatedLineCounts(
+        transaction.getHash(), currCumulatedLineCount);
+
     return SELECTED;
   }
 
@@ -201,7 +208,7 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
         .log();
   }
 
-  private String logTxLineCount() {
+  private String logTxLineCount(final Map<String, Integer> currCumulatedLineCount) {
     return currCumulatedLineCount.entrySet().stream()
         .map(
             e ->
@@ -210,7 +217,7 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
                     + "="
                     + (e.getValue()
                         - moduleLineCountAccumulator
-                            .getAccumulatedLineCountsPerModule()
+                            .getLastAccumulatedLineCountsPerModule()
                             .getOrDefault(e.getKey(), 0))
                     + "/"
                     + e.getValue()
@@ -234,7 +241,10 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
           .addKeyValue(
               "traceCounts",
               () ->
-                  moduleLineCountAccumulator.getAccumulatedLineCountsPerModule().entrySet().stream()
+                  moduleLineCountAccumulator
+                      .getConfirmedAccumulatedLineCountsPerModule()
+                      .entrySet()
+                      .stream()
                       .sorted(Map.Entry.comparingByKey())
                       .map(e -> '"' + e.getKey() + "\":" + e.getValue())
                       .collect(Collectors.joining(",")))
