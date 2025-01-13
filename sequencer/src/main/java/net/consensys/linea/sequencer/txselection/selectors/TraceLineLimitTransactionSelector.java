@@ -23,6 +23,7 @@ import java.math.BigInteger;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -62,6 +63,7 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
   private final Map<String, Integer> moduleLimits;
   private final int overLimitCacheSize;
   private final ModuleLineCountValidator moduleLineCountAccumulator;
+  private final PendingSelectionState<Map<String, Integer>> pendingCumulativeLineCounts;
 
   public TraceLineLimitTransactionSelector(
       final BigInteger chainId,
@@ -78,6 +80,10 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
     this.moduleLimits = moduleLimits;
     this.limitFilePath = tracerConfiguration.moduleLimitsFilePath();
     this.overLimitCacheSize = txSelectorConfiguration.overLinesLimitCacheSize();
+    this.pendingCumulativeLineCounts =
+        new PendingSelectionState<>(
+            moduleLimits.keySet().stream()
+                .collect(Collectors.toMap(Function.identity(), unused -> 0)));
 
     zkTracer = new ZkTracerWithLog(l1L2BridgeConfiguration);
     for (Module m : zkTracer.getHub().getModulesToCount()) {
@@ -115,7 +121,7 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
   public void onTransactionNotSelected(
       final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
       final TransactionSelectionResult transactionSelectionResult) {
-    moduleLineCountAccumulator.discard(
+    pendingCumulativeLineCounts.discard(
         evaluationContext.getPendingTransaction().getTransaction().getHash());
     zkTracer.popTransaction(evaluationContext.getPendingTransaction());
   }
@@ -124,7 +130,7 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
   public void onTransactionSelected(
       final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
       final TransactionProcessingResult processingResult) {
-    moduleLineCountAccumulator.confirm(
+    pendingCumulativeLineCounts.confirm(
         evaluationContext.getPendingTransaction().getTransaction().getHash());
   }
 
@@ -152,7 +158,8 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
         .log();
 
     ModuleLimitsValidationResult result =
-        moduleLineCountAccumulator.validate(currCumulatedLineCount);
+        moduleLineCountAccumulator.validate(
+            currCumulatedLineCount, pendingCumulativeLineCounts.getLast());
 
     switch (result.getResult()) {
       case MODULE_NOT_DEFINED:
@@ -182,8 +189,7 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
     }
     // optimistically append to the accumulator, will be reverted in case the tx is not selected for
     // other reasons
-    moduleLineCountAccumulator.appendAccumulatedLineCounts(
-        transaction.getHash(), currCumulatedLineCount);
+    pendingCumulativeLineCounts.appendUnconfirmed(transaction.getHash(), currCumulatedLineCount);
 
     return SELECTED;
   }
@@ -216,9 +222,7 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
                 e.getKey()
                     + "="
                     + (e.getValue()
-                        - moduleLineCountAccumulator
-                            .getLastAccumulatedLineCountsPerModule()
-                            .getOrDefault(e.getKey(), 0))
+                        - pendingCumulativeLineCounts.getLast().getOrDefault(e.getKey(), 0))
                     + "/"
                     + e.getValue()
                     + "/"
@@ -241,10 +245,7 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
           .addKeyValue(
               "traceCounts",
               () ->
-                  moduleLineCountAccumulator
-                      .getConfirmedAccumulatedLineCountsPerModule()
-                      .entrySet()
-                      .stream()
+                  pendingCumulativeLineCounts.getConfirmed().entrySet().stream()
                       .sorted(Map.Entry.comparingByKey())
                       .map(e -> '"' + e.getKey() + "\":" + e.getValue())
                       .collect(Collectors.joining(",")))

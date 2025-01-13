@@ -38,7 +38,8 @@ import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationCon
 public class MaxBlockGasTransactionSelector implements PluginTransactionSelector {
 
   private final long maxGasPerBlock;
-  private long cumulativeBlockGasUsed;
+  private final PendingSelectionState<Long> pendingCumulativeBlockGasUsed =
+      new PendingSelectionState<>(0L);
 
   /**
    * Evaluates a transaction post-processing. Checks if adding the gas used of the transaction, to
@@ -70,27 +71,25 @@ public class MaxBlockGasTransactionSelector implements PluginTransactionSelector
       return TX_GAS_EXCEEDS_USER_MAX_BLOCK_GAS;
     }
 
-    if (isTransactionExceedingMaxBlockGasLimit(gasUsedByTransaction)) {
+    final long newCumulativeBlockGasUsed =
+        Math.addExact(pendingCumulativeBlockGasUsed.getLast(), gasUsedByTransaction);
+
+    if (newCumulativeBlockGasUsed > maxGasPerBlock) {
       log.atTrace()
           .setMessage(
               "Not selecting transaction {}, its cumulative block gas used {} greater than max user gas per block {},"
                   + " skipping it")
           .addArgument(transaction::getHash)
-          .addArgument(cumulativeBlockGasUsed)
+          .addArgument(newCumulativeBlockGasUsed)
           .addArgument(maxGasPerBlock)
           .log();
       return TX_TOO_LARGE_FOR_REMAINING_USER_GAS;
     }
-    return SELECTED;
-  }
 
-  private boolean isTransactionExceedingMaxBlockGasLimit(long transactionGasUsed) {
-    try {
-      return Math.addExact(cumulativeBlockGasUsed, transactionGasUsed) > maxGasPerBlock;
-    } catch (final ArithmeticException e) {
-      // Overflow won't occur as cumulativeBlockGasUsed won't exceed Long.MAX_VALUE
-      return true;
-    }
+    pendingCumulativeBlockGasUsed.appendUnconfirmed(
+        transaction.getHash(), newCumulativeBlockGasUsed);
+
+    return SELECTED;
   }
 
   /**
@@ -104,8 +103,16 @@ public class MaxBlockGasTransactionSelector implements PluginTransactionSelector
   public void onTransactionSelected(
       final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
       final TransactionProcessingResult processingResult) {
-    cumulativeBlockGasUsed =
-        Math.addExact(cumulativeBlockGasUsed, processingResult.getEstimateGasUsedByTransaction());
+    pendingCumulativeBlockGasUsed.confirm(
+        evaluationContext.getPendingTransaction().getTransaction().getHash());
+  }
+
+  @Override
+  public void onTransactionNotSelected(
+      final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
+      final TransactionSelectionResult transactionSelectionResult) {
+    pendingCumulativeBlockGasUsed.discard(
+        evaluationContext.getPendingTransaction().getTransaction().getHash());
   }
 
   @Override

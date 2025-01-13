@@ -21,6 +21,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
+import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
@@ -34,6 +36,7 @@ public class MaxBlockCallDataSizeTransactionSelectorTest {
   private static final int BLOCK_CALL_DATA_MAX_SIZE = 100;
   private static final int BLOCK_CALL_DATA_HALF_SIZE = 50;
   private static final int TX_CALL_DATA_SIZE = BLOCK_CALL_DATA_HALF_SIZE + 1;
+  private static int seq = 1;
   private PluginTransactionSelector transactionSelector;
 
   @BeforeEach
@@ -102,6 +105,7 @@ public class MaxBlockCallDataSizeTransactionSelectorTest {
     Transaction transaction = mock(Transaction.class);
     when(pendingTransaction.getTransaction()).thenReturn(transaction);
     when(transaction.getPayload()).thenReturn(Bytes.repeat((byte) 1, size));
+    when(transaction.getHash()).thenReturn(Hash.wrap(Bytes32.repeat((byte)seq++)));
     return new TestTransactionEvaluationContext(
         mock(ProcessableBlockHeader.class), pendingTransaction);
   }
