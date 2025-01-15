@@ -17,13 +17,13 @@ package net.consensys.linea.sequencer.txselection.selectors;
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.BLOCK_CALLDATA_OVERFLOW;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
-import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
+import org.hyperledger.besu.plugin.services.txselection.AbstractPluginTransactionSelector;
+import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager;
 import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationContext;
 
 /**
@@ -32,12 +32,19 @@ import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationCon
  * pushes the call data size of the block over the limit.
  */
 @Slf4j
-@RequiredArgsConstructor
-public class MaxBlockCallDataTransactionSelector implements PluginTransactionSelector {
+public class MaxBlockCallDataTransactionSelector
+    extends AbstractPluginTransactionSelector<Integer> {
 
   private final int maxBlockCallDataSize;
-  private final PendingSelectionState<Integer> pendingCumulativeBlockCallDataSize =
-      new PendingSelectionState<>(0);
+
+  //  private final PendingSelectionState<Integer> pendingCumulativeBlockCallDataSize =
+  //      new PendingSelectionState<>(0);
+
+  public MaxBlockCallDataTransactionSelector(
+      final SelectorsStateManager stateManager, final int maxBlockCallDataSize) {
+    super(stateManager, 0);
+    this.maxBlockCallDataSize = maxBlockCallDataSize;
+  }
 
   /**
    * Evaluates a transaction before processing. Checks if adding the transaction to the block pushes
@@ -53,8 +60,7 @@ public class MaxBlockCallDataTransactionSelector implements PluginTransactionSel
 
     final Transaction transaction = evaluationContext.getPendingTransaction().getTransaction();
     final int transactionCallDataSize = transaction.getPayload().size();
-    final int newCumulativeBlockCallDataSize =
-        Math.addExact(pendingCumulativeBlockCallDataSize.getLast(), transactionCallDataSize);
+    final int newCumulativeBlockCallDataSize = Math.addExact(getState(), transactionCallDataSize);
 
     if (newCumulativeBlockCallDataSize > maxBlockCallDataSize) {
       log.atTrace()
@@ -73,33 +79,9 @@ public class MaxBlockCallDataTransactionSelector implements PluginTransactionSel
         .addArgument(newCumulativeBlockCallDataSize)
         .log();
 
-    pendingCumulativeBlockCallDataSize.appendUnconfirmed(
-        transaction.getHash(), newCumulativeBlockCallDataSize);
+    updateState(newCumulativeBlockCallDataSize);
 
     return SELECTED;
-  }
-
-  /**
-   * Updates the confirmed call data size of all transactions in a block when a transaction is
-   * selected.
-   *
-   * @param evaluationContext The evaluation context of the selected transaction
-   * @param transactionProcessingResult The processing result of the selected transaction
-   */
-  @Override
-  public void onTransactionSelected(
-      final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
-      final TransactionProcessingResult transactionProcessingResult) {
-    pendingCumulativeBlockCallDataSize.confirm(
-        evaluationContext.getPendingTransaction().getTransaction().getHash());
-  }
-
-  @Override
-  public void onTransactionNotSelected(
-      final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
-      final TransactionSelectionResult transactionSelectionResult) {
-    pendingCumulativeBlockCallDataSize.discard(
-        evaluationContext.getPendingTransaction().getTransaction().getHash());
   }
 
   /**

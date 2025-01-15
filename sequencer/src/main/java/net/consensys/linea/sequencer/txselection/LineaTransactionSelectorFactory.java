@@ -28,6 +28,7 @@ import net.consensys.linea.sequencer.txselection.selectors.LineaTransactionSelec
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelectorFactory;
+import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager;
 
 /**
  * Represents a factory for creating transaction selectors. Note that a new instance of the
@@ -66,6 +67,21 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
   @Override
   public PluginTransactionSelector create() {
     return new LineaTransactionSelector(
+        new SelectorsStateManager(),
+        blockchainService,
+        txSelectorConfiguration,
+        l1L2BridgeConfiguration,
+        profitabilityConfiguration,
+        tracerConfiguration,
+        limitsMap,
+        rejectedTxJsonRpcManager,
+        maybeProfitabilityMetrics);
+  }
+
+  @Override
+  public PluginTransactionSelector create(final SelectorsStateManager selectorsStateManager) {
+    return new LineaTransactionSelector(
+        selectorsStateManager,
         blockchainService,
         txSelectorConfiguration,
         l1L2BridgeConfiguration,

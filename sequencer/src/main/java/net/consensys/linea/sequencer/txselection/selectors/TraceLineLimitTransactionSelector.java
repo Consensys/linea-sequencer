@@ -43,7 +43,8 @@ import org.hyperledger.besu.plugin.data.BlockHeader;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.tracer.BlockAwareOperationTracer;
-import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
+import org.hyperledger.besu.plugin.services.txselection.AbstractPluginTransactionSelector;
+import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager;
 import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationContext;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
@@ -54,7 +55,8 @@ import org.slf4j.MarkerFactory;
  * adding a transaction to the block pushes the trace lines for a module over the limit.
  */
 @Slf4j
-public class TraceLineLimitTransactionSelector implements PluginTransactionSelector {
+public class TraceLineLimitTransactionSelector
+    extends AbstractPluginTransactionSelector<Map<String, Integer>> {
   private static final Marker BLOCK_LINE_COUNT_MARKER = MarkerFactory.getMarker("BLOCK_LINE_COUNT");
   @VisibleForTesting protected static Set<Hash> overLineCountLimitCache = new LinkedHashSet<>();
   private final ZkTracer zkTracer;
@@ -63,14 +65,19 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
   private final Map<String, Integer> moduleLimits;
   private final int overLimitCacheSize;
   private final ModuleLineCountValidator moduleLineCountAccumulator;
-  private final PendingSelectionState<Map<String, Integer>> pendingCumulativeLineCounts;
+
+  //  private final PendingSelectionState<Map<String, Integer>> pendingCumulativeLineCounts;
 
   public TraceLineLimitTransactionSelector(
+      final SelectorsStateManager stateManager,
       final BigInteger chainId,
       final Map<String, Integer> moduleLimits,
       final LineaTransactionSelectorConfiguration txSelectorConfiguration,
       final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
       final LineaTracerConfiguration tracerConfiguration) {
+    super(
+        stateManager,
+        moduleLimits.keySet().stream().collect(Collectors.toMap(Function.identity(), unused -> 0)));
     if (l1L2BridgeConfiguration.isEmpty()) {
       log.error("L1L2 bridge settings have not been defined.");
       System.exit(1);
@@ -80,10 +87,10 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
     this.moduleLimits = moduleLimits;
     this.limitFilePath = tracerConfiguration.moduleLimitsFilePath();
     this.overLimitCacheSize = txSelectorConfiguration.overLinesLimitCacheSize();
-    this.pendingCumulativeLineCounts =
-        new PendingSelectionState<>(
-            moduleLimits.keySet().stream()
-                .collect(Collectors.toMap(Function.identity(), unused -> 0)));
+    //    this.pendingCumulativeLineCounts =
+    //        new PendingSelectionState<>(
+    //            moduleLimits.keySet().stream()
+    //                .collect(Collectors.toMap(Function.identity(), unused -> 0)));
 
     zkTracer = new ZkTracerWithLog(l1L2BridgeConfiguration);
     for (Module m : zkTracer.getHub().getModulesToCount()) {
@@ -121,17 +128,7 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
   public void onTransactionNotSelected(
       final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
       final TransactionSelectionResult transactionSelectionResult) {
-    pendingCumulativeLineCounts.discard(
-        evaluationContext.getPendingTransaction().getTransaction().getHash());
     zkTracer.popTransaction(evaluationContext.getPendingTransaction());
-  }
-
-  @Override
-  public void onTransactionSelected(
-      final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
-      final TransactionProcessingResult processingResult) {
-    pendingCumulativeLineCounts.confirm(
-        evaluationContext.getPendingTransaction().getTransaction().getHash());
   }
 
   /**
@@ -158,8 +155,7 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
         .log();
 
     ModuleLimitsValidationResult result =
-        moduleLineCountAccumulator.validate(
-            currCumulatedLineCount, pendingCumulativeLineCounts.getLast());
+        moduleLineCountAccumulator.validate(currCumulatedLineCount, getState());
 
     switch (result.getResult()) {
       case MODULE_NOT_DEFINED:
@@ -187,9 +183,8 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
       default:
         break;
     }
-    // optimistically append to the accumulator, will be reverted in case the tx is not selected for
-    // other reasons
-    pendingCumulativeLineCounts.appendUnconfirmed(transaction.getHash(), currCumulatedLineCount);
+
+    updateState(currCumulatedLineCount);
 
     return SELECTED;
   }
@@ -221,8 +216,7 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
                 // tx line count / cumulated line count / line count limit
                 e.getKey()
                     + "="
-                    + (e.getValue()
-                        - pendingCumulativeLineCounts.getLast().getOrDefault(e.getKey(), 0))
+                    + (e.getValue() - getState().getOrDefault(e.getKey(), 0))
                     + "/"
                     + e.getValue()
                     + "/"
@@ -245,7 +239,7 @@ public class TraceLineLimitTransactionSelector implements PluginTransactionSelec
           .addKeyValue(
               "traceCounts",
               () ->
-                  pendingCumulativeLineCounts.getConfirmed().entrySet().stream()
+                  getConfirmedState().entrySet().stream()
                       .sorted(Map.Entry.comparingByKey())
                       .map(e -> '"' + e.getKey() + "\":" + e.getValue())
                       .collect(Collectors.joining(",")))

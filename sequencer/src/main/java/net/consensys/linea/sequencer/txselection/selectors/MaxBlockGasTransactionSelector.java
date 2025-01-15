@@ -18,13 +18,13 @@ import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectio
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_TOO_LARGE_FOR_REMAINING_USER_GAS;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
-import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
+import org.hyperledger.besu.plugin.services.txselection.AbstractPluginTransactionSelector;
+import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager;
 import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationContext;
 
 /**
@@ -34,12 +34,15 @@ import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationCon
  * configure a max gas per block that is below the limit defined by the protocol.
  */
 @Slf4j
-@RequiredArgsConstructor
-public class MaxBlockGasTransactionSelector implements PluginTransactionSelector {
+public class MaxBlockGasTransactionSelector extends AbstractPluginTransactionSelector<Long> {
 
   private final long maxGasPerBlock;
-  private final PendingSelectionState<Long> pendingCumulativeBlockGasUsed =
-      new PendingSelectionState<>(0L);
+
+  public MaxBlockGasTransactionSelector(
+      final SelectorsStateManager selectorsStateManager, final long maxGasPerBlock) {
+    super(selectorsStateManager, 0L);
+    this.maxGasPerBlock = maxGasPerBlock;
+  }
 
   /**
    * Evaluates a transaction post-processing. Checks if adding the gas used of the transaction, to
@@ -71,8 +74,7 @@ public class MaxBlockGasTransactionSelector implements PluginTransactionSelector
       return TX_GAS_EXCEEDS_USER_MAX_BLOCK_GAS;
     }
 
-    final long newCumulativeBlockGasUsed =
-        Math.addExact(pendingCumulativeBlockGasUsed.getLast(), gasUsedByTransaction);
+    final long newCumulativeBlockGasUsed = Math.addExact(getState(), gasUsedByTransaction);
 
     if (newCumulativeBlockGasUsed > maxGasPerBlock) {
       log.atTrace()
@@ -86,33 +88,9 @@ public class MaxBlockGasTransactionSelector implements PluginTransactionSelector
       return TX_TOO_LARGE_FOR_REMAINING_USER_GAS;
     }
 
-    pendingCumulativeBlockGasUsed.appendUnconfirmed(
-        transaction.getHash(), newCumulativeBlockGasUsed);
+    updateState(newCumulativeBlockGasUsed);
 
     return SELECTED;
-  }
-
-  /**
-   * If the transaction has been selected, then we add its gas used to the current gas used of the
-   * block.
-   *
-   * @param evaluationContext The current selection context
-   * @param processingResult The result of processing the selected transaction.
-   */
-  @Override
-  public void onTransactionSelected(
-      final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
-      final TransactionProcessingResult processingResult) {
-    pendingCumulativeBlockGasUsed.confirm(
-        evaluationContext.getPendingTransaction().getTransaction().getHash());
-  }
-
-  @Override
-  public void onTransactionNotSelected(
-      final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
-      final TransactionSelectionResult transactionSelectionResult) {
-    pendingCumulativeBlockGasUsed.discard(
-        evaluationContext.getPendingTransaction().getTransaction().getHash());
   }
 
   @Override
