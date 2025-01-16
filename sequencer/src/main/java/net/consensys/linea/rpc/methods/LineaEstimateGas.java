@@ -44,7 +44,7 @@ import org.bouncycastle.asn1.sec.SECNamedCurves;
 import org.bouncycastle.asn1.x9.X9ECParameters;
 import org.bouncycastle.crypto.params.ECDomainParameters;
 import org.hyperledger.besu.crypto.SECPSignature;
-import org.hyperledger.besu.datatypes.AccountOverrideMap;
+import org.hyperledger.besu.datatypes.StateOverrideMap;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.exception.InvalidJsonRpcParameters;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.exception.InvalidJsonRpcRequestException;
@@ -149,7 +149,7 @@ public class LineaEstimateGas {
       }
 
       final var callParameters = parseCallParameters(request.getParams());
-      final var maybeStateOverrides = getAddressAccountOverrideMap(request.getParams());
+      final var maybeStateOverrides = getStateOverrideMap(request.getParams());
       final var minGasPrice = besuConfiguration.getMinGasPrice();
       final var gasLimitUpperBound = calculateGasLimitUpperBound(callParameters, logId);
       final Wei baseFee =
@@ -268,7 +268,7 @@ public class LineaEstimateGas {
 
   private Long estimateGasUsed(
       final JsonCallParameter callParameters,
-      final Optional<AccountOverrideMap> maybeStateOverrides,
+      final Optional<StateOverrideMap> maybeStateOverrides,
       final Transaction transaction,
       final Wei baseFee,
       final long logId) {
@@ -444,9 +444,9 @@ public class LineaEstimateGas {
     }
   }
 
-  protected Optional<AccountOverrideMap> getAddressAccountOverrideMap(final Object[] params) {
+  protected Optional<StateOverrideMap> getStateOverrideMap(final Object[] params) {
     try {
-      return parameterParser.optional(params, 1, AccountOverrideMap.class);
+      return parameterParser.optional(params, 1, StateOverrideMap.class);
     } catch (JsonRpcParameter.JsonRpcParameterException e) {
       throw new InvalidJsonRpcRequestException(
           "Invalid account overrides parameter (index 1)", RpcErrorType.INVALID_CALL_PARAMS, e);
