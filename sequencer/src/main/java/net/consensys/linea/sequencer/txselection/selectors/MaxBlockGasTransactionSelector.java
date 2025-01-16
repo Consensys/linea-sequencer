@@ -25,6 +25,7 @@ import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.txselection.AbstractPluginTransactionSelector;
 import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager;
+import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager.LongState;
 import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationContext;
 
 /**
@@ -34,13 +35,13 @@ import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationCon
  * configure a max gas per block that is below the limit defined by the protocol.
  */
 @Slf4j
-public class MaxBlockGasTransactionSelector extends AbstractPluginTransactionSelector<Long> {
+public class MaxBlockGasTransactionSelector extends AbstractPluginTransactionSelector<LongState> {
 
   private final long maxGasPerBlock;
 
   public MaxBlockGasTransactionSelector(
       final SelectorsStateManager selectorsStateManager, final long maxGasPerBlock) {
-    super(selectorsStateManager, 0L);
+    super(selectorsStateManager, new LongState(0L));
     this.maxGasPerBlock = maxGasPerBlock;
   }
 
@@ -74,7 +75,11 @@ public class MaxBlockGasTransactionSelector extends AbstractPluginTransactionSel
       return TX_GAS_EXCEEDS_USER_MAX_BLOCK_GAS;
     }
 
-    final long newCumulativeBlockGasUsed = Math.addExact(getState(), gasUsedByTransaction);
+    final var selectorState = getWorkingState();
+    final var stateCumulativeBlockGasUsed = selectorState.getValue();
+
+    final long newCumulativeBlockGasUsed =
+        Math.addExact(stateCumulativeBlockGasUsed, gasUsedByTransaction);
 
     if (newCumulativeBlockGasUsed > maxGasPerBlock) {
       log.atTrace()
@@ -88,7 +93,7 @@ public class MaxBlockGasTransactionSelector extends AbstractPluginTransactionSel
       return TX_TOO_LARGE_FOR_REMAINING_USER_GAS;
     }
 
-    updateState(newCumulativeBlockGasUsed);
+    selectorState.setValue(newCumulativeBlockGasUsed);
 
     return SELECTED;
   }

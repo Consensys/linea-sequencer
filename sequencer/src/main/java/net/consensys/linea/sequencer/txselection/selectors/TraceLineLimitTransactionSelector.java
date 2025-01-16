@@ -20,6 +20,7 @@ import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectio
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 
 import java.math.BigInteger;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -45,6 +46,7 @@ import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.tracer.BlockAwareOperationTracer;
 import org.hyperledger.besu.plugin.services.txselection.AbstractPluginTransactionSelector;
 import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager;
+import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager.CopiableState;
 import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationContext;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
@@ -56,7 +58,8 @@ import org.slf4j.MarkerFactory;
  */
 @Slf4j
 public class TraceLineLimitTransactionSelector
-    extends AbstractPluginTransactionSelector<Map<String, Integer>> {
+    extends AbstractPluginTransactionSelector<
+        TraceLineLimitTransactionSelector.CopiableLineLimitMap<String, Integer>> {
   private static final Marker BLOCK_LINE_COUNT_MARKER = MarkerFactory.getMarker("BLOCK_LINE_COUNT");
   @VisibleForTesting protected static Set<Hash> overLineCountLimitCache = new LinkedHashSet<>();
   private final ZkTracer zkTracer;
@@ -77,7 +80,9 @@ public class TraceLineLimitTransactionSelector
       final LineaTracerConfiguration tracerConfiguration) {
     super(
         stateManager,
-        moduleLimits.keySet().stream().collect(Collectors.toMap(Function.identity(), unused -> 0)));
+        new CopiableLineLimitMap<>(
+            moduleLimits.keySet().stream()
+                .collect(Collectors.toMap(Function.identity(), unused -> 0))));
     if (l1L2BridgeConfiguration.isEmpty()) {
       log.error("L1L2 bridge settings have not been defined.");
       System.exit(1);
@@ -87,10 +92,6 @@ public class TraceLineLimitTransactionSelector
     this.moduleLimits = moduleLimits;
     this.limitFilePath = tracerConfiguration.moduleLimitsFilePath();
     this.overLimitCacheSize = txSelectorConfiguration.overLinesLimitCacheSize();
-    //    this.pendingCumulativeLineCounts =
-    //        new PendingSelectionState<>(
-    //            moduleLimits.keySet().stream()
-    //                .collect(Collectors.toMap(Function.identity(), unused -> 0)));
 
     zkTracer = new ZkTracerWithLog(l1L2BridgeConfiguration);
     for (Module m : zkTracer.getHub().getModulesToCount()) {
@@ -145,17 +146,20 @@ public class TraceLineLimitTransactionSelector
       final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
       final TransactionProcessingResult processingResult) {
 
+    final var selectorState = getWorkingState();
+    final var stateLineLimitMap = selectorState.getLineLimitMap();
+
     // check that we are not exceeding line number for any module
     final Map<String, Integer> currCumulatedLineCount = zkTracer.getModulesLineCount();
     final Transaction transaction = evaluationContext.getPendingTransaction().getTransaction();
     log.atTrace()
         .setMessage("Tx {} line count per module: {}")
         .addArgument(transaction::getHash)
-        .addArgument(() -> logTxLineCount(currCumulatedLineCount))
+        .addArgument(() -> logTxLineCount(currCumulatedLineCount, stateLineLimitMap))
         .log();
 
     ModuleLimitsValidationResult result =
-        moduleLineCountAccumulator.validate(currCumulatedLineCount, getState());
+        moduleLineCountAccumulator.validate(currCumulatedLineCount, stateLineLimitMap);
 
     switch (result.getResult()) {
       case MODULE_NOT_DEFINED:
@@ -184,7 +188,7 @@ public class TraceLineLimitTransactionSelector
         break;
     }
 
-    updateState(currCumulatedLineCount);
+    selectorState.setLineLimitMap(currCumulatedLineCount);
 
     return SELECTED;
   }
@@ -209,14 +213,16 @@ public class TraceLineLimitTransactionSelector
         .log();
   }
 
-  private String logTxLineCount(final Map<String, Integer> currCumulatedLineCount) {
+  private String logTxLineCount(
+      final Map<String, Integer> currCumulatedLineCount,
+      final Map<String, Integer> stateLineLimitMap) {
     return currCumulatedLineCount.entrySet().stream()
         .map(
             e ->
                 // tx line count / cumulated line count / line count limit
                 e.getKey()
                     + "="
-                    + (e.getValue() - getState().getOrDefault(e.getKey(), 0))
+                    + (e.getValue() - stateLineLimitMap.getOrDefault(e.getKey(), 0))
                     + "/"
                     + e.getValue()
                     + "/"
@@ -244,6 +250,27 @@ public class TraceLineLimitTransactionSelector
                       .map(e -> '"' + e.getKey() + "\":" + e.getValue())
                       .collect(Collectors.joining(",")))
           .log();
+    }
+  }
+
+  static class CopiableLineLimitMap<String, Integer> extends HashMap<String, Integer>
+      implements CopiableState<CopiableLineLimitMap<String, Integer>> {
+
+    public CopiableLineLimitMap(final Map<String, Integer> map) {
+      super(map);
+    }
+
+    @Override
+    public CopiableLineLimitMap<String, Integer> copy() {
+      return new CopiableLineLimitMap<>(this);
+    }
+
+    public Map<String, Integer> getLineLimitMap() {
+      return this;
+    }
+
+    public void setLineLimitMap(final Map<String, Integer> lineLimitMap) {
+      lineLimitMap.forEach(this::put);
     }
   }
 }

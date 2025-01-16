@@ -24,6 +24,7 @@ import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.txselection.AbstractPluginTransactionSelector;
 import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager;
+import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager.LongState;
 import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationContext;
 
 /**
@@ -33,7 +34,7 @@ import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationCon
  */
 @Slf4j
 public class MaxBlockCallDataTransactionSelector
-    extends AbstractPluginTransactionSelector<Integer> {
+    extends AbstractPluginTransactionSelector<LongState> {
 
   private final int maxBlockCallDataSize;
 
@@ -42,7 +43,7 @@ public class MaxBlockCallDataTransactionSelector
 
   public MaxBlockCallDataTransactionSelector(
       final SelectorsStateManager stateManager, final int maxBlockCallDataSize) {
-    super(stateManager, 0);
+    super(stateManager, new LongState(0L));
     this.maxBlockCallDataSize = maxBlockCallDataSize;
   }
 
@@ -60,7 +61,12 @@ public class MaxBlockCallDataTransactionSelector
 
     final Transaction transaction = evaluationContext.getPendingTransaction().getTransaction();
     final int transactionCallDataSize = transaction.getPayload().size();
-    final int newCumulativeBlockCallDataSize = Math.addExact(getState(), transactionCallDataSize);
+
+    final var selectorState = getWorkingState();
+    final var stateCumulativeBlockCallDataSize = selectorState.getValue();
+
+    final long newCumulativeBlockCallDataSize =
+        Math.addExact(stateCumulativeBlockCallDataSize, transactionCallDataSize);
 
     if (newCumulativeBlockCallDataSize > maxBlockCallDataSize) {
       log.atTrace()
@@ -79,7 +85,7 @@ public class MaxBlockCallDataTransactionSelector
         .addArgument(newCumulativeBlockCallDataSize)
         .log();
 
-    updateState(newCumulativeBlockCallDataSize);
+    selectorState.setValue(newCumulativeBlockCallDataSize);
 
     return SELECTED;
   }
