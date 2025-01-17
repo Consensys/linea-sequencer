@@ -25,7 +25,7 @@ import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.txselection.AbstractPluginTransactionSelector;
 import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager;
-import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager.LongState;
+import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager.DuplicableLongState;
 import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationContext;
 
 /**
@@ -35,13 +35,13 @@ import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationCon
  * configure a max gas per block that is below the limit defined by the protocol.
  */
 @Slf4j
-public class MaxBlockGasTransactionSelector extends AbstractPluginTransactionSelector<LongState> {
+public class MaxBlockGasTransactionSelector extends AbstractPluginTransactionSelector<DuplicableLongState> {
 
   private final long maxGasPerBlock;
 
   public MaxBlockGasTransactionSelector(
       final SelectorsStateManager selectorsStateManager, final long maxGasPerBlock) {
-    super(selectorsStateManager, new LongState(0L));
+    super(selectorsStateManager, new DuplicableLongState(0L));
     this.maxGasPerBlock = maxGasPerBlock;
   }
 

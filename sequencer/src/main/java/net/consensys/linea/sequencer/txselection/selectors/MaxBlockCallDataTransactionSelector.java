@@ -24,7 +24,7 @@ import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.txselection.AbstractPluginTransactionSelector;
 import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager;
-import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager.LongState;
+import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager.DuplicableLongState;
 import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationContext;
 
 /**
@@ -34,7 +34,7 @@ import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationCon
  */
 @Slf4j
 public class MaxBlockCallDataTransactionSelector
-    extends AbstractPluginTransactionSelector<LongState> {
+    extends AbstractPluginTransactionSelector<DuplicableLongState> {
 
   private final int maxBlockCallDataSize;
 
@@ -43,7 +43,7 @@ public class MaxBlockCallDataTransactionSelector
 
   public MaxBlockCallDataTransactionSelector(
       final SelectorsStateManager stateManager, final int maxBlockCallDataSize) {
-    super(stateManager, new LongState(0L));
+    super(stateManager, new DuplicableLongState(0L));
     this.maxBlockCallDataSize = maxBlockCallDataSize;
   }
 

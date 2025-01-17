@@ -46,7 +46,7 @@ import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.tracer.BlockAwareOperationTracer;
 import org.hyperledger.besu.plugin.services.txselection.AbstractPluginTransactionSelector;
 import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager;
-import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager.CopiableState;
+import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager.DuplicableState;
 import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationContext;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
@@ -59,7 +59,7 @@ import org.slf4j.MarkerFactory;
 @Slf4j
 public class TraceLineLimitTransactionSelector
     extends AbstractPluginTransactionSelector<
-        TraceLineLimitTransactionSelector.CopiableLineLimitMap<String, Integer>> {
+    TraceLineLimitTransactionSelector.DuplicableLineLimitMap> {
   private static final Marker BLOCK_LINE_COUNT_MARKER = MarkerFactory.getMarker("BLOCK_LINE_COUNT");
   @VisibleForTesting protected static Set<Hash> overLineCountLimitCache = new LinkedHashSet<>();
   private final ZkTracer zkTracer;
@@ -68,8 +68,6 @@ public class TraceLineLimitTransactionSelector
   private final Map<String, Integer> moduleLimits;
   private final int overLimitCacheSize;
   private final ModuleLineCountValidator moduleLineCountAccumulator;
-
-  //  private final PendingSelectionState<Map<String, Integer>> pendingCumulativeLineCounts;
 
   public TraceLineLimitTransactionSelector(
       final SelectorsStateManager stateManager,
@@ -80,7 +78,7 @@ public class TraceLineLimitTransactionSelector
       final LineaTracerConfiguration tracerConfiguration) {
     super(
         stateManager,
-        new CopiableLineLimitMap<>(
+        new DuplicableLineLimitMap(
             moduleLimits.keySet().stream()
                 .collect(Collectors.toMap(Function.identity(), unused -> 0))));
     if (l1L2BridgeConfiguration.isEmpty()) {
@@ -147,7 +145,7 @@ public class TraceLineLimitTransactionSelector
       final TransactionProcessingResult processingResult) {
 
     final var selectorState = getWorkingState();
-    final var stateLineLimitMap = selectorState.getLineLimitMap();
+    final var stateLineLimitMap = selectorState.getValue();
 
     // check that we are not exceeding line number for any module
     final Map<String, Integer> currCumulatedLineCount = zkTracer.getModulesLineCount();
@@ -188,7 +186,7 @@ public class TraceLineLimitTransactionSelector
         break;
     }
 
-    selectorState.setLineLimitMap(currCumulatedLineCount);
+    selectorState.setValue(currCumulatedLineCount);
 
     return SELECTED;
   }
@@ -245,7 +243,7 @@ public class TraceLineLimitTransactionSelector
           .addKeyValue(
               "traceCounts",
               () ->
-                  getConfirmedState().entrySet().stream()
+                  getConfirmedState().getValue().entrySet().stream()
                       .sorted(Map.Entry.comparingByKey())
                       .map(e -> '"' + e.getKey() + "\":" + e.getValue())
                       .collect(Collectors.joining(",")))
@@ -253,24 +251,15 @@ public class TraceLineLimitTransactionSelector
     }
   }
 
-  static class CopiableLineLimitMap<String, Integer> extends HashMap<String, Integer>
-      implements CopiableState<CopiableLineLimitMap<String, Integer>> {
+  static class DuplicableLineLimitMap extends DuplicableState<Map<String, Integer>> {
 
-    public CopiableLineLimitMap(final Map<String, Integer> map) {
+    public DuplicableLineLimitMap(final Map<String, Integer> map) {
       super(map);
     }
 
     @Override
-    public CopiableLineLimitMap<String, Integer> copy() {
-      return new CopiableLineLimitMap<>(this);
-    }
-
-    public Map<String, Integer> getLineLimitMap() {
-      return this;
-    }
-
-    public void setLineLimitMap(final Map<String, Integer> lineLimitMap) {
-      lineLimitMap.forEach(this::put);
+    protected DuplicableState<Map<String, Integer>> deepCopy() {
+      return new DuplicableLineLimitMap(Map.copyOf(getValue()));
     }
   }
 }
