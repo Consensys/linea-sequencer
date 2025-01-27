@@ -54,7 +54,7 @@ import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.JsonRpcPara
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.RpcErrorType;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.evm.tracing.EstimateGasOperationTracer;
-import org.hyperledger.besu.plugin.data.BlockHeader;
+import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.RpcEndpointService;
@@ -279,13 +279,14 @@ public class LineaEstimateGas {
       final long logId) {
 
     final var estimateGasTracer = new EstimateGasOperationTracer();
-    final var chainHeadHeader = blockchainService.getChainHeadHeader();
-    final var zkTracer = createZkTracer(chainHeadHeader, blockchainService.getChainId().get());
+    // final var chainHeadHeader = blockchainService.getChainHeadHeader();
+    final var pendingBlockHeader = transactionSimulationService.simulatePendingBlockHeader();
+    final var zkTracer = createZkTracer(pendingBlockHeader, blockchainService.getChainId().get());
     final TracerAggregator zkAndGasTracer = TracerAggregator.create(estimateGasTracer, zkTracer);
 
     final var maybeSimulationResults =
         transactionSimulationService.simulate(
-            transaction, maybeStateOverrides, Optional.empty(), zkAndGasTracer, false);
+            transaction, maybeStateOverrides, pendingBlockHeader, zkAndGasTracer, false);
 
     ModuleLimitsValidationResult moduleLimit =
         moduleLineCountValidator.validate(zkTracer.getModulesLineCount());
@@ -334,7 +335,7 @@ public class LineaEstimateGas {
                       createTransactionForSimulation(
                           callParameters, lowGasEstimation, baseFee, logId),
                       maybeStateOverrides,
-                      Optional.empty(),
+                      pendingBlockHeader,
                       estimateGasTracer,
                       false);
 
@@ -371,7 +372,7 @@ public class LineaEstimateGas {
                                     createTransactionForSimulation(
                                         callParameters, mid, baseFee, logId),
                                     maybeStateOverrides,
-                                    Optional.empty(),
+                                    pendingBlockHeader,
                                     estimateGasTracer,
                                     false);
 
@@ -550,10 +551,11 @@ public class LineaEstimateGas {
     return nonce;
   }
 
-  private ZkTracer createZkTracer(final BlockHeader chainHeadHeader, final BigInteger chainId) {
+  private ZkTracer createZkTracer(
+      final ProcessableBlockHeader pendingBlockHeader, final BigInteger chainId) {
     var zkTracer = new ZkTracer(l1L2BridgeConfiguration, chainId);
     zkTracer.traceStartConflation(1L);
-    zkTracer.traceStartBlock(chainHeadHeader, null);
+    zkTracer.traceStartBlock(pendingBlockHeader, pendingBlockHeader.getCoinbase());
     return zkTracer;
   }
 
