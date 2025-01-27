@@ -95,7 +95,7 @@ public class TraceLineLimitTransactionSelectorTest {
 
     final var evaluationContext =
         mockEvaluationContext(false, 100, Wei.of(1_100_000_000), Wei.of(1_000_000_000), 21000, 0);
-    selectorsStateManager.startNewEvaluation(evaluationContext);
+    selectorsStateManager.startNewEvaluation();
     verifyTransactionSelection(
         transactionSelector,
         evaluationContext,
@@ -116,7 +116,7 @@ public class TraceLineLimitTransactionSelectorTest {
 
     final var evaluationContext =
         mockEvaluationContext(false, 100, Wei.of(1_100_000_000), Wei.of(1_000_000_000), 21000, 0);
-    selectorsStateManager.startNewEvaluation(evaluationContext);
+    selectorsStateManager.startNewEvaluation();
     verifyTransactionSelection(
         transactionSelector,
         evaluationContext,
@@ -137,7 +137,7 @@ public class TraceLineLimitTransactionSelectorTest {
 
     var evaluationContext =
         mockEvaluationContext(false, 100, Wei.of(1_100_000_000), Wei.of(1_000_000_000), 21000, 0);
-    selectorsStateManager.startNewEvaluation(evaluationContext);
+    selectorsStateManager.startNewEvaluation();
     verifyTransactionSelection(
         transactionSelector,
         evaluationContext,
@@ -178,7 +178,7 @@ public class TraceLineLimitTransactionSelectorTest {
     for (int i = 0; i <= OVER_LINE_COUNT_LIMIT_CACHE_SIZE; i++) {
       var evaluationContext =
           mockEvaluationContext(false, 100, Wei.of(1_100_000_000), Wei.of(1_000_000_000), 21000, 0);
-      selectorsStateManager.startNewEvaluation(evaluationContext);
+      selectorsStateManager.startNewEvaluation();
       verifyTransactionSelection(
           transactionSelector,
           evaluationContext,

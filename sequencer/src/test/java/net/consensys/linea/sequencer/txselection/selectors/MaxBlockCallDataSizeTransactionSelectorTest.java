@@ -51,22 +51,22 @@ public class MaxBlockCallDataSizeTransactionSelectorTest {
   @Test
   public void shouldSelectTransactionWhen_BlockCallDataSize_IsLessThan_MaxBlockCallDataSize() {
     final var evaluationContext1 = mockTransactionOfCallDataSize(BLOCK_CALL_DATA_HALF_SIZE);
-    selectorsStateManager.startNewEvaluation(evaluationContext1);
+    selectorsStateManager.startNewEvaluation();
     verifyTransactionSelection(transactionSelector, evaluationContext1, SELECTED);
 
     final var evaluationContext2 = mockTransactionOfCallDataSize(BLOCK_CALL_DATA_HALF_SIZE - 1);
-    selectorsStateManager.startNewEvaluation(evaluationContext2);
+    selectorsStateManager.startNewEvaluation();
     verifyTransactionSelection(transactionSelector, evaluationContext2, SELECTED);
   }
 
   @Test
   public void shouldSelectTransactionWhen_BlockCallDataSize_IsEqualTo_MaxBlockCallDataSize() {
     final var evaluationContext1 = mockTransactionOfCallDataSize(BLOCK_CALL_DATA_HALF_SIZE);
-    selectorsStateManager.startNewEvaluation(evaluationContext1);
+    selectorsStateManager.startNewEvaluation();
     verifyTransactionSelection(transactionSelector, evaluationContext1, SELECTED);
 
     final var evaluationContext2 = mockTransactionOfCallDataSize(BLOCK_CALL_DATA_HALF_SIZE);
-    selectorsStateManager.startNewEvaluation(evaluationContext2);
+    selectorsStateManager.startNewEvaluation();
     verifyTransactionSelection(transactionSelector, evaluationContext2, SELECTED);
   }
 
@@ -74,26 +74,26 @@ public class MaxBlockCallDataSizeTransactionSelectorTest {
   public void
       shouldNotSelectTransactionWhen_BlockCallDataSize_IsGreaterThan_MaxBlockCallDataSize() {
     final var evaluationContext1 = mockTransactionOfCallDataSize(BLOCK_CALL_DATA_HALF_SIZE);
-    selectorsStateManager.startNewEvaluation(evaluationContext1);
+    selectorsStateManager.startNewEvaluation();
     verifyTransactionSelection(transactionSelector, evaluationContext1, SELECTED);
 
     final var evaluationContext2 = mockTransactionOfCallDataSize(BLOCK_CALL_DATA_HALF_SIZE + 1);
-    selectorsStateManager.startNewEvaluation(evaluationContext2);
+    selectorsStateManager.startNewEvaluation();
     verifyTransactionSelection(transactionSelector, evaluationContext2, BLOCK_CALLDATA_OVERFLOW);
   }
 
   @Test
   public void shouldNotSelectAdditionalTransactionOnceBlockIsFull() {
     final var evaluationContext1 = mockTransactionOfCallDataSize(TX_CALL_DATA_SIZE);
-    selectorsStateManager.startNewEvaluation(evaluationContext1);
+    selectorsStateManager.startNewEvaluation();
     verifyTransactionSelection(transactionSelector, evaluationContext1, SELECTED);
 
     final var evaluationContext2 = mockTransactionOfCallDataSize(TX_CALL_DATA_SIZE);
-    selectorsStateManager.startNewEvaluation(evaluationContext2);
+    selectorsStateManager.startNewEvaluation();
     verifyTransactionSelection(transactionSelector, evaluationContext2, BLOCK_CALLDATA_OVERFLOW);
 
     final var evaluationContext3 = mockTransactionOfCallDataSize(TX_CALL_DATA_SIZE);
-    selectorsStateManager.startNewEvaluation(evaluationContext3);
+    selectorsStateManager.startNewEvaluation();
     verifyTransactionSelection(transactionSelector, evaluationContext3, BLOCK_CALLDATA_OVERFLOW);
   }
 

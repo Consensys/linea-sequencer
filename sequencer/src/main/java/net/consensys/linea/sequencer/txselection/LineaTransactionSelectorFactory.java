@@ -26,6 +26,7 @@ import net.consensys.linea.metrics.HistogramMetrics;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.sequencer.txselection.selectors.LineaTransactionSelector;
 import org.hyperledger.besu.plugin.services.BlockchainService;
+import org.hyperledger.besu.plugin.services.txselection.BlockTransactionSelectionService;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelectorFactory;
 import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager;
@@ -65,20 +66,6 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
   }
 
   @Override
-  public PluginTransactionSelector create() {
-    return new LineaTransactionSelector(
-        new SelectorsStateManager(),
-        blockchainService,
-        txSelectorConfiguration,
-        l1L2BridgeConfiguration,
-        profitabilityConfiguration,
-        tracerConfiguration,
-        limitsMap,
-        rejectedTxJsonRpcManager,
-        maybeProfitabilityMetrics);
-  }
-
-  @Override
   public PluginTransactionSelector create(final SelectorsStateManager selectorsStateManager) {
     return new LineaTransactionSelector(
         selectorsStateManager,
@@ -90,5 +77,20 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
         limitsMap,
         rejectedTxJsonRpcManager,
         maybeProfitabilityMetrics);
+  }
+
+  @Override
+  public void selectPendingTransactions(final BlockTransactionSelectionService blockTransactionSelectionService) {
+    final var bundles = privateTxPool.getBundles();
+
+    for(final var bundle: bundles) {
+      for(final var pendingTx: bundle) {
+        if(! blockTransactionSelectionService.evaluatePendingTransaction(pendingTx)) {
+          blockTransactionSelectionService.rollback();
+          break;
+        }
+      }
+      blockTransactionSelectionService.commit();
+    }
   }
 }

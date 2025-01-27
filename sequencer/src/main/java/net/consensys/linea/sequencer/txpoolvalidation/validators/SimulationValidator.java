@@ -161,7 +161,7 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
   private ZkTracer createZkTracer(final BlockHeader chainHeadHeader, BigInteger chainId) {
     var zkTracer = new ZkTracer(l1L2BridgeConfiguration, chainId);
     zkTracer.traceStartConflation(1L);
-    zkTracer.traceStartBlock(chainHeadHeader);
+    zkTracer.traceStartBlock(chainHeadHeader, null);
     return zkTracer;
   }
 

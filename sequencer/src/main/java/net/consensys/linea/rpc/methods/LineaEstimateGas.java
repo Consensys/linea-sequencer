@@ -523,7 +523,7 @@ public class LineaEstimateGas {
   private ZkTracer createZkTracer(final BlockHeader chainHeadHeader, final BigInteger chainId) {
     var zkTracer = new ZkTracer(l1L2BridgeConfiguration, chainId);
     zkTracer.traceStartConflation(1L);
-    zkTracer.traceStartBlock(chainHeadHeader);
+    zkTracer.traceStartBlock(chainHeadHeader, null);
     return zkTracer;
   }
 

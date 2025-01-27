@@ -53,7 +53,7 @@ public class MaxBlockGasTransactionSelectorTest {
     final var mockTransactionProcessingResult =
         mockTransactionProcessingResult(MAX_GAS_PER_BLOCK - 1);
     final var evaluationContext = mockEvaluationContext();
-    selectorsStateManager.startNewEvaluation(evaluationContext);
+    selectorsStateManager.startNewEvaluation();
     verifyTransactionSelection(
         transactionSelector, evaluationContext, mockTransactionProcessingResult, SELECTED);
   }
@@ -62,7 +62,7 @@ public class MaxBlockGasTransactionSelectorTest {
   public void shouldSelectWhen_GasUsedByTransaction_IsEqual_MaxGasPerBlock() {
     final var mockTransactionProcessingResult = mockTransactionProcessingResult(MAX_GAS_PER_BLOCK);
     final var evaluationContext = mockEvaluationContext();
-    selectorsStateManager.startNewEvaluation(evaluationContext);
+    selectorsStateManager.startNewEvaluation();
     verifyTransactionSelection(
         transactionSelector, evaluationContext, mockTransactionProcessingResult, SELECTED);
   }
@@ -72,7 +72,7 @@ public class MaxBlockGasTransactionSelectorTest {
     final var mockTransactionProcessingResult =
         mockTransactionProcessingResult(MAX_GAS_PER_BLOCK + 1);
     final var evaluationContext = mockEvaluationContext();
-    selectorsStateManager.startNewEvaluation(evaluationContext);
+    selectorsStateManager.startNewEvaluation();
     verifyTransactionSelection(
         transactionSelector,
         evaluationContext,
@@ -83,7 +83,7 @@ public class MaxBlockGasTransactionSelectorTest {
   @Test
   public void shouldNotSelectWhen_CumulativeGasUsed_IsGreaterThan_MaxGasPerBlock() {
     final var evaluationContext1 = mockEvaluationContext();
-    selectorsStateManager.startNewEvaluation(evaluationContext1);
+    selectorsStateManager.startNewEvaluation();
 
     // block empty, transaction 80% max gas, should select
     verifyTransactionSelection(
@@ -93,7 +93,7 @@ public class MaxBlockGasTransactionSelectorTest {
         SELECTED);
 
     final var evaluationContext2 = mockEvaluationContext();
-    selectorsStateManager.startNewEvaluation(evaluationContext2);
+    selectorsStateManager.startNewEvaluation();
 
     // block 80% full, transaction 80% max gas, should not select
     verifyTransactionSelection(
@@ -103,7 +103,7 @@ public class MaxBlockGasTransactionSelectorTest {
         TX_TOO_LARGE_FOR_REMAINING_USER_GAS);
 
     final var evaluationContext3 = mockEvaluationContext();
-    selectorsStateManager.startNewEvaluation(evaluationContext3);
+    selectorsStateManager.startNewEvaluation();
 
     // block 80% full, transaction 20% max gas, should select
     verifyTransactionSelection(
