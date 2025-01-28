@@ -279,14 +279,13 @@ public class LineaEstimateGas {
       final long logId) {
 
     final var estimateGasTracer = new EstimateGasOperationTracer();
-    // final var chainHeadHeader = blockchainService.getChainHeadHeader();
     final var pendingBlockHeader = transactionSimulationService.simulatePendingBlockHeader();
     final var zkTracer = createZkTracer(pendingBlockHeader, blockchainService.getChainId().get());
     final TracerAggregator zkAndGasTracer = TracerAggregator.create(estimateGasTracer, zkTracer);
 
     final var maybeSimulationResults =
         transactionSimulationService.simulate(
-            transaction, maybeStateOverrides, pendingBlockHeader, zkAndGasTracer, false);
+            transaction, maybeStateOverrides, pendingBlockHeader, zkAndGasTracer, false, true);
 
     ModuleLimitsValidationResult moduleLimit =
         moduleLineCountValidator.validate(zkTracer.getModulesLineCount());
@@ -337,7 +336,8 @@ public class LineaEstimateGas {
                       maybeStateOverrides,
                       pendingBlockHeader,
                       estimateGasTracer,
-                      false);
+                      false,
+                      true);
 
               return lowResult
                   .map(
@@ -374,7 +374,8 @@ public class LineaEstimateGas {
                                     maybeStateOverrides,
                                     pendingBlockHeader,
                                     estimateGasTracer,
-                                    false);
+                                    false,
+                                    true);
 
                             if (binarySearchResult.isEmpty()
                                 || !binarySearchResult.get().isSuccessful()) {
