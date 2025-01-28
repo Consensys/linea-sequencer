@@ -55,6 +55,9 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
       final LineaProfitabilityConfiguration profitabilityConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
+      // TODO: we need to solve the problem of sharing a private pool
+      // between rpc constructor and selector constructor
+      // final LineaSendBundleTransactionSelector lineaSendBundleTransactionSelector
       final Map<String, Integer> limitsMap,
       final Optional<JsonRpcManager> rejectedTxJsonRpcManager,
       final Optional<HistogramMetrics> maybeProfitabilityMetrics) {
@@ -92,6 +95,8 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       final LineaTransactionSelectorConfiguration txSelectorConfiguration,
       final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
       final LineaProfitabilityConfiguration profitabilityConfiguration,
+      // TODO:
+      // final LineaSendBundleTransactionSelector lineaSendBundleTransactionSelector
       final LineaTracerConfiguration tracerConfiguration,
       final Map<String, Integer> limitsMap,
       final Optional<HistogramMetrics> maybeProfitabilityMetrics) {
