@@ -45,7 +45,6 @@ public class LineaLimitedBundlePool {
   /**
    * Initializes the LineaLimitedBundlePool with a maximum size and expiration time.
    *
-   * @param maxSize The maximum number of TransactionBundles in the pool.
    * @param maxSizeInBytes The maximum size in bytes of the pool objects.
    */
   public LineaLimitedBundlePool(long maxSizeInBytes) {
@@ -176,9 +175,7 @@ public class LineaLimitedBundlePool {
   }
 
   private int calculateWeight(TransactionBundle bundle) {
-    return bundle.pendingTransactions.stream()
-        .mapToInt(pt -> pt.getTransaction().getPayload().size())
-        .sum();
+    return bundle.pendingTransactions.stream().mapToInt(pt -> pt.getTransaction().getSize()).sum();
   }
 
   /** TransactionBundle record representing a collection of pending transactions with metadata. */

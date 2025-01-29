@@ -24,16 +24,19 @@ import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
 import net.consensys.linea.metrics.HistogramMetrics;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
+import net.consensys.linea.rpc.services.LineaLimitedBundlePool;
+import net.consensys.linea.sequencer.txselection.LineaTransactionSelectorPlugin.PluginTransactionSelectorFactory;
+import net.consensys.linea.sequencer.txselection.LineaTransactionSelectorPlugin.SelectorsStateManager;
 import net.consensys.linea.sequencer.txselection.selectors.LineaTransactionSelector;
-import org.hyperledger.besu.datatypes.PendingTransaction;
-import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
+import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
-import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelectorFactory;
 
 /**
  * Represents a factory for creating transaction selectors. Note that a new instance of the
  * transaction selector is created everytime a new block creation time is started.
+ *
+ * <p>Also provides an entrypoint for bundle transactions
  */
 public class LineaTransactionSelectorFactory implements PluginTransactionSelectorFactory {
   private final BlockchainService blockchainService;
@@ -43,6 +46,7 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
   private final LineaProfitabilityConfiguration profitabilityConfiguration;
   private final LineaTracerConfiguration tracerConfiguration;
   private final Optional<HistogramMetrics> maybeProfitabilityMetrics;
+  private final Optional<LineaLimitedBundlePool> maybeBundlePool;
 
   private final Map<String, Integer> limitsMap;
 
@@ -54,7 +58,8 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
       final LineaTracerConfiguration tracerConfiguration,
       final Map<String, Integer> limitsMap,
       final Optional<JsonRpcManager> rejectedTxJsonRpcManager,
-      final Optional<HistogramMetrics> maybeProfitabilityMetrics) {
+      final Optional<HistogramMetrics> maybeProfitabilityMetrics,
+      final Optional<LineaLimitedBundlePool> maybeBundlePool) {
     this.blockchainService = blockchainService;
     this.txSelectorConfiguration = txSelectorConfiguration;
     this.l1L2BridgeConfiguration = l1L2BridgeConfiguration;
@@ -63,10 +68,11 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
     this.limitsMap = limitsMap;
     this.rejectedTxJsonRpcManager = rejectedTxJsonRpcManager;
     this.maybeProfitabilityMetrics = maybeProfitabilityMetrics;
+    this.maybeBundlePool = maybeBundlePool;
   }
 
   @Override
-  public PluginTransactionSelector create() {
+  public PluginTransactionSelector create(final SelectorsStateManager selectorsStateManager) {
     return new LineaTransactionSelector(
         blockchainService,
         txSelectorConfiguration,
@@ -78,18 +84,32 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
         maybeProfitabilityMetrics);
   }
 
-  /** this method will be in the upstream interface. TODO: remove me. */
-  public interface BlockTransactionSelectionService {
-
-    TransactionSelectionResult evaluatePendingTransaction(PendingTransaction pendingTransaction);
-
-    boolean commit();
-
-    void rollback();
-  }
-
-  /** this will be in the upstream interface for PluginTransactionSelectorFactory interface */
-  // @Override
   public void selectPendingTransactions(
-      final BlockTransactionSelectionService blockTransactionSelectionService) {}
+      final LineaTransactionSelectorPlugin.BlockTransactionSelectionService bts,
+      final ProcessableBlockHeader pendingBlockHeader) {
+    // TODO: unwind this a bit and add logging
+    maybeBundlePool
+        .map(bp -> bp.getBundlesByBlockNumber(pendingBlockHeader.getNumber()))
+        .ifPresent(
+            bundles -> {
+              bundles.forEach(
+                  bundle -> {
+                    // TODO: instead of recreating this here, we should add the base
+                    // evaluatePendingTransactions(List<PendingTransactions>) to the interface
+
+                    // TODO: otherwise if we want to skip using selectors for bundles, we should
+                    //  do something custom here
+                    var badBundleRes =
+                        bundle.pendingTransactions().stream()
+                            .map(pt -> bts.evaluatePendingTransaction(pt))
+                            .filter(evalRes -> !evalRes.selected())
+                            .findFirst();
+                    if (badBundleRes.isPresent()) {
+                      bts.rollback();
+                    } else {
+                      bts.commit();
+                    }
+                  });
+            });
+  }
 }
