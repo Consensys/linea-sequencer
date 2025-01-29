@@ -19,18 +19,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
-import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.datatypes.parameters.UnsignedLongParameter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Answers;
 
 class LineaLimitedBundlePoolTest {
 
@@ -73,7 +73,8 @@ class LineaLimitedBundlePoolTest {
   @Test
   void smokeTestGetBundleByPendingTransaction() {
     Hash hash = Hash.fromHexStringLenient("0x1234");
-    PendingTransaction pendingTransaction = new MockPendingTransaction();
+    PendingTransaction pendingTransaction =
+        mock(PendingTransaction.class, Answers.RETURNS_DEEP_STUBS);
     LineaLimitedBundlePool.TransactionBundle bundle =
         new LineaLimitedBundlePool.TransactionBundle(
             hash,
@@ -118,30 +119,5 @@ class LineaLimitedBundlePoolTest {
         Optional.empty(),
         Optional.empty(),
         Optional.empty());
-  }
-
-  class MockPendingTransaction implements PendingTransaction {
-
-    @Override
-    public Transaction getTransaction() {
-      return new org.hyperledger.besu.ethereum.core.Transaction.Builder()
-          .payload(Bytes32.random())
-          .build();
-    }
-
-    @Override
-    public boolean isReceivedFromLocalSource() {
-      return false;
-    }
-
-    @Override
-    public boolean hasPriority() {
-      return false;
-    }
-
-    @Override
-    public long getAddedAt() {
-      return 0;
-    }
   }
 }
