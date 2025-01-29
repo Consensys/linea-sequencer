@@ -14,13 +14,26 @@
  */
 package net.consensys.linea.rpc.methods;
 
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.extern.slf4j.Slf4j;
-import net.consensys.linea.rpc.methods.parameters.BundleParameter;
 import net.consensys.linea.rpc.services.LineaLimitedBundlePool;
+import net.consensys.linea.rpc.services.LineaLimitedBundlePool.TransactionBundle;
+import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
+import org.hyperledger.besu.datatypes.Hash;
+import org.hyperledger.besu.datatypes.PendingTransaction;
+import org.hyperledger.besu.datatypes.Transaction;
+import org.hyperledger.besu.datatypes.parameters.UnsignedLongParameter;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.JsonRpcParameter;
+import org.hyperledger.besu.ethereum.api.util.DomainObjectDecodeUtils;
 import org.hyperledger.besu.plugin.services.RpcEndpointService;
 import org.hyperledger.besu.plugin.services.exception.PluginRpcEndpointException;
 import org.hyperledger.besu.plugin.services.rpc.PluginRpcRequest;
@@ -52,11 +65,57 @@ public class LineaSendBundle {
     final int logId = log.isDebugEnabled() ? LOG_SEQUENCE.incrementAndGet() : -1;
 
     try {
-      final var bundleParams = parseRequest(logId, request.getParams());
+      final BundleParameter bundleParams = parseRequest(logId, request.getParams());
 
-      // TODO: pre-validate the bundle and add to the bundle pool.
+      if (bundleParams.maxTimestamp.isPresent()
+          && bundleParams.maxTimestamp.get() < Instant.now().toEpochMilli()) {
+        throw new Exception("bundle max timestamp is in the past");
+      }
 
-      return new BundleResponse(Bytes32.random());
+      // TODO: pre-validate the bundle transactions via selectors?
+
+      var optBundleUUID = bundleParams.replacementUUID.map(UUID::fromString);
+
+      // use replacement UUID hashed if present, otherwise the hash of the transactions themselves
+      var optBundleHash =
+          optBundleUUID
+              .map(
+                  uuid ->
+                      Bytes.concatenate(
+                          Bytes.ofUnsignedLong(uuid.getMostSignificantBits()),
+                          Bytes.ofUnsignedLong(uuid.getLeastSignificantBits())))
+              .map(Hash::hash)
+              .or(
+                  () ->
+                      bundleParams.txs().stream()
+                          .map(Bytes::fromHexString)
+                          .reduce(Bytes::concatenate)
+                          .map(Hash::hash));
+
+      if (optBundleHash.isPresent()) {
+        Hash bundleHash = optBundleHash.get();
+        List<PendingTransaction> txs =
+            bundleParams.txs.stream()
+                .map(DomainObjectDecodeUtils::decodeRawTransaction)
+                .map(tx -> new PendingBundleTx(tx, true, true, System.currentTimeMillis()))
+                .collect(Collectors.toList());
+
+        if (!txs.isEmpty()) {
+          bundlePool.put(
+              bundleHash,
+              new TransactionBundle(
+                  bundleHash,
+                  txs,
+                  bundleParams.blockNumber,
+                  bundleParams.minTimestamp,
+                  bundleParams.maxTimestamp,
+                  bundleParams.revertingTxHashes()));
+          return new BundleResponse(bundleHash);
+        }
+      }
+      // otherwise boom.
+      throw new RuntimeException("Malformed bundle, no bundle transactions present");
+
     } catch (final Exception e) {
       throw new PluginRpcEndpointException(new LineaSendBundleError(e.getMessage()));
     }
@@ -72,7 +131,7 @@ public class LineaSendBundle {
           .addArgument(logId)
           .setCause(e)
           .log();
-      throw new RuntimeException(e);
+      throw new RuntimeException("malformed linea_sendBundle json param");
     }
   }
 
@@ -96,4 +155,46 @@ public class LineaSendBundle {
       return errMessage;
     }
   }
+
+  public record BundleParameter(
+      /*  array of signed transactions to execute in a bundle */
+      List<String> txs,
+      /* block number for which this bundle is valid */
+      Long blockNumber,
+      /* Optional minimum timestamp from which this bundle is valid */
+      Optional<Long> minTimestamp,
+      /* Optional max timestamp for which this bundle is valid */
+      Optional<Long> maxTimestamp,
+      /* Optional list of transaction hashes which are allowed to revert */
+      Optional<List<Hash>> revertingTxHashes,
+      /* Optional UUID which can be used to replace or cancel this bundle */
+      Optional<String> replacementUUID,
+      /* Optional list of builders to share this bundle with */
+      Optional<List<String>> builders) {
+    @JsonCreator
+    public BundleParameter(
+        @JsonProperty("txs") final List<String> txs,
+        @JsonProperty("blockNumber") final UnsignedLongParameter blockNumber,
+        @JsonProperty("minTimestamp") final Optional<Long> minTimestamp,
+        @JsonProperty("maxTimestamp") final Optional<Long> maxTimestamp,
+        @JsonProperty("revertingTxHashes") final Optional<List<Hash>> revertingTxHashes,
+        @JsonProperty("replacementUUID") final Optional<String> replacementUUID,
+        @JsonProperty("builders") final Optional<List<String>> builders) {
+      this(
+          txs,
+          blockNumber.getValue(),
+          minTimestamp,
+          maxTimestamp,
+          revertingTxHashes,
+          replacementUUID,
+          builders);
+    }
+  }
+
+  public record PendingBundleTx(
+      Transaction getTransaction,
+      boolean isReceivedFromLocalSource,
+      boolean hasPriority,
+      long getAddedAt)
+      implements PendingTransaction {}
 }

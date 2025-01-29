@@ -28,7 +28,6 @@ import net.consensys.linea.rpc.services.LineaLimitedBundlePool.TransactionBundle
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Wei;
-import org.hyperledger.besu.datatypes.parameters.UnsignedLongParameter;
 import org.hyperledger.besu.plugin.data.BlockHeader;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
@@ -117,7 +116,7 @@ class LineaSendBundleTransactionSelectorTest {
     return new TransactionBundle(
         Hash.fromHexStringLenient("0x1234"),
         List.of(mock(PendingTransaction.class)),
-        new UnsignedLongParameter(blockNumber),
+        blockNumber,
         Optional.ofNullable(minTimestamp),
         Optional.ofNullable(maxTimestamp),
         Optional.empty());

@@ -24,7 +24,7 @@ public class LineaSendBundleEndpointPlugin extends AbstractLineaRequiredPlugin {
   private RpcEndpointService rpcEndpointService;
   private LineaSendBundle lineaSendBundleMethod;
 
-  // TODO: rational default?
+  // TODO: rational default? config?
   private final long DEFAULT_MAX_POOL_SIZE_IN_MB = 4L;
 
   /**
@@ -43,6 +43,7 @@ public class LineaSendBundleEndpointPlugin extends AbstractLineaRequiredPlugin {
                     new RuntimeException(
                         "Failed to obtain RpcEndpointService from the ServiceManager."));
 
+    // TODO: where do I come from?  need a shared instance
     var lineaBundlePool = new LineaLimitedBundlePool(DEFAULT_MAX_POOL_SIZE_IN_MB * 1024 * 1024);
 
     lineaSendBundleMethod = new LineaSendBundle(rpcEndpointService, lineaBundlePool);

@@ -27,7 +27,6 @@ import java.util.Optional;
 
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
-import org.hyperledger.besu.datatypes.parameters.UnsignedLongParameter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Answers;
@@ -79,7 +78,7 @@ class LineaLimitedBundlePoolTest {
         new LineaLimitedBundlePool.TransactionBundle(
             hash,
             List.of(pendingTransaction),
-            new UnsignedLongParameter(1),
+            1L,
             Optional.empty(),
             Optional.empty(),
             Optional.empty());
@@ -115,7 +114,7 @@ class LineaLimitedBundlePoolTest {
     return new LineaLimitedBundlePool.TransactionBundle(
         hash,
         Collections.emptyList(),
-        new UnsignedLongParameter(blockNumber),
+        blockNumber,
         Optional.empty(),
         Optional.empty(),
         Optional.empty());

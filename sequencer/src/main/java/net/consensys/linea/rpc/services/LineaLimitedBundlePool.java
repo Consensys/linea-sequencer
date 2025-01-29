@@ -27,7 +27,6 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
-import org.hyperledger.besu.datatypes.parameters.UnsignedLongParameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -154,7 +153,7 @@ public class LineaLimitedBundlePool {
    * @param bundle The TransactionBundle to add.
    */
   private void addToBlockIndex(TransactionBundle bundle) {
-    long blockNumber = bundle.blockNumber().getValue();
+    long blockNumber = bundle.blockNumber();
     blockIndex.computeIfAbsent(blockNumber, k -> new ArrayList<>()).add(bundle);
   }
 
@@ -164,7 +163,7 @@ public class LineaLimitedBundlePool {
    * @param bundle The TransactionBundle to remove.
    */
   private void removeFromBlockIndex(TransactionBundle bundle) {
-    long blockNumber = bundle.blockNumber().getValue();
+    long blockNumber = bundle.blockNumber();
     List<TransactionBundle> bundles = blockIndex.get(blockNumber);
     if (bundles != null) {
       bundles.remove(bundle);
@@ -182,7 +181,7 @@ public class LineaLimitedBundlePool {
   public record TransactionBundle(
       Hash bundleIdentifier,
       List<PendingTransaction> pendingTransactions,
-      UnsignedLongParameter blockNumber,
+      Long blockNumber,
       Optional<Long> minTimestamp,
       Optional<Long> maxTimestamp,
       Optional<List<Hash>> revertingTxHashes) {}

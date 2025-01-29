@@ -37,7 +37,6 @@ import net.consensys.linea.rpc.services.LineaLimitedBundlePool;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
-import org.hyperledger.besu.datatypes.parameters.UnsignedLongParameter;
 import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.BlockchainService;
@@ -138,7 +137,7 @@ class LineaTransactionSelectorFactoryTest {
     return new LineaLimitedBundlePool.TransactionBundle(
         hash,
         List.of(mock(PendingTransaction.class, RETURNS_DEEP_STUBS)),
-        new UnsignedLongParameter(blockNumber),
+        blockNumber,
         Optional.empty(),
         Optional.empty(),
         Optional.empty());
