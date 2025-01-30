@@ -1,3 +1,17 @@
+/*
+ * Copyright Consensys Software Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package net.consensys.linea.rpc.methods;
 
 import static java.util.Optional.empty;
@@ -45,7 +59,7 @@ class LineaSendBundleTest {
   @BeforeEach
   void setup() {
     rpcEndpointService = mock(RpcEndpointService.class);
-    bundlePool = spy(new LineaLimitedBundlePool(4096));
+    bundlePool = spy(new LineaLimitedBundlePool(4096L));
     lineaSendBundle = new LineaSendBundle(rpcEndpointService, bundlePool);
   }
 

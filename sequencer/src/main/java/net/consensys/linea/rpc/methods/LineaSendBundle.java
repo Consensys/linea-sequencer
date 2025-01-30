@@ -24,8 +24,9 @@ import java.util.stream.Collectors;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.extern.slf4j.Slf4j;
+import net.consensys.linea.rpc.services.BundlePoolService;
+import net.consensys.linea.rpc.services.BundlePoolService.TransactionBundle;
 import net.consensys.linea.rpc.services.LineaLimitedBundlePool;
-import net.consensys.linea.rpc.services.LineaLimitedBundlePool.TransactionBundle;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Hash;
@@ -44,10 +45,10 @@ public class LineaSendBundle {
   private static final AtomicInteger LOG_SEQUENCE = new AtomicInteger();
   private final JsonRpcParameter parameterParser = new JsonRpcParameter();
   private final RpcEndpointService rpcEndpointService;
-  private final LineaLimitedBundlePool bundlePool;
+  private final BundlePoolService bundlePool;
 
   public LineaSendBundle(
-      final RpcEndpointService rpcEndpointService, LineaLimitedBundlePool bundlePool) {
+      final RpcEndpointService rpcEndpointService, BundlePoolService bundlePool) {
     this.rpcEndpointService = rpcEndpointService;
     this.bundlePool = bundlePool;
   }

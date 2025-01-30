@@ -24,19 +24,16 @@ import com.google.auto.service.AutoService;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
+import net.consensys.linea.config.LineaTransactionSelectorCliOptions;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
 import net.consensys.linea.metrics.HistogramMetrics;
+import net.consensys.linea.rpc.services.BundlePoolService;
 import net.consensys.linea.sequencer.txselection.selectors.ProfitableTransactionSelector;
-import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
-import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
-import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
-import org.hyperledger.besu.plugin.services.BesuService;
-import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
-import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelectorFactory;
+import org.hyperledger.besu.plugin.services.TransactionSelectionService;
 
 /**
  * This class extends the default transaction selection rules used by Besu. It leverages the
@@ -51,10 +48,12 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
   private TransactionSelectionService transactionSelectionService;
   private Optional<JsonRpcManager> rejectedTxJsonRpcManager = Optional.empty();
   private BesuConfiguration besuConfiguration;
+  private Optional<BundlePoolService> bundlePool = Optional.empty();
 
   @Override
   public void doRegister(final ServiceManager serviceManager) {
     this.serviceManager = serviceManager;
+
     transactionSelectionService =
         serviceManager
             .getService(TransactionSelectionService.class)
@@ -70,6 +69,13 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
                 () ->
                     new RuntimeException(
                         "Failed to obtain BesuConfiguration from the ServiceManager."));
+
+    // get or create bundle pool service
+    // TODO, can we use .create() here for cli options and get the correct cli overrides?
+    bundlePool =
+        BundlePoolService.getOrCreateBundlePool(
+            serviceManager, LineaTransactionSelectorCliOptions.create().maxBundlePoolSizeBytes);
+
     metricCategoryRegistry.addMetricCategory(SEQUENCER_PROFITABILITY);
   }
 
@@ -113,81 +119,12 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
             createLimitModules(tracerConfiguration()),
             rejectedTxJsonRpcManager,
             maybeProfitabilityMetrics,
-            // TODO: plumb LineaLimitedBundlePool
-            Optional.empty()));
+            bundlePool));
   }
 
   @Override
   public void stop() {
     super.stop();
     rejectedTxJsonRpcManager.ifPresent(JsonRpcManager::shutdown);
-  }
-
-  /**
-   * I am confusingly named. For the uninitiated, how would one differentiate the purpose of
-   * TransactionSelectionService versus BlockTransactionSelectionService? Perhaps it was the
-   * original creation/naming of TransactionSelectionService that confused things.
-   *
-   * <p>This is a bit circuitous. BTS has a transactionSelectorService, which creates a
-   * PluginTransactionSelector via a factory. The factory in this case is _this_ outer class, loaded
-   * via the plugin system. BTS passes a reference to itself into selectPendingTransactions, so we
-   * can call evaluatePendingTransaction for each tx in a bundle, and finally commit/rollback
-   *
-   * <p>this interface will be in upstream besu eventually.
-   *
-   * <p>TODO: remove me.
-   */
-  public interface BlockTransactionSelectionService extends BesuService {
-
-    TransactionSelectionResult evaluatePendingTransaction(PendingTransaction pendingTransaction);
-
-    boolean commit();
-
-    void rollback();
-  }
-
-  public interface SelectorsStateManager {
-    /**
-     * Will be added in the upstream plugin services api.
-     *
-     * <p>TODO: remove me.
-     */
-  }
-
-  /**
-   * updated upstream interface, normally found in
-   * org.hyperledger.besu.plugin.services.TransactionSelectionService
-   *
-   * <p>I am extended beyond being a provider/factory for PluginTransactionSelector, to also provide
-   * an entry point for adding pending transactions to the block
-   *
-   * <p>TODO: remove me
-   */
-  public interface TransactionSelectionService extends BesuService {
-    PluginTransactionSelector createPluginTransactionSelector(
-        SelectorsStateManager selectorsStateManager);
-
-    void selectPendingTransactions(
-        BlockTransactionSelectionService blockTransactionSelectionService,
-        final ProcessableBlockHeader pendingBlockHeader);
-
-    void registerPluginTransactionSelectorFactory(
-        PluginTransactionSelectorFactory transactionSelectorFactory);
-  }
-
-  /**
-   * updated in upstream besu.
-   *
-   * <p>TODO: remove me.
-   */
-  public interface PluginTransactionSelectorFactory {
-
-    default PluginTransactionSelector create(final SelectorsStateManager selectorsStateManager) {
-      return PluginTransactionSelector.ACCEPT_ALL;
-    }
-
-    default void selectPendingTransactions(
-        final BlockTransactionSelectionService blockTransactionSelectionService,
-        final ProcessableBlockHeader pendingBlockHeader) {}
   }
 }

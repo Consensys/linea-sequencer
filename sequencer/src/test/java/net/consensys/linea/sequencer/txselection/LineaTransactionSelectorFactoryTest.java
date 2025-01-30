@@ -33,6 +33,7 @@ import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
+import net.consensys.linea.rpc.services.BundlePoolService;
 import net.consensys.linea.rpc.services.LineaLimitedBundlePool;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Hash;
@@ -40,6 +41,7 @@ import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.BlockchainService;
+import org.hyperledger.besu.plugin.services.txselection.BlockTransactionSelectionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -57,7 +59,7 @@ class LineaTransactionSelectorFactoryTest {
   private LineaTracerConfiguration mockTracerConfiguration;
   private Map<String, Integer> mockLimitsMap;
   private LineaLimitedBundlePool bundlePool;
-  private Optional<LineaLimitedBundlePool> mockBundlePool;
+  private Optional<BundlePoolService> mockBundlePool;
 
   private LineaTransactionSelectorFactory factory;
 
@@ -69,7 +71,7 @@ class LineaTransactionSelectorFactoryTest {
     mockProfitabilityConfiguration = mock(LineaProfitabilityConfiguration.class);
     mockTracerConfiguration = mock(LineaTracerConfiguration.class);
     mockLimitsMap = new HashMap<>();
-    bundlePool = new LineaLimitedBundlePool(4_000_000L);
+    bundlePool = new LineaLimitedBundlePool(4096);
     mockBundlePool = Mockito.spy(Optional.of(bundlePool));
 
     factory =
@@ -87,7 +89,7 @@ class LineaTransactionSelectorFactoryTest {
 
   @Test
   void testSelectPendingTransactions_WithBundles() {
-    var mockBts = mock(LineaTransactionSelectorPlugin.BlockTransactionSelectionService.class);
+    var mockBts = mock(BlockTransactionSelectionService.class);
     var mockPendingBlockHeader = mock(ProcessableBlockHeader.class);
     when(mockPendingBlockHeader.getNumber()).thenReturn(1L);
 
@@ -105,7 +107,7 @@ class LineaTransactionSelectorFactoryTest {
   @ParameterizedTest()
   @ArgumentsSource(FailedTransactionSelectionResultProvider.class)
   void testSelectPendingTransactions_WithFailedBundle(TransactionSelectionResult failStatus) {
-    var mockBts = mock(LineaTransactionSelectorPlugin.BlockTransactionSelectionService.class);
+    var mockBts = mock(BlockTransactionSelectionService.class);
     var mockPendingBlockHeader = mock(ProcessableBlockHeader.class);
     when(mockPendingBlockHeader.getNumber()).thenReturn(1L);
 
@@ -122,7 +124,7 @@ class LineaTransactionSelectorFactoryTest {
 
   @Test
   void testSelectPendingTransactions_WithoutBundles() {
-    var mockBts = mock(LineaTransactionSelectorPlugin.BlockTransactionSelectionService.class);
+    var mockBts = mock(BlockTransactionSelectionService.class);
     var mockPendingBlockHeader = mock(ProcessableBlockHeader.class);
     when(mockPendingBlockHeader.getNumber()).thenReturn(1L);
 

@@ -24,13 +24,14 @@ import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
 import net.consensys.linea.metrics.HistogramMetrics;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
-import net.consensys.linea.rpc.services.LineaLimitedBundlePool;
-import net.consensys.linea.sequencer.txselection.LineaTransactionSelectorPlugin.PluginTransactionSelectorFactory;
-import net.consensys.linea.sequencer.txselection.LineaTransactionSelectorPlugin.SelectorsStateManager;
+import net.consensys.linea.rpc.services.BundlePoolService;
 import net.consensys.linea.sequencer.txselection.selectors.LineaTransactionSelector;
 import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 import org.hyperledger.besu.plugin.services.BlockchainService;
+import org.hyperledger.besu.plugin.services.txselection.BlockTransactionSelectionService;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
+import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelectorFactory;
+import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager;
 
 /**
  * Represents a factory for creating transaction selectors. Note that a new instance of the
@@ -46,7 +47,7 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
   private final LineaProfitabilityConfiguration profitabilityConfiguration;
   private final LineaTracerConfiguration tracerConfiguration;
   private final Optional<HistogramMetrics> maybeProfitabilityMetrics;
-  private final Optional<LineaLimitedBundlePool> maybeBundlePool;
+  private final Optional<BundlePoolService> maybeBundlePool;
 
   private final Map<String, Integer> limitsMap;
 
@@ -59,7 +60,7 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
       final Map<String, Integer> limitsMap,
       final Optional<JsonRpcManager> rejectedTxJsonRpcManager,
       final Optional<HistogramMetrics> maybeProfitabilityMetrics,
-      final Optional<LineaLimitedBundlePool> maybeBundlePool) {
+      final Optional<BundlePoolService> maybeBundlePool) {
     this.blockchainService = blockchainService;
     this.txSelectorConfiguration = txSelectorConfiguration;
     this.l1L2BridgeConfiguration = l1L2BridgeConfiguration;
@@ -79,14 +80,14 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
         l1L2BridgeConfiguration,
         profitabilityConfiguration,
         tracerConfiguration,
+        maybeBundlePool,
         limitsMap,
         rejectedTxJsonRpcManager,
         maybeProfitabilityMetrics);
   }
 
   public void selectPendingTransactions(
-      final LineaTransactionSelectorPlugin.BlockTransactionSelectionService bts,
-      final ProcessableBlockHeader pendingBlockHeader) {
+      final BlockTransactionSelectionService bts, final ProcessableBlockHeader pendingBlockHeader) {
     // TODO: unwind this a bit and add logging
     maybeBundlePool
         .map(bp -> bp.getBundlesByBlockNumber(pendingBlockHeader.getNumber()))

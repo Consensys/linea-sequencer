@@ -26,9 +26,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalCause;
+import com.google.auto.service.AutoService;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
+import org.hyperledger.besu.plugin.services.BesuService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +38,8 @@ import org.slf4j.LoggerFactory;
  * A pool for managing TransactionBundles with limited size and FIFO eviction. Provides access via
  * hash identifiers or block numbers.
  */
-public class LineaLimitedBundlePool {
+@AutoService(BesuService.class)
+public class LineaLimitedBundlePool implements BundlePoolService {
 
   private static final Logger logger = LoggerFactory.getLogger(LineaLimitedBundlePool.class);
 
@@ -62,8 +65,8 @@ public class LineaLimitedBundlePool {
                   if (bundle != null && cause.wasEvicted()) {
                     logger.info(
                         "Dropping transaction bundle {}:{} due to {}",
-                        bundle.blockNumber,
-                        bundle.bundleIdentifier.toHexString(),
+                        bundle.blockNumber(),
+                        bundle.bundleIdentifier().toHexString(),
                         cause.name());
                     removeFromBlockIndex(bundle);
                   }
@@ -211,7 +214,9 @@ public class LineaLimitedBundlePool {
   }
 
   private int calculateWeight(TransactionBundle bundle) {
-    return bundle.pendingTransactions.stream().mapToInt(pt -> pt.getTransaction().getSize()).sum();
+    return bundle.pendingTransactions().stream()
+        .mapToInt(pt -> pt.getTransaction().getSize())
+        .sum();
   }
 
   /**
@@ -226,13 +231,4 @@ public class LineaLimitedBundlePool {
             Bytes.ofUnsignedLong(uuid.getMostSignificantBits()),
             Bytes.ofUnsignedLong(uuid.getLeastSignificantBits())));
   }
-
-  /** TransactionBundle record representing a collection of pending transactions with metadata. */
-  public record TransactionBundle(
-      Hash bundleIdentifier,
-      List<PendingTransaction> pendingTransactions,
-      Long blockNumber,
-      Optional<Long> minTimestamp,
-      Optional<Long> maxTimestamp,
-      Optional<List<Hash>> revertingTxHashes) {}
 }

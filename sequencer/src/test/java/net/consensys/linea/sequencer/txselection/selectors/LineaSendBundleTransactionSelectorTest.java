@@ -23,8 +23,8 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Optional;
 
+import net.consensys.linea.rpc.services.BundlePoolService.TransactionBundle;
 import net.consensys.linea.rpc.services.LineaLimitedBundlePool;
-import net.consensys.linea.rpc.services.LineaLimitedBundlePool.TransactionBundle;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Wei;

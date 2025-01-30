@@ -19,7 +19,7 @@ import static java.lang.Boolean.TRUE;
 import java.util.List;
 import java.util.Optional;
 
-import net.consensys.linea.rpc.services.LineaLimitedBundlePool;
+import net.consensys.linea.rpc.services.BundlePoolService;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
@@ -30,9 +30,9 @@ import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationCon
 public class LineaSendBundleTransactionSelector implements PluginTransactionSelector {
 
   public static final long DEFAULT_BUNDLE_POOL_SIZE = 10000L;
-  final LineaLimitedBundlePool bundlePool;
+  final BundlePoolService bundlePool;
 
-  public LineaSendBundleTransactionSelector(LineaLimitedBundlePool bundlePool) {
+  public LineaSendBundleTransactionSelector(BundlePoolService bundlePool) {
     this.bundlePool = bundlePool;
   }
 
