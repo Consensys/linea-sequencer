@@ -16,6 +16,7 @@
 package net.consensys.linea.rpc.services;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -24,7 +25,9 @@ import static org.mockito.Mockito.mock;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,7 +48,7 @@ class LineaLimitedBundlePoolTest {
     Hash hash = Hash.fromHexStringLenient("0x1234");
     LineaLimitedBundlePool.TransactionBundle bundle = createBundle(hash, 1);
 
-    pool.put(hash, bundle);
+    pool.putOrReplace(hash, bundle);
     LineaLimitedBundlePool.TransactionBundle retrieved = pool.get(hash);
 
     assertNotNull(retrieved, "Bundle should be retrieved by hash");
@@ -59,8 +62,8 @@ class LineaLimitedBundlePoolTest {
     LineaLimitedBundlePool.TransactionBundle bundle1 = createBundle(hash1, 1);
     LineaLimitedBundlePool.TransactionBundle bundle2 = createBundle(hash2, 1);
 
-    pool.put(hash1, bundle1);
-    pool.put(hash2, bundle2);
+    pool.putOrReplace(hash1, bundle1);
+    pool.putOrReplace(hash2, bundle2);
 
     List<LineaLimitedBundlePool.TransactionBundle> bundles = pool.getBundlesByBlockNumber(1);
 
@@ -83,7 +86,7 @@ class LineaLimitedBundlePoolTest {
             Optional.empty(),
             Optional.empty());
 
-    pool.put(hash, bundle);
+    pool.putOrReplace(hash, bundle);
 
     Optional<LineaLimitedBundlePool.TransactionBundle> retrieved =
         pool.getBundleByPendingTransaction(1, pendingTransaction);
@@ -99,8 +102,8 @@ class LineaLimitedBundlePoolTest {
     LineaLimitedBundlePool.TransactionBundle bundle1 = createBundle(hash1, 1);
     LineaLimitedBundlePool.TransactionBundle bundle2 = createBundle(hash2, 1);
 
-    pool.put(hash1, bundle1);
-    pool.put(hash2, bundle2);
+    pool.putOrReplace(hash1, bundle1);
+    pool.putOrReplace(hash2, bundle2);
 
     pool.removeByBlockNumber(1);
 
@@ -108,6 +111,74 @@ class LineaLimitedBundlePoolTest {
     assertNull(pool.get(hash2), "Bundle2 should be removed from the cache");
     assertTrue(
         pool.getBundlesByBlockNumber(1).isEmpty(), "Block index for block 1 should be empty");
+  }
+
+  @Test
+  void testPutAndGetByUUID() {
+    UUID uuid = UUID.randomUUID();
+    LineaLimitedBundlePool.TransactionBundle bundle = createBundle(Hash.ZERO, 1L);
+
+    pool.putOrReplace(uuid, bundle);
+
+    assertNotNull(pool.get(uuid));
+    assertEquals(bundle, pool.get(uuid));
+  }
+
+  @Test
+  void testPutAndGetByHash() {
+    Hash hash = Hash.hash(Bytes.fromHexStringLenient("0x1234"));
+    LineaLimitedBundlePool.TransactionBundle bundle = createBundle(hash, 1L);
+
+    pool.putOrReplace(hash, bundle);
+
+    assertNotNull(pool.get(hash));
+    assertEquals(bundle, pool.get(hash));
+  }
+
+  @Test
+  void testRemoveByUUID() {
+    UUID uuid = UUID.randomUUID();
+    LineaLimitedBundlePool.TransactionBundle bundle = createBundle(Hash.ZERO, 1L);
+
+    pool.putOrReplace(uuid, bundle);
+
+    assertTrue(pool.remove(uuid));
+    assertNull(pool.get(uuid));
+  }
+
+  @Test
+  void testRemoveByHash() {
+    Hash hash = Hash.hash(Bytes.fromHexStringLenient("0x5678"));
+    LineaLimitedBundlePool.TransactionBundle bundle = createBundle(hash, 1L);
+
+    pool.putOrReplace(hash, bundle);
+
+    assertTrue(pool.remove(hash));
+    assertNull(pool.get(hash));
+  }
+
+  @Test
+  void testGetByUUID_NotFound() {
+    UUID uuid = UUID.randomUUID();
+    assertNull(pool.get(uuid));
+  }
+
+  @Test
+  void testGetByHash_NotFound() {
+    Hash hash = Hash.hash(Bytes.fromHexStringLenient("0x9876"));
+    assertNull(pool.get(hash));
+  }
+
+  @Test
+  void testRemoveByUUID_NotFound() {
+    UUID uuid = UUID.randomUUID();
+    assertFalse(pool.remove(uuid));
+  }
+
+  @Test
+  void testRemoveByHash_NotFound() {
+    Hash hash = Hash.hash(Bytes.fromHexStringLenient("0xabcd"));
+    assertFalse(pool.remove(hash));
   }
 
   private LineaLimitedBundlePool.TransactionBundle createBundle(Hash hash, long blockNumber) {

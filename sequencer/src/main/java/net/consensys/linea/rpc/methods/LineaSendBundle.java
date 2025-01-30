@@ -79,12 +79,7 @@ public class LineaSendBundle {
       // use replacement UUID hashed if present, otherwise the hash of the transactions themselves
       var optBundleHash =
           optBundleUUID
-              .map(
-                  uuid ->
-                      Bytes.concatenate(
-                          Bytes.ofUnsignedLong(uuid.getMostSignificantBits()),
-                          Bytes.ofUnsignedLong(uuid.getLeastSignificantBits())))
-              .map(Hash::hash)
+              .map(LineaLimitedBundlePool::UUIDToHash)
               .or(
                   () ->
                       bundleParams.txs().stream()
@@ -101,7 +96,7 @@ public class LineaSendBundle {
                 .collect(Collectors.toList());
 
         if (!txs.isEmpty()) {
-          bundlePool.put(
+          bundlePool.putOrReplace(
               bundleHash,
               new TransactionBundle(
                   bundleHash,
@@ -137,7 +132,7 @@ public class LineaSendBundle {
 
   public record BundleResponse(Bytes32 bundleHash) {}
 
-  class LineaSendBundleError implements RpcMethodError {
+  static class LineaSendBundleError implements RpcMethodError {
 
     final String errMessage;
 

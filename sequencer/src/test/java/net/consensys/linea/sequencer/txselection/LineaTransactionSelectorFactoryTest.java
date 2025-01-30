@@ -93,7 +93,7 @@ class LineaTransactionSelectorFactoryTest {
 
     var mockHash = Hash.wrap(Bytes32.random());
     var mockBundle = createBundle(mockHash, 1L);
-    bundlePool.put(mockHash, mockBundle);
+    bundlePool.putOrReplace(mockHash, mockBundle);
 
     when(mockBts.evaluatePendingTransaction(any())).thenReturn(TransactionSelectionResult.SELECTED);
 
@@ -111,7 +111,7 @@ class LineaTransactionSelectorFactoryTest {
 
     var mockHash = Hash.wrap(Bytes32.random());
     var mockBundle = createBundle(mockHash, 1L);
-    bundlePool.put(mockHash, mockBundle);
+    bundlePool.putOrReplace(mockHash, mockBundle);
 
     when(mockBts.evaluatePendingTransaction(any())).thenReturn(failStatus);
 

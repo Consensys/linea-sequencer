@@ -20,11 +20,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalCause;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.slf4j.Logger;
@@ -107,29 +109,64 @@ public class LineaLimitedBundlePool {
   }
 
   /**
-   * Adds a new TransactionBundle to the cache and updates the block index.
+   * Retrieves a TransactionBundle by its replacement UUID
    *
-   * @param hash The hash identifier of the TransactionBundle.
-   * @param bundle The TransactionBundle to add.
+   * @param replacementUUID identifier of the TransactionBundle.
+   * @return The TransactionBundle associated with the uuid, or null if not found.
    */
-  public void put(Hash hash, TransactionBundle bundle) {
-    cache.put(hash, bundle);
-    addToBlockIndex(bundle);
+  public TransactionBundle get(UUID replacementUUID) {
+    return cache.getIfPresent(UUIDToHash(replacementUUID));
   }
 
   /**
-   * Replaces an existing TransactionBundle in the cache and updates the block index.
+   * Puts or replaces an existing TransactionBundle in the cache and updates the block index.
    *
    * @param hash The hash identifier of the TransactionBundle.
    * @param bundle The new TransactionBundle to replace the existing one.
    */
-  public void replace(Hash hash, TransactionBundle bundle) {
+  public void putOrReplace(Hash hash, TransactionBundle bundle) {
     TransactionBundle existing = cache.getIfPresent(hash);
     if (existing != null) {
       removeFromBlockIndex(existing);
     }
     cache.put(hash, bundle);
     addToBlockIndex(bundle);
+  }
+
+  /**
+   * Puts or replaces an existing TransactionBundle by UUIDin the cache and updates the block index.
+   *
+   * @param replacementUUID identifier of the TransactionBundle.
+   * @param bundle The new TransactionBundle to replace the existing one.
+   */
+  public void putOrReplace(UUID replacementUUID, TransactionBundle bundle) {
+    putOrReplace(UUIDToHash(replacementUUID), bundle);
+  }
+
+  /**
+   * removes an existing TransactionBundle in the cache and updates the block index.
+   *
+   * @param replacementUUID identifier of the TransactionBundle.
+   * @return boolean indicating if bundle was found and removed
+   */
+  public boolean remove(UUID replacementUUID) {
+    return remove(UUIDToHash(replacementUUID));
+  }
+
+  /**
+   * removes an existing TransactionBundle in the cache and updates the block index.
+   *
+   * @param hash The hash identifier of the TransactionBundle.
+   * @return boolean indicating if bundle was found and removed
+   */
+  public boolean remove(Hash hash) {
+    var existingBundle = cache.getIfPresent(hash);
+    if (existingBundle != null) {
+      cache.invalidate(hash);
+      removeFromBlockIndex(existingBundle);
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -175,6 +212,19 @@ public class LineaLimitedBundlePool {
 
   private int calculateWeight(TransactionBundle bundle) {
     return bundle.pendingTransactions.stream().mapToInt(pt -> pt.getTransaction().getSize()).sum();
+  }
+
+  /**
+   * convert a UUID into a hash used by the bundle pool.
+   *
+   * @param uuid the uuid to hash
+   * @return Hash identifier for the uuid
+   */
+  public static Hash UUIDToHash(UUID uuid) {
+    return Hash.hash(
+        Bytes.concatenate(
+            Bytes.ofUnsignedLong(uuid.getMostSignificantBits()),
+            Bytes.ofUnsignedLong(uuid.getLeastSignificantBits())));
   }
 
   /** TransactionBundle record representing a collection of pending transactions with metadata. */

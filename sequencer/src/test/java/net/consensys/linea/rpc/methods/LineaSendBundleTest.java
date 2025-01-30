@@ -15,8 +15,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import net.consensys.linea.rpc.services.LineaLimitedBundlePool;
-import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Hash;
+import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.TransactionTestFixture;
 import org.hyperledger.besu.plugin.services.RpcEndpointService;
@@ -29,7 +29,14 @@ class LineaSendBundleTest {
   private LineaSendBundle lineaSendBundle;
   private RpcEndpointService rpcEndpointService;
   private LineaLimitedBundlePool bundlePool;
+
   private Transaction mockTX1 =
+      new TransactionTestFixture()
+          .nonce(1)
+          .gasLimit(21000)
+          .createTransaction(SIGNATURE_ALGORITHM.get().generateKeyPair());
+
+  private Transaction mockTX2 =
       new TransactionTestFixture()
           .nonce(1)
           .gasLimit(21000)
@@ -66,14 +73,10 @@ class LineaSendBundleTest {
   }
 
   @Test
-  void testExecute_ValidBundle_withReplacementId() {
+  void testExecute_ValidBundle_withReplacement() {
     List<String> transactions = List.of(mockTX1.encoded().toHexString());
     UUID replId = UUID.randomUUID();
-    var expectedUUIDBundleHash =
-        Hash.hash(
-            Bytes.concatenate(
-                Bytes.ofUnsignedLong(replId.getMostSignificantBits()),
-                Bytes.ofUnsignedLong(replId.getLeastSignificantBits())));
+    var expectedUUIDBundleHash = LineaLimitedBundlePool.UUIDToHash(replId);
 
     Optional<Long> minTimestamp = Optional.of(1000L);
     Optional<Long> maxTimestamp = Optional.of(System.currentTimeMillis() + 5000L);
@@ -97,6 +100,32 @@ class LineaSendBundleTest {
     // Validate response
     assertNotNull(response);
     assertEquals(expectedUUIDBundleHash, response.bundleHash());
+
+    // Replace bundle:
+    transactions = List.of(mockTX2.encoded().toHexString(), mockTX1.encoded().toHexString());
+    bundleParams =
+        new LineaSendBundle.BundleParameter(
+            transactions,
+            12345L,
+            minTimestamp,
+            maxTimestamp,
+            empty(),
+            Optional.of(replId.toString()),
+            empty());
+    when(request.getParams()).thenReturn(new Object[] {bundleParams});
+
+    // re-execute
+    response = lineaSendBundle.execute(request);
+
+    // Validate response
+    assertNotNull(response);
+    assertEquals(expectedUUIDBundleHash, response.bundleHash());
+
+    // assert the new block number:
+    assertTrue(bundlePool.get(expectedUUIDBundleHash).blockNumber().equals(12345L));
+    List<PendingTransaction> pts = bundlePool.get(expectedUUIDBundleHash).pendingTransactions();
+    // assert the new tx2 is present
+    assertTrue(pts.stream().map(pt -> pt.getTransaction()).anyMatch(t -> t.equals(mockTX2)));
   }
 
   @Test
