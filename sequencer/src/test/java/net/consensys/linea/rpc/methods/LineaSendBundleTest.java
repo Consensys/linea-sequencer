@@ -33,6 +33,7 @@ import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.TransactionTestFixture;
+import org.hyperledger.besu.plugin.services.BesuEvents;
 import org.hyperledger.besu.plugin.services.RpcEndpointService;
 import org.hyperledger.besu.plugin.services.rpc.PluginRpcRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,6 +43,7 @@ class LineaSendBundleTest {
 
   private LineaSendBundle lineaSendBundle;
   private RpcEndpointService rpcEndpointService;
+  private BesuEvents mockEvents;
   private LineaLimitedBundlePool bundlePool;
 
   private Transaction mockTX1 =
@@ -59,7 +61,8 @@ class LineaSendBundleTest {
   @BeforeEach
   void setup() {
     rpcEndpointService = mock(RpcEndpointService.class);
-    bundlePool = spy(new LineaLimitedBundlePool(4096L));
+    mockEvents = mock(BesuEvents.class);
+    bundlePool = spy(new LineaLimitedBundlePool(4096L, mockEvents));
     lineaSendBundle = new LineaSendBundle(rpcEndpointService, bundlePool);
   }
 

@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.plugin.ServiceManager;
+import org.hyperledger.besu.plugin.services.BesuEvents;
 import org.hyperledger.besu.plugin.services.BesuService;
 
 public interface BundlePoolService extends BesuService {
@@ -21,8 +22,8 @@ public interface BundlePoolService extends BesuService {
       Optional<List<Hash>> revertingTxHashes) {}
 
   /**
-   * synchronized usage of serviceManager to get a bundle pool from the services manager
-   * or create and register one. Bundle Pool is required by both rpc and selector plugins.
+   * synchronized usage of serviceManager to get a bundle pool from the services manager or create
+   * and register one. Bundle Pool is required by both rpc and selector plugins.
    *
    * @param serviceManager
    * @param maxBundlePoolSizeBytes
@@ -30,15 +31,22 @@ public interface BundlePoolService extends BesuService {
    */
   static Optional<BundlePoolService> getOrCreateBundlePool(
       ServiceManager serviceManager, long maxBundlePoolSizeBytes) {
-    synchronized(serviceManager) {
-    return serviceManager
-        .getService(BundlePoolService.class)
-        .or(
-            () -> {
-              var bundlePool = new LineaLimitedBundlePool(maxBundlePoolSizeBytes);
-              serviceManager.addService(BundlePoolService.class, bundlePool);
-              return Optional.of(bundlePool);
-            });
+    synchronized (serviceManager) {
+      var eventService =
+          serviceManager
+              .getService(BesuEvents.class)
+              .orElseThrow(
+                  () ->
+                      new RuntimeException("Failed to obtain BesuEvents from the ServiceManager."));
+
+      return serviceManager
+          .getService(BundlePoolService.class)
+          .or(
+              () -> {
+                var bundlePool = new LineaLimitedBundlePool(maxBundlePoolSizeBytes, eventService);
+                serviceManager.addService(BundlePoolService.class, bundlePool);
+                return Optional.of(bundlePool);
+              });
     }
   }
 

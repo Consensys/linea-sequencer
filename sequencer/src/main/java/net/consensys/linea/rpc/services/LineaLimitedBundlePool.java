@@ -22,14 +22,19 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.google.auto.service.AutoService;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
+import org.hyperledger.besu.plugin.data.AddedBlockContext;
+import org.hyperledger.besu.plugin.services.BesuEvents;
 import org.hyperledger.besu.plugin.services.BesuService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,19 +44,22 @@ import org.slf4j.LoggerFactory;
  * hash identifiers or block numbers.
  */
 @AutoService(BesuService.class)
-public class LineaLimitedBundlePool implements BundlePoolService {
+public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.BlockAddedListener {
 
   private static final Logger logger = LoggerFactory.getLogger(LineaLimitedBundlePool.class);
 
   private final Cache<Hash, TransactionBundle> cache;
   private final Map<Long, List<TransactionBundle>> blockIndex;
+  private final AtomicLong maxBlockHeight = new AtomicLong(0L);
 
   /**
-   * Initializes the LineaLimitedBundlePool with a maximum size and expiration time.
+   * Initializes the LineaLimitedBundlePool with a maximum size and expiration time, and registers
+   * as a blockAddedEvent listener.
    *
    * @param maxSizeInBytes The maximum size in bytes of the pool objects.
    */
-  public LineaLimitedBundlePool(long maxSizeInBytes) {
+  @VisibleForTesting
+  public LineaLimitedBundlePool(long maxSizeInBytes, BesuEvents eventService) {
     this.cache =
         Caffeine.newBuilder()
             .maximumWeight(maxSizeInBytes) // Maximum size in bytes
@@ -74,6 +82,9 @@ public class LineaLimitedBundlePool implements BundlePoolService {
             .build();
 
     this.blockIndex = new ConcurrentHashMap<>();
+
+    // register ourselves as a block added listener:
+    eventService.addBlockAddedListener(this);
   }
 
   /**
@@ -230,5 +241,28 @@ public class LineaLimitedBundlePool implements BundlePoolService {
         Bytes.concatenate(
             Bytes.ofUnsignedLong(uuid.getMostSignificantBits()),
             Bytes.ofUnsignedLong(uuid.getLeastSignificantBits())));
+  }
+
+  /**
+   * Cull the bundle pool on the basis of blocks added.
+   *
+   * @param addedBlockContext
+   */
+  @Override
+  public void onBlockAdded(final AddedBlockContext addedBlockContext) {
+    final var lastSeen = addedBlockContext.getBlockHeader().getNumber();
+    final var latest = maxBlockHeight.updateAndGet(current -> Math.max(current, lastSeen));
+    // keep it simple regarding reorgs and, cull the pool for any block numbers lower than latest
+    blockIndex.keySet().stream()
+        .filter(k -> k < latest)
+        // collecting to a set in order to not mutate the collection we are streaming:
+        .collect(Collectors.toSet())
+        .forEach(
+            k -> {
+              blockIndex.get(k).forEach(bundle -> cache.invalidate(bundle.bundleIdentifier()));
+              // dropping from the cache should inherently remove from blockIndex, but this
+              // is cheap insurance against blockIndex map leaking due to cache evictions
+              blockIndex.remove(k);
+            });
   }
 }

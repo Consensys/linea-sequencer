@@ -40,6 +40,7 @@ import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
+import org.hyperledger.besu.plugin.services.BesuEvents;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.txselection.BlockTransactionSelectionService;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,6 +59,7 @@ class LineaTransactionSelectorFactoryTest {
   private LineaProfitabilityConfiguration mockProfitabilityConfiguration;
   private LineaTracerConfiguration mockTracerConfiguration;
   private Map<String, Integer> mockLimitsMap;
+  private BesuEvents mockEvents;
   private LineaLimitedBundlePool bundlePool;
   private Optional<BundlePoolService> mockBundlePool;
 
@@ -71,7 +73,8 @@ class LineaTransactionSelectorFactoryTest {
     mockProfitabilityConfiguration = mock(LineaProfitabilityConfiguration.class);
     mockTracerConfiguration = mock(LineaTracerConfiguration.class);
     mockLimitsMap = new HashMap<>();
-    bundlePool = new LineaLimitedBundlePool(4096);
+    mockEvents = mock(BesuEvents.class);
+    bundlePool = new LineaLimitedBundlePool(4096, mockEvents);
     mockBundlePool = Mockito.spy(Optional.of(bundlePool));
 
     factory =

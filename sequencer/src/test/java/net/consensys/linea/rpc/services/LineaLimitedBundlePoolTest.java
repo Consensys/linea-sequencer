@@ -21,15 +21,20 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import net.consensys.linea.rpc.services.BundlePoolService.TransactionBundle;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
+import org.hyperledger.besu.plugin.data.AddedBlockContext;
+import org.hyperledger.besu.plugin.data.BlockHeader;
+import org.hyperledger.besu.plugin.services.BesuEvents;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Answers;
@@ -37,19 +42,25 @@ import org.mockito.Answers;
 class LineaLimitedBundlePoolTest {
 
   private LineaLimitedBundlePool pool;
+  private BesuEvents eventService;
+  private AddedBlockContext addedBlockContext;
+  private BlockHeader blockHeader;
 
   @BeforeEach
   void setUp() {
-    pool = new LineaLimitedBundlePool(10_000); // Max 100 entries, 10 KB size
+    eventService = mock(BesuEvents.class);
+    addedBlockContext = mock(AddedBlockContext.class);
+    pool = new LineaLimitedBundlePool(10_000L, eventService); // Max 100 entries, 10 KB size
+    blockHeader = mock(BlockHeader.class);
   }
 
   @Test
   void smokeTestPutAndGetByHash() {
     Hash hash = Hash.fromHexStringLenient("0x1234");
-    LineaLimitedBundlePool.TransactionBundle bundle = createBundle(hash, 1);
+    TransactionBundle bundle = createBundle(hash, 1);
 
     pool.putOrReplace(hash, bundle);
-    LineaLimitedBundlePool.TransactionBundle retrieved = pool.get(hash);
+    TransactionBundle retrieved = pool.get(hash);
 
     assertNotNull(retrieved, "Bundle should be retrieved by hash");
     assertEquals(hash, retrieved.bundleIdentifier(), "Retrieved bundle hash should match");
@@ -59,13 +70,13 @@ class LineaLimitedBundlePoolTest {
   void smokeTestGetBundlesByBlockNumber() {
     Hash hash1 = Hash.fromHexStringLenient("0x1234");
     Hash hash2 = Hash.fromHexStringLenient("0x5678");
-    LineaLimitedBundlePool.TransactionBundle bundle1 = createBundle(hash1, 1);
-    LineaLimitedBundlePool.TransactionBundle bundle2 = createBundle(hash2, 1);
+    TransactionBundle bundle1 = createBundle(hash1, 1);
+    TransactionBundle bundle2 = createBundle(hash2, 1);
 
     pool.putOrReplace(hash1, bundle1);
     pool.putOrReplace(hash2, bundle2);
 
-    List<LineaLimitedBundlePool.TransactionBundle> bundles = pool.getBundlesByBlockNumber(1);
+    List<TransactionBundle> bundles = pool.getBundlesByBlockNumber(1);
 
     assertEquals(2, bundles.size(), "There should be two bundles for block 1");
     assertTrue(bundles.contains(bundle1), "Bundles should contain bundle1");
@@ -77,8 +88,8 @@ class LineaLimitedBundlePoolTest {
     Hash hash = Hash.fromHexStringLenient("0x1234");
     PendingTransaction pendingTransaction =
         mock(PendingTransaction.class, Answers.RETURNS_DEEP_STUBS);
-    LineaLimitedBundlePool.TransactionBundle bundle =
-        new LineaLimitedBundlePool.TransactionBundle(
+    TransactionBundle bundle =
+        new TransactionBundle(
             hash,
             List.of(pendingTransaction),
             1L,
@@ -88,7 +99,7 @@ class LineaLimitedBundlePoolTest {
 
     pool.putOrReplace(hash, bundle);
 
-    Optional<LineaLimitedBundlePool.TransactionBundle> retrieved =
+    Optional<TransactionBundle> retrieved =
         pool.getBundleByPendingTransaction(1, pendingTransaction);
 
     assertTrue(retrieved.isPresent(), "Bundle containing the pending transaction should be found");
@@ -99,8 +110,8 @@ class LineaLimitedBundlePoolTest {
   void smokeTestRemoveByBlockNumber() {
     Hash hash1 = Hash.fromHexStringLenient("0x1234");
     Hash hash2 = Hash.fromHexStringLenient("0x5678");
-    LineaLimitedBundlePool.TransactionBundle bundle1 = createBundle(hash1, 1);
-    LineaLimitedBundlePool.TransactionBundle bundle2 = createBundle(hash2, 1);
+    TransactionBundle bundle1 = createBundle(hash1, 1);
+    TransactionBundle bundle2 = createBundle(hash2, 1);
 
     pool.putOrReplace(hash1, bundle1);
     pool.putOrReplace(hash2, bundle2);
@@ -116,7 +127,7 @@ class LineaLimitedBundlePoolTest {
   @Test
   void testPutAndGetByUUID() {
     UUID uuid = UUID.randomUUID();
-    LineaLimitedBundlePool.TransactionBundle bundle = createBundle(Hash.ZERO, 1L);
+    TransactionBundle bundle = createBundle(Hash.ZERO, 1L);
 
     pool.putOrReplace(uuid, bundle);
 
@@ -127,7 +138,7 @@ class LineaLimitedBundlePoolTest {
   @Test
   void testPutAndGetByHash() {
     Hash hash = Hash.hash(Bytes.fromHexStringLenient("0x1234"));
-    LineaLimitedBundlePool.TransactionBundle bundle = createBundle(hash, 1L);
+    TransactionBundle bundle = createBundle(hash, 1L);
 
     pool.putOrReplace(hash, bundle);
 
@@ -138,7 +149,7 @@ class LineaLimitedBundlePoolTest {
   @Test
   void testRemoveByUUID() {
     UUID uuid = UUID.randomUUID();
-    LineaLimitedBundlePool.TransactionBundle bundle = createBundle(Hash.ZERO, 1L);
+    TransactionBundle bundle = createBundle(Hash.ZERO, 1L);
 
     pool.putOrReplace(uuid, bundle);
 
@@ -149,7 +160,7 @@ class LineaLimitedBundlePoolTest {
   @Test
   void testRemoveByHash() {
     Hash hash = Hash.hash(Bytes.fromHexStringLenient("0x5678"));
-    LineaLimitedBundlePool.TransactionBundle bundle = createBundle(hash, 1L);
+    TransactionBundle bundle = createBundle(hash, 1L);
 
     pool.putOrReplace(hash, bundle);
 
@@ -181,8 +192,35 @@ class LineaLimitedBundlePoolTest {
     assertFalse(pool.remove(hash));
   }
 
-  private LineaLimitedBundlePool.TransactionBundle createBundle(Hash hash, long blockNumber) {
-    return new LineaLimitedBundlePool.TransactionBundle(
+  @Test
+  void testOnBlockAdded_RemovesOldBundles() {
+    // Prepare old block number
+    long oldBlockNumber = 10L;
+    long newBlockNumber = 15L;
+    Hash mockOldHash = Hash.ZERO;
+
+    // Mock block header behavior
+    when(addedBlockContext.getBlockHeader()).thenReturn(blockHeader);
+    when(blockHeader.getNumber()).thenReturn(newBlockNumber);
+
+    // Create a fake transaction bundle
+    TransactionBundle oldBundle = createBundle(mockOldHash, oldBlockNumber);
+
+    // Manually insert old bundle into the block index
+    pool.putOrReplace(mockOldHash, oldBundle);
+
+    // Ensure bundle exists before adding new block
+    assert !pool.getBundlesByBlockNumber(oldBlockNumber).isEmpty();
+
+    // Call the method under test
+    pool.onBlockAdded(addedBlockContext);
+
+    // Verify that the old bundle is removed
+    assert pool.getBundlesByBlockNumber(oldBlockNumber).isEmpty();
+  }
+
+  private TransactionBundle createBundle(Hash hash, long blockNumber) {
+    return new TransactionBundle(
         hash,
         Collections.emptyList(),
         blockNumber,
