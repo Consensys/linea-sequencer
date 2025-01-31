@@ -15,6 +15,7 @@
 
 package net.consensys.linea.sequencer.txselection;
 
+import static net.consensys.linea.config.LineaTransactionSelectorCliOptions.DEFAULT_MAX_BUNDLE_GAS_PER_BLOCK;
 import static net.consensys.linea.metrics.LineaMetricCategory.SEQUENCER_PROFITABILITY;
 import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.createLimitModules;
 
@@ -50,6 +51,9 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
   private BesuConfiguration besuConfiguration;
   private Optional<BundlePoolService> bundlePool = Optional.empty();
 
+  // initialize to the static config default:
+  private long maxBundleGasPerBlock = DEFAULT_MAX_BUNDLE_GAS_PER_BLOCK;
+
   @Override
   public void doRegister(final ServiceManager serviceManager) {
     this.serviceManager = serviceManager;
@@ -70,11 +74,14 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
                     new RuntimeException(
                         "Failed to obtain BesuConfiguration from the ServiceManager."));
 
-    // get or create bundle pool service
     // TODO, can we use .create() here for cli options and get the correct cli overrides?
-    bundlePool =
-        BundlePoolService.getOrCreateBundlePool(
-            serviceManager, LineaTransactionSelectorCliOptions.create().maxBundlePoolSizeBytes);
+    var selectorOpts = LineaTransactionSelectorCliOptions.create();
+
+    var maxBundlePoolSizeBytes = selectorOpts.maxBundlePoolSizeBytes;
+    maxBundleGasPerBlock = selectorOpts.maxBundleGasPerBlock;
+
+    // get or create bundle pool service
+    bundlePool = BundlePoolService.getOrCreateBundlePool(serviceManager, maxBundlePoolSizeBytes);
 
     metricCategoryRegistry.addMetricCategory(SEQUENCER_PROFITABILITY);
   }
@@ -119,7 +126,8 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
             createLimitModules(tracerConfiguration()),
             rejectedTxJsonRpcManager,
             maybeProfitabilityMetrics,
-            bundlePool));
+            bundlePool,
+            maxBundleGasPerBlock));
   }
 
   @Override

@@ -19,6 +19,9 @@ import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -38,6 +41,7 @@ import net.consensys.linea.rpc.services.LineaLimitedBundlePool;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
+import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.BesuEvents;
@@ -49,7 +53,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
-import org.mockito.Mockito;
 
 class LineaTransactionSelectorFactoryTest {
 
@@ -74,8 +77,8 @@ class LineaTransactionSelectorFactoryTest {
     mockTracerConfiguration = mock(LineaTracerConfiguration.class);
     mockLimitsMap = new HashMap<>();
     mockEvents = mock(BesuEvents.class);
-    bundlePool = new LineaLimitedBundlePool(4096, mockEvents);
-    mockBundlePool = Mockito.spy(Optional.of(bundlePool));
+    bundlePool = spy(new LineaLimitedBundlePool(4096, mockEvents));
+    mockBundlePool = spy(Optional.of(bundlePool));
 
     factory =
         new LineaTransactionSelectorFactory(
@@ -87,7 +90,8 @@ class LineaTransactionSelectorFactoryTest {
             mockLimitsMap,
             Optional.empty(),
             Optional.empty(),
-            mockBundlePool);
+            mockBundlePool,
+            15_000_000L);
   }
 
   @Test
@@ -97,7 +101,7 @@ class LineaTransactionSelectorFactoryTest {
     when(mockPendingBlockHeader.getNumber()).thenReturn(1L);
 
     var mockHash = Hash.wrap(Bytes32.random());
-    var mockBundle = createBundle(mockHash, 1L);
+    var mockBundle = createBundle(mockHash, 1L, Optional.empty());
     bundlePool.putOrReplace(mockHash, mockBundle);
 
     when(mockBts.evaluatePendingTransaction(any())).thenReturn(TransactionSelectionResult.SELECTED);
@@ -115,7 +119,7 @@ class LineaTransactionSelectorFactoryTest {
     when(mockPendingBlockHeader.getNumber()).thenReturn(1L);
 
     var mockHash = Hash.wrap(Bytes32.random());
-    var mockBundle = createBundle(mockHash, 1L);
+    var mockBundle = createBundle(mockHash, 1L, Optional.empty());
     bundlePool.putOrReplace(mockHash, mockBundle);
 
     when(mockBts.evaluatePendingTransaction(any())).thenReturn(failStatus);
@@ -138,10 +142,70 @@ class LineaTransactionSelectorFactoryTest {
     verifyNoInteractions(mockBts);
   }
 
-  private LineaLimitedBundlePool.TransactionBundle createBundle(Hash hash, long blockNumber) {
+  @Test
+  void testSelectPendingTransactions_GasLimitCheck() {
+    ProcessableBlockHeader pendingBlockHeader = mock(ProcessableBlockHeader.class);
+    BlockTransactionSelectionService bts = mock(BlockTransactionSelectionService.class);
+    long mockBlockHeader = 15L;
+
+    when(pendingBlockHeader.getNumber()).thenReturn(mockBlockHeader);
+
+    PendingTransaction tx1 = mock(PendingTransaction.class);
+    PendingTransaction tx2 = mock(PendingTransaction.class);
+    PendingTransaction tx3 = mock(PendingTransaction.class);
+    PendingTransaction tx4 = mock(PendingTransaction.class);
+
+    Transaction transaction1 = mock(Transaction.class);
+    Transaction transaction2 = mock(Transaction.class);
+    Transaction transaction3 = mock(Transaction.class);
+    Transaction transaction4 = mock(Transaction.class);
+
+    when(tx1.getTransaction()).thenReturn(transaction1);
+    when(tx2.getTransaction()).thenReturn(transaction2);
+    when(tx3.getTransaction()).thenReturn(transaction3);
+    when(tx4.getTransaction()).thenReturn(transaction4);
+
+    when(transaction1.getGasLimit()).thenReturn(5_000_000L);
+    when(transaction2.getGasLimit()).thenReturn(7_000_000L);
+    // exceeds limit, will not be included
+    when(transaction3.getGasLimit()).thenReturn(5_000_000L);
+    // within limit but not selected:
+    when(transaction4.getGasLimit()).thenReturn(2_000_000L);
+
+    when(bts.evaluatePendingTransaction(tx1)).thenReturn(TransactionSelectionResult.SELECTED);
+    when(bts.evaluatePendingTransaction(tx2)).thenReturn(TransactionSelectionResult.SELECTED);
+    when(bts.evaluatePendingTransaction(tx3)).thenReturn(TransactionSelectionResult.SELECTED);
+    when(bts.evaluatePendingTransaction(tx4))
+        .thenReturn(TransactionSelectionResult.BLOCK_OCCUPANCY_ABOVE_THRESHOLD);
+
+    var bundle1 = createBundle(Hash.wrap(Bytes32.random()), mockBlockHeader, Optional.of(tx1));
+    var bundle2 = createBundle(Hash.wrap(Bytes32.random()), mockBlockHeader, Optional.of(tx2));
+    var bundle3 = createBundle(Hash.wrap(Bytes32.random()), mockBlockHeader, Optional.of(tx3));
+    var bundle4 = createBundle(Hash.wrap(Bytes32.random()), mockBlockHeader, Optional.of(tx4));
+
+    bundlePool.putOrReplace(bundle1.bundleIdentifier(), bundle1);
+    bundlePool.putOrReplace(bundle2.bundleIdentifier(), bundle2);
+    bundlePool.putOrReplace(bundle3.bundleIdentifier(), bundle3);
+    bundlePool.putOrReplace(bundle3.bundleIdentifier(), bundle4);
+
+    factory.selectPendingTransactions(bts, pendingBlockHeader);
+
+    // twice for not exceeding and selected
+    verify(bts, times(2)).commit();
+    // once for not selected
+    verify(bts, times(1)).rollback();
+    // never evaluated one that exceeds:
+    verify(bts, never()).evaluatePendingTransaction(tx3);
+  }
+
+  private LineaLimitedBundlePool.TransactionBundle createBundle(
+      Hash hash, long blockNumber, Optional<PendingTransaction> optPendingTx) {
     return new LineaLimitedBundlePool.TransactionBundle(
         hash,
-        List.of(mock(PendingTransaction.class, RETURNS_DEEP_STUBS)),
+        List.of(
+            optPendingTx.isPresent()
+                ? optPendingTx.get()
+                : mock(PendingTransaction.class, RETURNS_DEEP_STUBS)),
         blockNumber,
         Optional.empty(),
         Optional.empty(),
