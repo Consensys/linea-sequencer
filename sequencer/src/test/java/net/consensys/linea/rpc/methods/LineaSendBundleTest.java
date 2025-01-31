@@ -86,7 +86,7 @@ class LineaSendBundleTest {
 
     // Validate response
     assertNotNull(response);
-    assertEquals(expectedTxBundleHash, response.bundleHash());
+    assertEquals(expectedTxBundleHash.toHexString(), response.bundleHash());
   }
 
   @Test
@@ -116,7 +116,7 @@ class LineaSendBundleTest {
 
     // Validate response
     assertNotNull(response);
-    assertEquals(expectedUUIDBundleHash, response.bundleHash());
+    assertEquals(expectedUUIDBundleHash.toHexString(), response.bundleHash());
 
     // Replace bundle:
     transactions = List.of(mockTX2.encoded().toHexString(), mockTX1.encoded().toHexString());
@@ -136,7 +136,7 @@ class LineaSendBundleTest {
 
     // Validate response
     assertNotNull(response);
-    assertEquals(expectedUUIDBundleHash, response.bundleHash());
+    assertEquals(expectedUUIDBundleHash.toHexString(), response.bundleHash());
 
     // assert the new block number:
     assertTrue(bundlePool.get(expectedUUIDBundleHash).blockNumber().equals(12345L));

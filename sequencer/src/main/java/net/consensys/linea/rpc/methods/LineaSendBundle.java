@@ -28,7 +28,6 @@ import net.consensys.linea.rpc.services.BundlePoolService;
 import net.consensys.linea.rpc.services.BundlePoolService.TransactionBundle;
 import net.consensys.linea.rpc.services.LineaLimitedBundlePool;
 import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Transaction;
@@ -72,7 +71,7 @@ public class LineaSendBundle {
       final BundleParameter bundleParams = parseRequest(logId, request.getParams());
 
       if (bundleParams.maxTimestamp.isPresent()
-          && bundleParams.maxTimestamp.get() < Instant.now().toEpochMilli()) {
+          && bundleParams.maxTimestamp.get() < Instant.now().getEpochSecond()) {
         throw new Exception("bundle max timestamp is in the past");
       }
 
@@ -107,7 +106,7 @@ public class LineaSendBundle {
                   bundleParams.minTimestamp,
                   bundleParams.maxTimestamp,
                   bundleParams.revertingTxHashes()));
-          return new BundleResponse(bundleHash);
+          return new BundleResponse(bundleHash.toHexString());
         }
       }
       // otherwise boom.
@@ -132,7 +131,7 @@ public class LineaSendBundle {
     }
   }
 
-  public record BundleResponse(Bytes32 bundleHash) {}
+  public record BundleResponse(String bundleHash) {}
 
   static class LineaSendBundleError implements RpcMethodError {
 

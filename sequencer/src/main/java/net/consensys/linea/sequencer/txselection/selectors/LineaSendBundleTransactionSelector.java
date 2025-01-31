@@ -16,9 +16,11 @@ package net.consensys.linea.sequencer.txselection.selectors;
 
 import static java.lang.Boolean.TRUE;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+import net.consensys.linea.rpc.methods.LineaSendBundle;
 import net.consensys.linea.rpc.services.BundlePoolService;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
@@ -29,7 +31,6 @@ import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationCon
 
 public class LineaSendBundleTransactionSelector implements PluginTransactionSelector {
 
-  public static final long DEFAULT_BUNDLE_POOL_SIZE = 10000L;
   final BundlePoolService bundlePool;
 
   public LineaSendBundleTransactionSelector(BundlePoolService bundlePool) {
@@ -40,8 +41,10 @@ public class LineaSendBundleTransactionSelector implements PluginTransactionSele
   public TransactionSelectionResult evaluateTransactionPreProcessing(
       final TransactionEvaluationContext<? extends PendingTransaction> txContext) {
 
-    // TODO: @fab-10 ideally here we have a way to short circuit transaction evalution for
-    // pendingTransactions that are not part of a bundle. Need upstream interface changes
+    // short circuit if we are not a PendingBundleTx
+    if (!(txContext.getPendingTransaction() instanceof LineaSendBundle.PendingBundleTx)) {
+      return TransactionSelectionResult.SELECTED;
+    }
 
     final var blockHeader = txContext.getPendingBlockHeader();
 
@@ -57,13 +60,13 @@ public class LineaSendBundleTransactionSelector implements PluginTransactionSele
               .filter(
                   b ->
                       b.minTimestamp()
-                          .map(minTime -> minTime < System.currentTimeMillis())
+                          .map(minTime -> minTime < Instant.now().getEpochSecond())
                           .orElse(TRUE))
               // filter if we have a max timestamp that has not been satisfied
               .filter(
                   b ->
                       b.maxTimestamp()
-                          .map(maxTime -> maxTime > System.currentTimeMillis())
+                          .map(maxTime -> maxTime > Instant.now().getEpochSecond())
                           .orElse(TRUE))
               .findAny();
       if (satisfiesCriteria.isPresent()) {
@@ -81,8 +84,10 @@ public class LineaSendBundleTransactionSelector implements PluginTransactionSele
       final TransactionEvaluationContext<? extends PendingTransaction> txContext,
       final TransactionProcessingResult transactionProcessingResult) {
 
-    // TODO: @fab-10 ideally here we have a way to short circuit transaction evalution for
-    // pendingTransactions that are not part of a bundle. Need upstream interface changes
+    // short circuit if we are not a PendingBundleTx
+    if (!(txContext.getPendingTransaction() instanceof LineaSendBundle.PendingBundleTx)) {
+      return TransactionSelectionResult.SELECTED;
+    }
 
     if (transactionProcessingResult.isFailed()) {
 
