@@ -94,43 +94,40 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
   public void selectPendingTransactions(
       final BlockTransactionSelectionService bts, final ProcessableBlockHeader pendingBlockHeader) {
     final AtomicLong cumulativeBundleGasLimit = new AtomicLong(0L);
-    maybeBundlePool
-        .map(bp -> bp.getBundlesByBlockNumber(pendingBlockHeader.getNumber()))
-        .ifPresent(
-            bundles -> {
-              bundles.forEach(
-                  bundle -> {
-                    // TODO: instead of recreating this here, we should add the base
-                    // evaluatePendingTransactions(List<PendingTransactions>) to the interface
-                    var badBundleRes =
-                        bundle.pendingTransactions().stream()
-                            .map(
-                                pt -> {
-                                  // restricting block bundles on the basis of gasLimit, not gas
-                                  // used.
-                                  // gasUsed isn't returned from evaluatePendingTransaction
-                                  // currently
-                                  final var pendingGasLimit = pt.getTransaction().getGasLimit();
-                                  if (pendingGasLimit + cumulativeBundleGasLimit.get()
-                                      < maxBundleGasPerBlock) {
-                                    var res = bts.evaluatePendingTransaction(pt);
-                                    if (res.selected()) {
-                                      cumulativeBundleGasLimit.addAndGet(pendingGasLimit);
+    maybeBundlePool.ifPresent(
+        bp ->
+            bp.getBundlesByBlockNumber(pendingBlockHeader.getNumber())
+                .forEach(
+                    bundle -> {
+                      // mark as "to-evaluate" to prevent eviction during processing:
+                      bp.markBundleForEval(bundle);
+                      var badBundleRes =
+                          bundle.pendingTransactions().stream()
+                              .map(
+                                  pt -> {
+                                    // restricting block bundles on the basis of gasLimit, not gas
+                                    // used. gasUsed isn't returned from evaluatePendingTransaction
+                                    // currently
+                                    final var pendingGasLimit = pt.getTransaction().getGasLimit();
+                                    if (pendingGasLimit + cumulativeBundleGasLimit.get()
+                                        < maxBundleGasPerBlock) {
+                                      var res = bts.evaluatePendingTransaction(pt);
+                                      if (res.selected()) {
+                                        cumulativeBundleGasLimit.addAndGet(pendingGasLimit);
+                                      }
+                                      return res;
+                                    } else {
+                                      return TransactionSelectionResult
+                                          .BLOCK_OCCUPANCY_ABOVE_THRESHOLD;
                                     }
-                                    return res;
-                                  } else {
-                                    return TransactionSelectionResult
-                                        .BLOCK_OCCUPANCY_ABOVE_THRESHOLD;
-                                  }
-                                })
-                            .filter(evalRes -> !evalRes.selected())
-                            .findFirst();
-                    if (badBundleRes.isPresent()) {
-                      bts.rollback();
-                    } else {
-                      bts.commit();
-                    }
-                  });
-            });
+                                  })
+                              .filter(evalRes -> !evalRes.selected())
+                              .findFirst();
+                      if (badBundleRes.isPresent()) {
+                        bts.rollback();
+                      } else {
+                        bts.commit();
+                      }
+                    }));
   }
 }

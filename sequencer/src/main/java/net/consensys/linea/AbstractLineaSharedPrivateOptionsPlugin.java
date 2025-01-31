@@ -35,7 +35,10 @@ import net.consensys.linea.config.LineaTransactionSelectorCliOptions;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.plugins.AbstractLineaSharedOptionsPlugin;
 import net.consensys.linea.plugins.LineaOptionsPluginConfiguration;
+import net.consensys.linea.rpc.services.BundlePoolService;
+import net.consensys.linea.rpc.services.LineaLimitedBundlePool;
 import org.hyperledger.besu.plugin.ServiceManager;
+import org.hyperledger.besu.plugin.services.BesuEvents;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.metrics.MetricCategoryRegistry;
@@ -58,6 +61,8 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
     extends AbstractLineaSharedOptionsPlugin {
   protected static BlockchainService blockchainService;
   protected static MetricsSystem metricsSystem;
+  protected static BesuEvents besuEvents;
+  protected static BundlePoolService bundlePoolService;
   protected static MetricCategoryRegistry metricCategoryRegistry;
 
   private static final AtomicBoolean sharedRegisterTasksDone = new AtomicBoolean(false);
@@ -161,7 +166,8 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
     }
   }
 
-  private static void performSharedStartTasksOnce(final ServiceManager serviceManager) {
+  private void performSharedStartTasksOnce(final ServiceManager serviceManager) {
+
     blockchainService
         .getChainId()
         .ifPresentOrElse(
@@ -180,6 +186,17 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
             .orElseThrow(
                 () ->
                     new RuntimeException("Failed to obtain MetricSystem from the ServiceManager."));
+
+    besuEvents =
+        serviceManager
+            .getService(BesuEvents.class)
+            .orElseThrow(
+                () -> new RuntimeException("Failed to obtain BesuEvents from the ServiceManager."));
+
+    bundlePoolService =
+        new LineaLimitedBundlePool(
+            transactionSelectorConfiguration().maxBundlePoolSizeBytes(), besuEvents);
+    serviceManager.addService(BundlePoolService.class, bundlePoolService);
   }
 
   @Override

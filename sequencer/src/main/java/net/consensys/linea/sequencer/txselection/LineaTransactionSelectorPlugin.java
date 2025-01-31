@@ -25,7 +25,6 @@ import com.google.auto.service.AutoService;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
-import net.consensys.linea.config.LineaTransactionSelectorCliOptions;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
 import net.consensys.linea.metrics.HistogramMetrics;
@@ -74,15 +73,6 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
                     new RuntimeException(
                         "Failed to obtain BesuConfiguration from the ServiceManager."));
 
-    // TODO, can we use .create() here for cli options and get the correct cli overrides?
-    var selectorOpts = LineaTransactionSelectorCliOptions.create();
-
-    var maxBundlePoolSizeBytes = selectorOpts.maxBundlePoolSizeBytes;
-    maxBundleGasPerBlock = selectorOpts.maxBundleGasPerBlock;
-
-    // get or create bundle pool service
-    bundlePool = BundlePoolService.getOrCreateBundlePool(serviceManager, maxBundlePoolSizeBytes);
-
     metricCategoryRegistry.addMetricCategory(SEQUENCER_PROFITABILITY);
   }
 
@@ -92,6 +82,13 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
 
     final LineaTransactionSelectorConfiguration txSelectorConfiguration =
         transactionSelectorConfiguration();
+
+    // fetch bundle pool service, if configured:
+    bundlePool = serviceManager.getService(BundlePoolService.class);
+
+    // set maxBundleGasPerBlock
+    maxBundleGasPerBlock = txSelectorConfiguration.maxGasPerBlock();
+
     final LineaRejectedTxReportingConfiguration lineaRejectedTxReportingConfiguration =
         rejectedTxReportingConfiguration();
     rejectedTxJsonRpcManager =

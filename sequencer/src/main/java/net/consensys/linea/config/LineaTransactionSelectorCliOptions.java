@@ -144,6 +144,8 @@ public class LineaTransactionSelectorCliOptions implements LineaCliOptions {
         .maxGasPerBlock(maxGasPerBlock)
         .unprofitableCacheSize(unprofitableCacheSize)
         .unprofitableRetryLimit(unprofitableRetryLimit)
+        .maxBundleGasPerBlock(maxBundleGasPerBlock)
+        .maxBundlePoolSizeBytes(maxBundlePoolSizeBytes)
         .build();
   }
 
@@ -155,6 +157,8 @@ public class LineaTransactionSelectorCliOptions implements LineaCliOptions {
         .add(MAX_GAS_PER_BLOCK, maxGasPerBlock)
         .add(UNPROFITABLE_CACHE_SIZE, unprofitableCacheSize)
         .add(UNPROFITABLE_RETRY_LIMIT, unprofitableRetryLimit)
+        .add(MAX_BUNDLE_GAS_PER_BLOCK, maxBundleGasPerBlock)
+        .add(MAX_BUNDLE_POOL_SIZE_BYTES, maxBundlePoolSizeBytes)
         .toString();
   }
 }

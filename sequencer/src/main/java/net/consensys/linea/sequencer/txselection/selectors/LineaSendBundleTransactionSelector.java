@@ -39,7 +39,12 @@ public class LineaSendBundleTransactionSelector implements PluginTransactionSele
   @Override
   public TransactionSelectionResult evaluateTransactionPreProcessing(
       final TransactionEvaluationContext<? extends PendingTransaction> txContext) {
+
+    // TODO: @fab-10 ideally here we have a way to short circuit transaction evalution for
+    // pendingTransactions that are not part of a bundle. Need upstream interface changes
+
     final var blockHeader = txContext.getPendingBlockHeader();
+
     // map the pending transaction to its origin bundle:
     var bundle =
         bundlePool.getBundleByPendingTransaction(
@@ -67,10 +72,7 @@ public class LineaSendBundleTransactionSelector implements PluginTransactionSele
         return TransactionSelectionResult.invalid("Failed Bundled Transaction Criteria");
       }
     }
-
-    // TODO: if we do not find the bundle in the pool for 'reasons' this is an incredibly weak yes.
-    //  It could have been evicted due to age or size, or it could be assocaited with a different
-    //  block number than the one we are building.I don't like it.
+    // if the bundle was not found return SELECTED so we do not block a non-bundle transaction
     return TransactionSelectionResult.SELECTED;
   }
 
@@ -78,6 +80,10 @@ public class LineaSendBundleTransactionSelector implements PluginTransactionSele
   public TransactionSelectionResult evaluateTransactionPostProcessing(
       final TransactionEvaluationContext<? extends PendingTransaction> txContext,
       final TransactionProcessingResult transactionProcessingResult) {
+
+    // TODO: @fab-10 ideally here we have a way to short circuit transaction evalution for
+    // pendingTransactions that are not part of a bundle. Need upstream interface changes
+
     if (transactionProcessingResult.isFailed()) {
 
       final var blockHeader = txContext.getPendingBlockHeader();
@@ -96,10 +102,7 @@ public class LineaSendBundleTransactionSelector implements PluginTransactionSele
         return TransactionSelectionResult.invalid("Failed non revertable transaction in bundle");
       }
     }
-
-    // TODO: if we do not find the bundle in the pool for 'reasons' this is an incredibly weak yes.
-    //  It could have been evicted due to age or size, or it could be assocaited with a different
-    //  block number than the one we are building.I don't like it.
+    // if the bundle was not found return SELECTED so we do not block a non-bundle transaction
     return TransactionSelectionResult.SELECTED;
   }
 }

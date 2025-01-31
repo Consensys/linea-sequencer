@@ -17,7 +17,6 @@ package net.consensys.linea.rpc.services;
 
 import com.google.auto.service.AutoService;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
-import net.consensys.linea.config.LineaTransactionSelectorCliOptions;
 import net.consensys.linea.rpc.methods.LineaCancelBundle;
 import net.consensys.linea.rpc.methods.LineaSendBundle;
 import org.hyperledger.besu.plugin.BesuPlugin;
@@ -29,6 +28,7 @@ public class LineaSendBundleEndpointPlugin extends AbstractLineaRequiredPlugin {
   private RpcEndpointService rpcEndpointService;
   private LineaSendBundle lineaSendBundleMethod;
   private LineaCancelBundle lineaCancelBundleMethod;
+  private ServiceManager serviceManager;
 
   /**
    * Register the bundle RPC service.
@@ -37,7 +37,7 @@ public class LineaSendBundleEndpointPlugin extends AbstractLineaRequiredPlugin {
    */
   @Override
   public void doRegister(final ServiceManager serviceManager) {
-
+    this.serviceManager = serviceManager;
     rpcEndpointService =
         serviceManager
             .getService(RpcEndpointService.class)
@@ -46,23 +46,38 @@ public class LineaSendBundleEndpointPlugin extends AbstractLineaRequiredPlugin {
                     new RuntimeException(
                         "Failed to obtain RpcEndpointService from the ServiceManager."));
 
-    var bundlePool =
-        BundlePoolService.getOrCreateBundlePool(
-                serviceManager, LineaTransactionSelectorCliOptions.create().maxBundlePoolSizeBytes)
-            .orElseThrow(
-                () -> new RuntimeException("Failed to configure linea transaction bundle pool"));
-
-    lineaSendBundleMethod = new LineaSendBundle(rpcEndpointService, bundlePool);
+    lineaSendBundleMethod = new LineaSendBundle(rpcEndpointService);
 
     rpcEndpointService.registerRPCEndpoint(
         lineaSendBundleMethod.getNamespace(),
         lineaSendBundleMethod.getName(),
         lineaSendBundleMethod::execute);
 
-    lineaCancelBundleMethod = new LineaCancelBundle(rpcEndpointService, bundlePool);
+    lineaCancelBundleMethod = new LineaCancelBundle(rpcEndpointService);
     rpcEndpointService.registerRPCEndpoint(
         lineaCancelBundleMethod.getNamespace(),
         lineaCancelBundleMethod.getName(),
         lineaCancelBundleMethod::execute);
+  }
+
+  /**
+   * Starts this plugin and in case the extra data pricing is enabled, as first thing it tries to
+   * extract extra data pricing configuration from the chain head, then it starts listening for new
+   * imported block, in order to update the extra data pricing on every incoming block.
+   */
+  @Override
+  public void start() {
+    super.start();
+    final var bundlePool =
+        serviceManager
+            .getService(BundlePoolService.class)
+            .orElseThrow(
+                () ->
+                    new RuntimeException("Failed to obtain Bundle pool from the ServiceManager."));
+
+    // set the pool
+    lineaSendBundleMethod.init(bundlePool);
+    // set the pool
+    lineaCancelBundleMethod.init(bundlePool);
   }
 }

@@ -45,12 +45,15 @@ public class LineaSendBundle {
   private static final AtomicInteger LOG_SEQUENCE = new AtomicInteger();
   private final JsonRpcParameter parameterParser = new JsonRpcParameter();
   private final RpcEndpointService rpcEndpointService;
-  private final BundlePoolService bundlePool;
+  private BundlePoolService bundlePool;
 
-  public LineaSendBundle(
-      final RpcEndpointService rpcEndpointService, BundlePoolService bundlePool) {
+  public LineaSendBundle(final RpcEndpointService rpcEndpointService) {
     this.rpcEndpointService = rpcEndpointService;
-    this.bundlePool = bundlePool;
+  }
+
+  public LineaSendBundle init(BundlePoolService bundlePoolService) {
+    this.bundlePool = bundlePoolService;
+    return this;
   }
 
   public String getNamespace() {
@@ -72,8 +75,6 @@ public class LineaSendBundle {
           && bundleParams.maxTimestamp.get() < Instant.now().toEpochMilli()) {
         throw new Exception("bundle max timestamp is in the past");
       }
-
-      // TODO: pre-validate the bundle transactions via selectors?
 
       var optBundleUUID = bundleParams.replacementUUID.map(UUID::fromString);
 

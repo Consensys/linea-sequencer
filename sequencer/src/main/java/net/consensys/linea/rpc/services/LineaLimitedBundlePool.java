@@ -49,6 +49,7 @@ public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.Blo
   private static final Logger logger = LoggerFactory.getLogger(LineaLimitedBundlePool.class);
 
   private final Cache<Hash, TransactionBundle> cache;
+  private final Cache<Hash, TransactionBundle> evalCache;
   private final Map<Long, List<TransactionBundle>> blockIndex;
   private final AtomicLong maxBlockHeight = new AtomicLong(0L);
 
@@ -80,7 +81,7 @@ public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.Blo
                   }
                 })
             .build();
-
+    this.evalCache = Caffeine.newBuilder().maximumSize(10).build();
     this.blockIndex = new ConcurrentHashMap<>();
 
     // register ourselves as a block added listener:
@@ -107,9 +108,19 @@ public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.Blo
    */
   public Optional<TransactionBundle> getBundleByPendingTransaction(
       long blockNumber, PendingTransaction pendingTransaction) {
-    return getBundlesByBlockNumber(blockNumber).stream()
-        .filter(bundle -> bundle.pendingTransactions().contains(pendingTransaction))
-        .findAny();
+    var getFromEvalCache =
+        evalCache.asMap().values().stream()
+            .filter(e -> e.pendingTransactions().contains(pendingTransaction))
+            .findAny();
+
+    var withFallbackToPool =
+        getFromEvalCache.or(
+            () ->
+                getBundlesByBlockNumber(blockNumber).stream()
+                    .filter(bundle -> bundle.pendingTransactions().contains(pendingTransaction))
+                    .findAny());
+
+    return withFallbackToPool;
   }
 
   /**
@@ -196,6 +207,11 @@ public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.Blo
         cache.invalidate(bundle.bundleIdentifier());
       }
     }
+  }
+
+  @Override
+  public void markBundleForEval(final TransactionBundle bundle) {
+    evalCache.put(bundle.bundleIdentifier(), bundle);
   }
 
   /**

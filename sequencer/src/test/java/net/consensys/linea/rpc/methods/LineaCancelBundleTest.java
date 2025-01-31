@@ -42,7 +42,7 @@ class LineaCancelBundleTest {
     rpcEndpointService = mock(RpcEndpointService.class);
     bundlePool = mock(LineaLimitedBundlePool.class);
     request = mock(PluginRpcRequest.class);
-    lineaCancelBundle = new LineaCancelBundle(rpcEndpointService, bundlePool);
+    lineaCancelBundle = new LineaCancelBundle(rpcEndpointService).init(bundlePool);
   }
 
   @Test

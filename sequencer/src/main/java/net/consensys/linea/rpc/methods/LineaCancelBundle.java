@@ -29,12 +29,15 @@ public class LineaCancelBundle {
   private static final AtomicInteger LOG_SEQUENCE = new AtomicInteger();
   private final JsonRpcParameter parameterParser = new JsonRpcParameter();
   private final RpcEndpointService rpcEndpointService;
-  private final BundlePoolService bundlePool;
+  private BundlePoolService bundlePool;
 
-  public LineaCancelBundle(
-      final RpcEndpointService rpcEndpointService, BundlePoolService bundlePool) {
+  public LineaCancelBundle(final RpcEndpointService rpcEndpointService) {
     this.rpcEndpointService = rpcEndpointService;
-    this.bundlePool = bundlePool;
+  }
+
+  public LineaCancelBundle init(BundlePoolService bundlePoolService) {
+    this.bundlePool = bundlePoolService;
+    return this;
   }
 
   public String getNamespace() {

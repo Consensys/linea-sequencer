@@ -219,13 +219,44 @@ class LineaLimitedBundlePoolTest {
     assert pool.getBundlesByBlockNumber(oldBlockNumber).isEmpty();
   }
 
+  @Test
+  void testGetBundleByPendingTransaction_UsesEvalCache() {
+    long blockNumber = 15L;
+    PendingTransaction mockPendingTransaction = mock(PendingTransaction.class);
+    TransactionBundle mockBundle =
+        createBundle(Hash.ZERO, blockNumber, List.of(mockPendingTransaction));
+    pool.markBundleForEval(mockBundle);
+
+    Optional<TransactionBundle> result =
+        pool.getBundleByPendingTransaction(blockNumber, mockPendingTransaction);
+
+    assertTrue(result.isPresent(), "Bundle should be found in evalCache");
+    assertEquals(mockBundle, result.get(), "Returned bundle should match the evalCache entry");
+  }
+
+  @Test
+  void testGetBundleByPendingTransaction_FallsBackToPoolCache() {
+    long blockNumber = 15L;
+    PendingTransaction mockPendingTransaction =
+        mock(PendingTransaction.class, Answers.RETURNS_DEEP_STUBS);
+    TransactionBundle mockBundle =
+        createBundle(Hash.ZERO, blockNumber, List.of(mockPendingTransaction));
+    pool.putOrReplace(mockBundle.bundleIdentifier(), mockBundle);
+
+    Optional<TransactionBundle> result =
+        pool.getBundleByPendingTransaction(blockNumber, mockPendingTransaction);
+
+    assertTrue(result.isPresent(), "Bundle should be found in blockIndex");
+    assertEquals(mockBundle, result.get(), "Returned bundle should match the blockIndex entry");
+  }
+
   private TransactionBundle createBundle(Hash hash, long blockNumber) {
+    return createBundle(hash, blockNumber, Collections.emptyList());
+  }
+
+  private TransactionBundle createBundle(
+      Hash hash, long blockNumber, List<PendingTransaction> maybeTxs) {
     return new TransactionBundle(
-        hash,
-        Collections.emptyList(),
-        blockNumber,
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty());
+        hash, maybeTxs, blockNumber, Optional.empty(), Optional.empty(), Optional.empty());
   }
 }

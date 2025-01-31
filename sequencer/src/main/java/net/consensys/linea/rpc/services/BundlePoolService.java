@@ -20,8 +20,6 @@ import java.util.UUID;
 
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
-import org.hyperledger.besu.plugin.ServiceManager;
-import org.hyperledger.besu.plugin.services.BesuEvents;
 import org.hyperledger.besu.plugin.services.BesuService;
 
 public interface BundlePoolService extends BesuService {
@@ -34,35 +32,6 @@ public interface BundlePoolService extends BesuService {
       Optional<Long> minTimestamp,
       Optional<Long> maxTimestamp,
       Optional<List<Hash>> revertingTxHashes) {}
-
-  /**
-   * synchronized usage of serviceManager to get a bundle pool from the services manager or create
-   * and register one. Bundle Pool is required by both rpc and selector plugins.
-   *
-   * @param serviceManager
-   * @param maxBundlePoolSizeBytes
-   * @return
-   */
-  static Optional<BundlePoolService> getOrCreateBundlePool(
-      ServiceManager serviceManager, long maxBundlePoolSizeBytes) {
-    synchronized (serviceManager) {
-      var eventService =
-          serviceManager
-              .getService(BesuEvents.class)
-              .orElseThrow(
-                  () ->
-                      new RuntimeException("Failed to obtain BesuEvents from the ServiceManager."));
-
-      return serviceManager
-          .getService(BundlePoolService.class)
-          .or(
-              () -> {
-                var bundlePool = new LineaLimitedBundlePool(maxBundlePoolSizeBytes, eventService);
-                serviceManager.addService(BundlePoolService.class, bundlePool);
-                return Optional.of(bundlePool);
-              });
-    }
-  }
 
   /**
    * Retrieves a list of TransactionBundles associated with a block number.
@@ -138,4 +107,11 @@ public interface BundlePoolService extends BesuService {
    * @param blockNumber The block number whose bundles should be removed.
    */
   void removeByBlockNumber(long blockNumber);
+
+  /**
+   * Mark this bundle for evaluation, to ensure it is not evicted during processing.
+   *
+   * @param bundle to mark
+   */
+  void markBundleForEval(TransactionBundle bundle);
 }

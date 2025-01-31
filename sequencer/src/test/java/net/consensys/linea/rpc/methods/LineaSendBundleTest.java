@@ -63,7 +63,7 @@ class LineaSendBundleTest {
     rpcEndpointService = mock(RpcEndpointService.class);
     mockEvents = mock(BesuEvents.class);
     bundlePool = spy(new LineaLimitedBundlePool(4096L, mockEvents));
-    lineaSendBundle = new LineaSendBundle(rpcEndpointService, bundlePool);
+    lineaSendBundle = new LineaSendBundle(rpcEndpointService).init(bundlePool);
   }
 
   @Test
