@@ -20,7 +20,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.rpc.services.BundlePoolService;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.JsonRpcParameter;
-import org.hyperledger.besu.plugin.services.RpcEndpointService;
 import org.hyperledger.besu.plugin.services.exception.PluginRpcEndpointException;
 import org.hyperledger.besu.plugin.services.rpc.PluginRpcRequest;
 
@@ -28,12 +27,7 @@ import org.hyperledger.besu.plugin.services.rpc.PluginRpcRequest;
 public class LineaCancelBundle {
   private static final AtomicInteger LOG_SEQUENCE = new AtomicInteger();
   private final JsonRpcParameter parameterParser = new JsonRpcParameter();
-  private final RpcEndpointService rpcEndpointService;
   private BundlePoolService bundlePool;
-
-  public LineaCancelBundle(final RpcEndpointService rpcEndpointService) {
-    this.rpcEndpointService = rpcEndpointService;
-  }
 
   public LineaCancelBundle init(BundlePoolService bundlePoolService) {
     this.bundlePool = bundlePoolService;

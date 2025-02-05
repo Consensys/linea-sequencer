@@ -34,7 +34,6 @@ import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.TransactionTestFixture;
 import org.hyperledger.besu.plugin.services.BesuEvents;
-import org.hyperledger.besu.plugin.services.RpcEndpointService;
 import org.hyperledger.besu.plugin.services.rpc.PluginRpcRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,7 +41,6 @@ import org.junit.jupiter.api.Test;
 class LineaSendBundleTest {
 
   private LineaSendBundle lineaSendBundle;
-  private RpcEndpointService rpcEndpointService;
   private BesuEvents mockEvents;
   private LineaLimitedBundlePool bundlePool;
 
@@ -60,10 +58,9 @@ class LineaSendBundleTest {
 
   @BeforeEach
   void setup() {
-    rpcEndpointService = mock(RpcEndpointService.class);
     mockEvents = mock(BesuEvents.class);
     bundlePool = spy(new LineaLimitedBundlePool(4096L, mockEvents));
-    lineaSendBundle = new LineaSendBundle(rpcEndpointService).init(bundlePool);
+    lineaSendBundle = new LineaSendBundle().init(bundlePool);
   }
 
   @Test

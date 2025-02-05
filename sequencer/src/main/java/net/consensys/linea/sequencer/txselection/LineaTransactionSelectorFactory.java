@@ -49,7 +49,7 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
   private final LineaProfitabilityConfiguration profitabilityConfiguration;
   private final LineaTracerConfiguration tracerConfiguration;
   private final Optional<HistogramMetrics> maybeProfitabilityMetrics;
-  private final Optional<BundlePoolService> maybeBundlePool;
+  private final BundlePoolService bundlePoolService;
   private final long maxBundleGasPerBlock;
 
   private final Map<String, Integer> limitsMap;
@@ -63,7 +63,7 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
       final Map<String, Integer> limitsMap,
       final Optional<JsonRpcManager> rejectedTxJsonRpcManager,
       final Optional<HistogramMetrics> maybeProfitabilityMetrics,
-      final Optional<BundlePoolService> maybeBundlePool,
+      final BundlePoolService bundlePoolService,
       final long maxBundleGasPerBlock) {
     this.blockchainService = blockchainService;
     this.txSelectorConfiguration = txSelectorConfiguration;
@@ -73,19 +73,20 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
     this.limitsMap = limitsMap;
     this.rejectedTxJsonRpcManager = rejectedTxJsonRpcManager;
     this.maybeProfitabilityMetrics = maybeProfitabilityMetrics;
-    this.maybeBundlePool = maybeBundlePool;
+    this.bundlePoolService = bundlePoolService;
     this.maxBundleGasPerBlock = maxBundleGasPerBlock;
   }
 
   @Override
   public PluginTransactionSelector create(final SelectorsStateManager selectorsStateManager) {
     return new LineaTransactionSelector(
+        selectorsStateManager,
         blockchainService,
         txSelectorConfiguration,
         l1L2BridgeConfiguration,
         profitabilityConfiguration,
         tracerConfiguration,
-        maybeBundlePool,
+        bundlePoolService,
         limitsMap,
         rejectedTxJsonRpcManager,
         maybeProfitabilityMetrics);
@@ -94,40 +95,39 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
   public void selectPendingTransactions(
       final BlockTransactionSelectionService bts, final ProcessableBlockHeader pendingBlockHeader) {
     final AtomicLong cumulativeBundleGasLimit = new AtomicLong(0L);
-    maybeBundlePool.ifPresent(
-        bp ->
-            bp.getBundlesByBlockNumber(pendingBlockHeader.getNumber())
-                .forEach(
-                    bundle -> {
-                      // mark as "to-evaluate" to prevent eviction during processing:
-                      bp.markBundleForEval(bundle);
-                      var badBundleRes =
-                          bundle.pendingTransactions().stream()
-                              .map(
-                                  pt -> {
-                                    // restricting block bundles on the basis of gasLimit, not gas
-                                    // used. gasUsed isn't returned from evaluatePendingTransaction
-                                    // currently
-                                    final var pendingGasLimit = pt.getTransaction().getGasLimit();
-                                    if (pendingGasLimit + cumulativeBundleGasLimit.get()
-                                        < maxBundleGasPerBlock) {
-                                      var res = bts.evaluatePendingTransaction(pt);
-                                      if (res.selected()) {
-                                        cumulativeBundleGasLimit.addAndGet(pendingGasLimit);
-                                      }
-                                      return res;
-                                    } else {
-                                      return TransactionSelectionResult
-                                          .BLOCK_OCCUPANCY_ABOVE_THRESHOLD;
-                                    }
-                                  })
-                              .filter(evalRes -> !evalRes.selected())
-                              .findFirst();
-                      if (badBundleRes.isPresent()) {
-                        bts.rollback();
-                      } else {
-                        bts.commit();
-                      }
-                    }));
+
+    bundlePoolService
+        .getBundlesByBlockNumber(pendingBlockHeader.getNumber())
+        .forEach(
+            bundle -> {
+              // mark as "to-evaluate" to prevent eviction during processing:
+              bundlePoolService.markBundleForEval(bundle);
+              var badBundleRes =
+                  bundle.pendingTransactions().stream()
+                      .map(
+                          pt -> {
+                            // restricting block bundles on the basis of gasLimit, not gas
+                            // used. gasUsed isn't returned from evaluatePendingTransaction
+                            // currently
+                            final var pendingGasLimit = pt.getTransaction().getGasLimit();
+                            if (pendingGasLimit + cumulativeBundleGasLimit.get()
+                                < maxBundleGasPerBlock) {
+                              var res = bts.evaluatePendingTransaction(pt);
+                              if (res.selected()) {
+                                cumulativeBundleGasLimit.addAndGet(pendingGasLimit);
+                              }
+                              return res;
+                            } else {
+                              return TransactionSelectionResult.BLOCK_OCCUPANCY_ABOVE_THRESHOLD;
+                            }
+                          })
+                      .filter(evalRes -> !evalRes.selected())
+                      .findFirst();
+              if (badBundleRes.isPresent()) {
+                bts.rollback();
+              } else {
+                bts.commit();
+              }
+            });
   }
 }

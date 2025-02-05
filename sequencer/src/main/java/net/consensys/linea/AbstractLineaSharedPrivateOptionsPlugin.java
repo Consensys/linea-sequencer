@@ -38,9 +38,11 @@ import net.consensys.linea.plugins.LineaOptionsPluginConfiguration;
 import net.consensys.linea.rpc.services.BundlePoolService;
 import net.consensys.linea.rpc.services.LineaLimitedBundlePool;
 import org.hyperledger.besu.plugin.ServiceManager;
+import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.BesuEvents;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
+import org.hyperledger.besu.plugin.services.RpcEndpointService;
 import org.hyperledger.besu.plugin.services.metrics.MetricCategoryRegistry;
 
 /**
@@ -59,11 +61,13 @@ import org.hyperledger.besu.plugin.services.metrics.MetricCategoryRegistry;
 @Slf4j
 public abstract class AbstractLineaSharedPrivateOptionsPlugin
     extends AbstractLineaSharedOptionsPlugin {
+  protected static BesuConfiguration besuConfiguration;
   protected static BlockchainService blockchainService;
   protected static MetricsSystem metricsSystem;
   protected static BesuEvents besuEvents;
   protected static BundlePoolService bundlePoolService;
   protected static MetricCategoryRegistry metricCategoryRegistry;
+  protected static RpcEndpointService rpcEndpointService;
 
   private static final AtomicBoolean sharedRegisterTasksDone = new AtomicBoolean(false);
   private static final AtomicBoolean sharedStartTasksDone = new AtomicBoolean(false);
@@ -140,6 +144,13 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
   }
 
   protected static void performSharedRegisterTasksOnce(final ServiceManager serviceManager) {
+    besuConfiguration =
+        serviceManager
+            .getService(BesuConfiguration.class)
+            .orElseThrow(
+                () ->
+                    new RuntimeException(
+                        "Failed to obtain BesuConfiguration from the ServiceManager."));
     blockchainService =
         serviceManager
             .getService(BlockchainService.class)
@@ -155,6 +166,14 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
                 () ->
                     new RuntimeException(
                         "Failed to obtain MetricCategoryRegistry from the ServiceManager."));
+
+    rpcEndpointService =
+        serviceManager
+            .getService(RpcEndpointService.class)
+            .orElseThrow(
+                () ->
+                    new RuntimeException(
+                        "Failed to obtain RpcEndpointService from the ServiceManager."));
   }
 
   @Override
@@ -196,7 +215,6 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
     bundlePoolService =
         new LineaLimitedBundlePool(
             transactionSelectorConfiguration().maxBundlePoolSizeBytes(), besuEvents);
-    serviceManager.addService(BundlePoolService.class, bundlePoolService);
   }
 
   @Override

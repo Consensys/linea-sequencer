@@ -241,9 +241,7 @@ public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.Blo
   }
 
   private int calculateWeight(TransactionBundle bundle) {
-    return bundle.pendingTransactions().stream()
-        .mapToInt(pt -> pt.getTransaction().getSize())
-        .sum();
+    return bundle.pendingTransactions().stream().mapToInt(PendingTransaction::memorySize).sum();
   }
 
   /**

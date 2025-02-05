@@ -147,7 +147,8 @@ public class LineaPluginTestBase extends AcceptanceTestBase {
                     "LineaEstimateGasEndpointPlugin",
                     "LineaSetExtraDataEndpointPlugin",
                     "LineaTransactionPoolValidatorPlugin",
-                    "LineaTransactionSelectorPlugin"));
+                    "LineaTransactionSelectorPlugin",
+                    "LineaSendBundleEndpointPlugin"));
 
     return besu.create(nodeConfBuilder.build());
   }

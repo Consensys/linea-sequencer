@@ -23,7 +23,6 @@ import java.util.Optional;
 import net.consensys.linea.rpc.methods.LineaSendBundle;
 import net.consensys.linea.rpc.services.BundlePoolService;
 import org.hyperledger.besu.datatypes.Hash;
-import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
@@ -39,7 +38,7 @@ public class LineaSendBundleTransactionSelector implements PluginTransactionSele
 
   @Override
   public TransactionSelectionResult evaluateTransactionPreProcessing(
-      final TransactionEvaluationContext<? extends PendingTransaction> txContext) {
+      final TransactionEvaluationContext txContext) {
 
     // short circuit if we are not a PendingBundleTx
     if (!(txContext.getPendingTransaction() instanceof LineaSendBundle.PendingBundleTx)) {
@@ -81,7 +80,7 @@ public class LineaSendBundleTransactionSelector implements PluginTransactionSele
 
   @Override
   public TransactionSelectionResult evaluateTransactionPostProcessing(
-      final TransactionEvaluationContext<? extends PendingTransaction> txContext,
+      final TransactionEvaluationContext txContext,
       final TransactionProcessingResult transactionProcessingResult) {
 
     // short circuit if we are not a PendingBundleTx
