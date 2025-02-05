@@ -32,7 +32,6 @@ import net.consensys.linea.jsonrpc.JsonRpcManager;
 import net.consensys.linea.jsonrpc.JsonRpcRequestBuilder;
 import net.consensys.linea.metrics.HistogramMetrics;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
-import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.BlockchainService;
@@ -132,7 +131,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
    */
   @Override
   public TransactionSelectionResult evaluateTransactionPreProcessing(
-      final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext) {
+      final TransactionEvaluationContext evaluationContext) {
     return selectors.stream()
         .map(selector -> selector.evaluateTransactionPreProcessing(evaluationContext))
         .filter(result -> !result.equals(TransactionSelectionResult.SELECTED))
@@ -150,7 +149,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
    */
   @Override
   public TransactionSelectionResult evaluateTransactionPostProcessing(
-      final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
+      final TransactionEvaluationContext evaluationContext,
       final TransactionProcessingResult processingResult) {
     for (var selector : selectors) {
       TransactionSelectionResult result =
@@ -170,7 +169,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
    */
   @Override
   public void onTransactionSelected(
-      final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
+      final TransactionEvaluationContext evaluationContext,
       final TransactionProcessingResult processingResult) {
     selectors.forEach(
         selector -> selector.onTransactionSelected(evaluationContext, processingResult));
@@ -184,7 +183,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
    */
   @Override
   public void onTransactionNotSelected(
-      final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
+      final TransactionEvaluationContext evaluationContext,
       final TransactionSelectionResult transactionSelectionResult) {
     selectors.forEach(
         selector ->
