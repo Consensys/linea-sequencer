@@ -28,7 +28,6 @@ import net.consensys.linea.rpc.methods.LineaSendBundle.PendingBundleTx;
 import net.consensys.linea.rpc.services.BundlePoolService.TransactionBundle;
 import net.consensys.linea.rpc.services.LineaLimitedBundlePool;
 import org.hyperledger.besu.datatypes.Hash;
-import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.plugin.data.BlockHeader;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
@@ -124,7 +123,7 @@ class LineaSendBundleTransactionSelectorTest {
         Optional.empty());
   }
 
-  private TransactionEvaluationContext<PendingTransaction> mockTransactionEvaluationContext(
+  private TransactionEvaluationContext mockTransactionEvaluationContext(
       BlockHeader blockHeader, PendingBundleTx pendingTransaction) {
     return new TestTransactionEvaluationContext(blockHeader, pendingTransaction, Wei.ONE, Wei.ONE);
   }

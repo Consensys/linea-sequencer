@@ -192,5 +192,11 @@ public class LineaSendBundle {
       boolean isReceivedFromLocalSource,
       boolean hasPriority,
       long getAddedAt)
-      implements PendingTransaction {}
+      implements PendingTransaction {
+    @Override
+    public String toTraceLog() {
+      // ToDo
+      return "ToDo";
+    }
+  }
 }
