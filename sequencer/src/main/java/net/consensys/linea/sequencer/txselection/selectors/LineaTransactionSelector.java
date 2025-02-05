@@ -32,12 +32,13 @@ import net.consensys.linea.jsonrpc.JsonRpcManager;
 import net.consensys.linea.jsonrpc.JsonRpcRequestBuilder;
 import net.consensys.linea.metrics.HistogramMetrics;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
-import org.hyperledger.besu.datatypes.PendingTransaction;
+import net.consensys.linea.rpc.services.BundlePoolService;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.tracer.BlockAwareOperationTracer;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
+import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager;
 import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationContext;
 
 /** Class for transaction selection using a list of selectors. */
@@ -50,11 +51,13 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
   private final Set<String> rejectedTransactionReasonsMap = new HashSet<>();
 
   public LineaTransactionSelector(
+      final SelectorsStateManager selectorsStateManager,
       final BlockchainService blockchainService,
       final LineaTransactionSelectorConfiguration txSelectorConfiguration,
       final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
       final LineaProfitabilityConfiguration profitabilityConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
+      final BundlePoolService bundlePoolService,
       final Map<String, Integer> limitsMap,
       final Optional<JsonRpcManager> rejectedTxJsonRpcManager,
       final Optional<HistogramMetrics> maybeProfitabilityMetrics) {
@@ -68,11 +71,13 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
 
     selectors =
         createTransactionSelectors(
+            selectorsStateManager,
             blockchainService,
             txSelectorConfiguration,
             l1L2BridgeConfiguration,
             profitabilityConfiguration,
             tracerConfiguration,
+            bundlePoolService,
             limitsMap,
             maybeProfitabilityMetrics);
   }
@@ -80,39 +85,51 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
   /**
    * Creates a list of selectors based on Linea configuration.
    *
+   * @param selectorsStateManager
    * @param blockchainService Blockchain service.
    * @param txSelectorConfiguration The configuration to use.
    * @param profitabilityConfiguration The profitability configuration.
+   * @param tracerConfiguration the tracer config
+   * @param bundlePoolService bundle pool for transaction bundle selector
    * @param limitsMap The limits map.
    * @param maybeProfitabilityMetrics The optional profitability metrics
    * @return A list of selectors.
    */
   private List<PluginTransactionSelector> createTransactionSelectors(
+      final SelectorsStateManager selectorsStateManager,
       final BlockchainService blockchainService,
       final LineaTransactionSelectorConfiguration txSelectorConfiguration,
       final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
       final LineaProfitabilityConfiguration profitabilityConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
+      final BundlePoolService bundlePoolService,
       final Map<String, Integer> limitsMap,
       final Optional<HistogramMetrics> maybeProfitabilityMetrics) {
 
     traceLineLimitTransactionSelector =
         new TraceLineLimitTransactionSelector(
+            selectorsStateManager,
             blockchainService.getChainId().get(),
             limitsMap,
             txSelectorConfiguration,
             l1L2BridgeConfiguration,
             tracerConfiguration);
 
-    return List.of(
-        new MaxBlockCallDataTransactionSelector(txSelectorConfiguration.maxBlockCallDataSize()),
-        new MaxBlockGasTransactionSelector(txSelectorConfiguration.maxGasPerBlock()),
-        new ProfitableTransactionSelector(
-            blockchainService,
-            txSelectorConfiguration,
-            profitabilityConfiguration,
-            maybeProfitabilityMetrics),
-        traceLineLimitTransactionSelector);
+    List<PluginTransactionSelector> selectors =
+        List.of(
+            new MaxBlockCallDataTransactionSelector(
+                selectorsStateManager, txSelectorConfiguration.maxBlockCallDataSize()),
+            new MaxBlockGasTransactionSelector(
+                selectorsStateManager, txSelectorConfiguration.maxGasPerBlock()),
+            new ProfitableTransactionSelector(
+                blockchainService,
+                txSelectorConfiguration,
+                profitabilityConfiguration,
+                maybeProfitabilityMetrics),
+            new LineaSendBundleTransactionSelector(bundlePoolService),
+            traceLineLimitTransactionSelector);
+
+    return selectors;
   }
 
   /**
@@ -124,7 +141,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
    */
   @Override
   public TransactionSelectionResult evaluateTransactionPreProcessing(
-      final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext) {
+      final TransactionEvaluationContext evaluationContext) {
     return selectors.stream()
         .map(selector -> selector.evaluateTransactionPreProcessing(evaluationContext))
         .filter(result -> !result.equals(TransactionSelectionResult.SELECTED))
@@ -142,7 +159,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
    */
   @Override
   public TransactionSelectionResult evaluateTransactionPostProcessing(
-      final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
+      final TransactionEvaluationContext evaluationContext,
       final TransactionProcessingResult processingResult) {
     for (var selector : selectors) {
       TransactionSelectionResult result =
@@ -162,7 +179,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
    */
   @Override
   public void onTransactionSelected(
-      final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
+      final TransactionEvaluationContext evaluationContext,
       final TransactionProcessingResult processingResult) {
     selectors.forEach(
         selector -> selector.onTransactionSelected(evaluationContext, processingResult));
@@ -176,7 +193,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
    */
   @Override
   public void onTransactionNotSelected(
-      final TransactionEvaluationContext<? extends PendingTransaction> evaluationContext,
+      final TransactionEvaluationContext evaluationContext,
       final TransactionSelectionResult transactionSelectionResult) {
     selectors.forEach(
         selector ->
