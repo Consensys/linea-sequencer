@@ -16,8 +16,6 @@ package net.consensys.linea.sequencer.txselection;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -64,7 +62,7 @@ class LineaTransactionSelectorFactoryTest {
   private Map<String, Integer> mockLimitsMap;
   private BesuEvents mockEvents;
   private LineaLimitedBundlePool bundlePool;
-  private Optional<BundlePoolService> mockBundlePool;
+  private BundlePoolService mockBundlePool;
 
   private LineaTransactionSelectorFactory factory;
 
@@ -78,7 +76,6 @@ class LineaTransactionSelectorFactoryTest {
     mockLimitsMap = new HashMap<>();
     mockEvents = mock(BesuEvents.class);
     bundlePool = spy(new LineaLimitedBundlePool(4096, mockEvents));
-    mockBundlePool = spy(Optional.of(bundlePool));
 
     factory =
         new LineaTransactionSelectorFactory(
@@ -90,7 +87,7 @@ class LineaTransactionSelectorFactoryTest {
             mockLimitsMap,
             Optional.empty(),
             Optional.empty(),
-            mockBundlePool,
+            bundlePool,
             15_000_000L);
   }
 
@@ -135,8 +132,6 @@ class LineaTransactionSelectorFactoryTest {
     var mockPendingBlockHeader = mock(ProcessableBlockHeader.class);
     when(mockPendingBlockHeader.getNumber()).thenReturn(1L);
 
-    doNothing().when(mockBundlePool).ifPresent(any());
-    doAnswer(__ -> Optional.empty()).when(mockBundlePool).map(any());
     factory.selectPendingTransactions(mockBts, mockPendingBlockHeader);
 
     verifyNoInteractions(mockBts);

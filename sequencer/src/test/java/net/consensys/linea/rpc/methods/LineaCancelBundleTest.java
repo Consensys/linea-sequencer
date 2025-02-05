@@ -24,7 +24,6 @@ import static org.mockito.Mockito.when;
 import java.util.UUID;
 
 import net.consensys.linea.rpc.services.LineaLimitedBundlePool;
-import org.hyperledger.besu.plugin.services.RpcEndpointService;
 import org.hyperledger.besu.plugin.services.exception.PluginRpcEndpointException;
 import org.hyperledger.besu.plugin.services.rpc.PluginRpcRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,16 +32,14 @@ import org.junit.jupiter.api.Test;
 class LineaCancelBundleTest {
 
   private LineaCancelBundle lineaCancelBundle;
-  private RpcEndpointService rpcEndpointService;
   private LineaLimitedBundlePool bundlePool;
   private PluginRpcRequest request;
 
   @BeforeEach
   void setup() {
-    rpcEndpointService = mock(RpcEndpointService.class);
     bundlePool = mock(LineaLimitedBundlePool.class);
     request = mock(PluginRpcRequest.class);
-    lineaCancelBundle = new LineaCancelBundle(rpcEndpointService).init(bundlePool);
+    lineaCancelBundle = new LineaCancelBundle().init(bundlePool);
   }
 
   @Test

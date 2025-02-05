@@ -18,7 +18,6 @@ import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectio
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_MODULE_LINE_COUNT_OVERFLOW_CACHED;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -58,7 +57,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
       final LineaProfitabilityConfiguration profitabilityConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
-      final Optional<BundlePoolService> maybeBundlePool,
+      final BundlePoolService bundlePoolService,
       final Map<String, Integer> limitsMap,
       final Optional<JsonRpcManager> rejectedTxJsonRpcManager,
       final Optional<HistogramMetrics> maybeProfitabilityMetrics) {
@@ -78,7 +77,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
             l1L2BridgeConfiguration,
             profitabilityConfiguration,
             tracerConfiguration,
-            maybeBundlePool,
+            bundlePoolService,
             limitsMap,
             maybeProfitabilityMetrics);
   }
@@ -91,7 +90,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
    * @param txSelectorConfiguration The configuration to use.
    * @param profitabilityConfiguration The profitability configuration.
    * @param tracerConfiguration the tracer config
-   * @param maybeBundlePool an optional bundle pool for transaction bundle selector
+   * @param bundlePoolService bundle pool for transaction bundle selector
    * @param limitsMap The limits map.
    * @param maybeProfitabilityMetrics The optional profitability metrics
    * @return A list of selectors.
@@ -103,7 +102,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
       final LineaProfitabilityConfiguration profitabilityConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
-      final Optional<BundlePoolService> maybeBundlePool,
+      final BundlePoolService bundlePoolService,
       final Map<String, Integer> limitsMap,
       final Optional<HistogramMetrics> maybeProfitabilityMetrics) {
 
@@ -117,21 +116,18 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
             tracerConfiguration);
 
     List<PluginTransactionSelector> selectors =
-        new ArrayList<>(
-            List.of(
-                new MaxBlockCallDataTransactionSelector(
-                    selectorsStateManager, txSelectorConfiguration.maxBlockCallDataSize()),
-                new MaxBlockGasTransactionSelector(
-                    selectorsStateManager, txSelectorConfiguration.maxGasPerBlock()),
-                new ProfitableTransactionSelector(
-                    blockchainService,
-                    txSelectorConfiguration,
-                    profitabilityConfiguration,
-                    maybeProfitabilityMetrics),
-                traceLineLimitTransactionSelector));
-
-    maybeBundlePool.ifPresent(
-        bundlePool -> selectors.add(new LineaSendBundleTransactionSelector(bundlePool)));
+        List.of(
+            new MaxBlockCallDataTransactionSelector(
+                selectorsStateManager, txSelectorConfiguration.maxBlockCallDataSize()),
+            new MaxBlockGasTransactionSelector(
+                selectorsStateManager, txSelectorConfiguration.maxGasPerBlock()),
+            new ProfitableTransactionSelector(
+                blockchainService,
+                txSelectorConfiguration,
+                profitabilityConfiguration,
+                maybeProfitabilityMetrics),
+            new LineaSendBundleTransactionSelector(bundlePoolService),
+            traceLineLimitTransactionSelector);
 
     return selectors;
   }

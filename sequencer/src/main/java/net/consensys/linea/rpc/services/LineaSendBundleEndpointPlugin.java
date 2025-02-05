@@ -21,14 +21,11 @@ import net.consensys.linea.rpc.methods.LineaCancelBundle;
 import net.consensys.linea.rpc.methods.LineaSendBundle;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
-import org.hyperledger.besu.plugin.services.RpcEndpointService;
 
 @AutoService(BesuPlugin.class)
 public class LineaSendBundleEndpointPlugin extends AbstractLineaRequiredPlugin {
-  private RpcEndpointService rpcEndpointService;
   private LineaSendBundle lineaSendBundleMethod;
   private LineaCancelBundle lineaCancelBundleMethod;
-  private ServiceManager serviceManager;
 
   /**
    * Register the bundle RPC service.
@@ -37,23 +34,15 @@ public class LineaSendBundleEndpointPlugin extends AbstractLineaRequiredPlugin {
    */
   @Override
   public void doRegister(final ServiceManager serviceManager) {
-    this.serviceManager = serviceManager;
-    rpcEndpointService =
-        serviceManager
-            .getService(RpcEndpointService.class)
-            .orElseThrow(
-                () ->
-                    new RuntimeException(
-                        "Failed to obtain RpcEndpointService from the ServiceManager."));
-
-    lineaSendBundleMethod = new LineaSendBundle(rpcEndpointService);
+    lineaSendBundleMethod = new LineaSendBundle();
 
     rpcEndpointService.registerRPCEndpoint(
         lineaSendBundleMethod.getNamespace(),
         lineaSendBundleMethod.getName(),
         lineaSendBundleMethod::execute);
 
-    lineaCancelBundleMethod = new LineaCancelBundle(rpcEndpointService);
+    lineaCancelBundleMethod = new LineaCancelBundle();
+
     rpcEndpointService.registerRPCEndpoint(
         lineaCancelBundleMethod.getNamespace(),
         lineaCancelBundleMethod.getName(),
@@ -68,16 +57,9 @@ public class LineaSendBundleEndpointPlugin extends AbstractLineaRequiredPlugin {
   @Override
   public void start() {
     super.start();
-    final var bundlePool =
-        serviceManager
-            .getService(BundlePoolService.class)
-            .orElseThrow(
-                () ->
-                    new RuntimeException("Failed to obtain Bundle pool from the ServiceManager."));
 
     // set the pool
-    lineaSendBundleMethod.init(bundlePool);
-    // set the pool
-    lineaCancelBundleMethod.init(bundlePool);
+    lineaSendBundleMethod.init(bundlePoolService);
+    lineaCancelBundleMethod.init(bundlePoolService);
   }
 }

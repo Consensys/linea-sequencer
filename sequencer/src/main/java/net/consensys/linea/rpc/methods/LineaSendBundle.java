@@ -30,11 +30,10 @@ import net.consensys.linea.rpc.services.LineaLimitedBundlePool;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
-import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.datatypes.parameters.UnsignedLongParameter;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.JsonRpcParameter;
 import org.hyperledger.besu.ethereum.api.util.DomainObjectDecodeUtils;
-import org.hyperledger.besu.plugin.services.RpcEndpointService;
+import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.plugin.services.exception.PluginRpcEndpointException;
 import org.hyperledger.besu.plugin.services.rpc.PluginRpcRequest;
 import org.hyperledger.besu.plugin.services.rpc.RpcMethodError;
@@ -43,12 +42,7 @@ import org.hyperledger.besu.plugin.services.rpc.RpcMethodError;
 public class LineaSendBundle {
   private static final AtomicInteger LOG_SEQUENCE = new AtomicInteger();
   private final JsonRpcParameter parameterParser = new JsonRpcParameter();
-  private final RpcEndpointService rpcEndpointService;
   private BundlePoolService bundlePool;
-
-  public LineaSendBundle(final RpcEndpointService rpcEndpointService) {
-    this.rpcEndpointService = rpcEndpointService;
-  }
 
   public LineaSendBundle init(BundlePoolService bundlePoolService) {
     this.bundlePool = bundlePoolService;
@@ -93,7 +87,7 @@ public class LineaSendBundle {
         List<PendingTransaction> txs =
             bundleParams.txs.stream()
                 .map(DomainObjectDecodeUtils::decodeRawTransaction)
-                .map(tx -> new PendingBundleTx(tx, true, true, System.currentTimeMillis()))
+                .map(tx -> new PendingBundleTx(tx))
                 .collect(Collectors.toList());
 
         if (!txs.isEmpty()) {
@@ -187,16 +181,16 @@ public class LineaSendBundle {
     }
   }
 
-  public record PendingBundleTx(
-      Transaction getTransaction,
-      boolean isReceivedFromLocalSource,
-      boolean hasPriority,
-      long getAddedAt)
-      implements PendingTransaction {
+  public class PendingBundleTx
+      extends org.hyperledger.besu.ethereum.eth.transactions.PendingTransaction.Local {
+
+    public PendingBundleTx(final Transaction transaction) {
+      super(transaction);
+    }
+
     @Override
     public String toTraceLog() {
-      // ToDo
-      return "ToDo";
+      return "Bundle tx: " + super.toTraceLog();
     }
   }
 }
