@@ -137,12 +137,12 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
   }
 
   private void commit(final BlockTransactionSelectionService bts) {
-    currSelector.get().getOperationTracer().commitTransactions();
+    currSelector.get().getOperationTracer().commitTransactionBundle();
     bts.commit();
   }
 
   private void rollback(final BlockTransactionSelectionService bts) {
-    currSelector.get().getOperationTracer().popTransactions();
+    currSelector.get().getOperationTracer().popTransactionBundle();
     bts.rollback();
   }
 }
