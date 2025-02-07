@@ -83,9 +83,9 @@ public class LineaPluginTestBase extends AcceptanceTestBase {
   public static final int MAX_CALLDATA_SIZE = 1188; // contract has a call data size of 1160
   public static final int MAX_TX_GAS_LIMIT = DefaultGasProvider.GAS_LIMIT.intValue();
   public static final long CHAIN_ID = 1337L;
+  public static final int BLOCK_PERIOD_SECONDS = 5;
   public static final CliqueOptions LINEA_CLIQUE_OPTIONS =
-      new CliqueOptions(
-          CliqueOptions.DEFAULT.blockPeriodSeconds(), CliqueOptions.DEFAULT.epochLength(), false);
+      new CliqueOptions(BLOCK_PERIOD_SECONDS, CliqueOptions.DEFAULT.epochLength(), false);
   protected static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
   protected BesuNode minerNode;
 

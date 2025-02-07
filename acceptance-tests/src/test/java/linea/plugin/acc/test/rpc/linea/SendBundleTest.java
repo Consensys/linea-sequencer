@@ -20,10 +20,8 @@ import static org.web3j.crypto.Hash.sha3;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Arrays;
-import java.util.List;
 
 import linea.plugin.acc.test.LineaPluginTestBase;
-import linea.plugin.acc.test.TestCommandLineOptionsBuilder;
 import linea.plugin.acc.test.tests.web3j.generated.AcceptanceTestToken;
 import lombok.RequiredArgsConstructor;
 import org.hyperledger.besu.datatypes.Wei;
@@ -41,11 +39,6 @@ import org.web3j.utils.Numeric;
 public class SendBundleTest extends LineaPluginTestBase {
   private static final BigInteger TRANSFER_GAS_LIMIT = BigInteger.valueOf(100000L);
   private static final BigInteger TRANSFER_GAS_PRICE = BigInteger.TEN.pow(9);
-
-  @Override
-  public List<String> getTestCliOptions() {
-    return new TestCommandLineOptionsBuilder().build();
-  }
 
   @Test
   public void singleTxBundleIsAcceptedAndMined() {
@@ -158,7 +151,7 @@ public class SendBundleTest extends LineaPluginTestBase {
         ethTransactions
             .getTransactionReceipt(payGasWithTokenRawTx.txHash())
             .execute(minerNode.nodeRequests())
-            .get();
+            .orElseThrow();
     final var gasPrice =
         Wei.fromHexString(payGasWithTokenReceipt.getEffectiveGasPrice()).toBigInteger();
 
