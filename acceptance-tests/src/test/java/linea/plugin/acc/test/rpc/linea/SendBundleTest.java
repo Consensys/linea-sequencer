@@ -172,12 +172,12 @@ public class SendBundleTest extends LineaPluginTestBase {
   public void singleNotSelectedTxBundleIsNotMined() throws Exception {
     final var mulmodExecutor = deployMulmodExecutor();
 
-    final var operationCall =
+    final var mulmodOverflow =
         mulmodOperation(mulmodExecutor, accounts.getPrimaryBenefactor(), 1, 5_000);
 
     final var sendBundleRequest =
         new SendBundleRequest(
-            new BundleParams(new String[] {operationCall.rawTx}, Integer.toHexString(2)));
+            new BundleParams(new String[] {mulmodOverflow.rawTx}, Integer.toHexString(2)));
     final var sendBundleResponse = sendBundleRequest.execute(minerNode.nodeRequests());
 
     assertThat(sendBundleResponse.hasError()).isFalse();
@@ -190,7 +190,7 @@ public class SendBundleTest extends LineaPluginTestBase {
             .execute(minerNode.nodeRequests());
 
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()));
-    minerNode.verify(eth.expectNoTransactionReceipt(operationCall.txHash));
+    minerNode.verify(eth.expectNoTransactionReceipt(mulmodOverflow.txHash));
   }
 
   @Test
@@ -198,14 +198,14 @@ public class SendBundleTest extends LineaPluginTestBase {
     final var mulmodExecutor = deployMulmodExecutor();
     final var recipient = accounts.createAccount("recipient");
 
-    final var operationCall =
+    final var mulmodOverflow =
         mulmodOperation(mulmodExecutor, accounts.getPrimaryBenefactor(), 1, 5_000);
-    final var inBundleTransferTxHash =
+    final var inBundleTransferTx =
         accountTransactions.createTransfer(recipient, accounts.getPrimaryBenefactor(), 1);
 
-    // first is not selected due to insufficient gas
+    // first is not selected because exceeds line count limit
     final var bundleRawTxs =
-        new String[] {operationCall.rawTx, inBundleTransferTxHash.signedTransactionData()};
+        new String[] {mulmodOverflow.rawTx, inBundleTransferTx.signedTransactionData()};
 
     final var sendBundleRequest =
         new SendBundleRequest(new BundleParams(bundleRawTxs, Integer.toHexString(2)));
@@ -222,12 +222,12 @@ public class SendBundleTest extends LineaPluginTestBase {
 
     // first sentry is mined and no tx of the bundle is mined
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash1.toHexString()));
-    minerNode.verify(eth.expectNoTransactionReceipt(operationCall.txHash));
-    minerNode.verify(eth.expectNoTransactionReceipt(inBundleTransferTxHash.transactionHash()));
+    minerNode.verify(eth.expectNoTransactionReceipt(mulmodOverflow.txHash));
+    minerNode.verify(eth.expectNoTransactionReceipt(inBundleTransferTx.transactionHash()));
 
     // try with a bundle where first is selected but second no
     final var reverseBundleRawTxs =
-        new String[] {inBundleTransferTxHash.signedTransactionData(), operationCall.rawTx};
+        new String[] {inBundleTransferTx.signedTransactionData(), mulmodOverflow.rawTx};
     final var sendReverseBundleRequest =
         new SendBundleRequest(new BundleParams(reverseBundleRawTxs, Integer.toHexString(3)));
     final var sendReverseBundleResponse =
@@ -248,8 +248,56 @@ public class SendBundleTest extends LineaPluginTestBase {
 
     // second sentry is mined and no tx of the bundle is mined
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash2.toHexString()));
-    minerNode.verify(eth.expectNoTransactionReceipt(operationCall.txHash));
-    minerNode.verify(eth.expectNoTransactionReceipt(inBundleTransferTxHash.transactionHash()));
+    minerNode.verify(eth.expectNoTransactionReceipt(mulmodOverflow.txHash));
+    minerNode.verify(eth.expectNoTransactionReceipt(inBundleTransferTx.transactionHash()));
+  }
+
+  @Test
+  public void mixOfSelectedNotSelectedBundles() throws Exception {
+    final var mulmodExecutor = deployMulmodExecutor();
+
+    final var mulmodOverflow =
+        mulmodOperation(mulmodExecutor, accounts.getPrimaryBenefactor(), 1, 5_000);
+    final var inBundleTransferTx1 =
+        accountTransactions.createTransfer(
+            accounts.getSecondaryBenefactor(), accounts.getPrimaryBenefactor(), 1, BigInteger.ZERO);
+
+    // first is not selected because exceeds line count limit
+    final var notSelectedBundleRawTxs =
+        new String[] {mulmodOverflow.rawTx, inBundleTransferTx1.signedTransactionData()};
+
+    final var sendNotSelectedBundleRequest =
+        new SendBundleRequest(new BundleParams(notSelectedBundleRawTxs, Integer.toHexString(2)));
+    final var sendNotSelectedBundleResponse =
+        sendNotSelectedBundleRequest.execute(minerNode.nodeRequests());
+
+    assertThat(sendNotSelectedBundleResponse.hasError()).isFalse();
+    assertThat(sendNotSelectedBundleResponse.getResult().bundleHash()).isNotBlank();
+
+    final var mulmodOk = mulmodOperation(mulmodExecutor, accounts.getPrimaryBenefactor(), 1, 1_000);
+    final var inBundleTransferTx2 =
+        accountTransactions.createTransfer(
+            accounts.getSecondaryBenefactor(), accounts.getPrimaryBenefactor(), 2, BigInteger.ZERO);
+
+    // both txs are valid
+    final var selectedBundleRawTxs =
+        new String[] {mulmodOk.rawTx, inBundleTransferTx2.signedTransactionData()};
+
+    final var sendSelectedBundleRequest =
+        new SendBundleRequest(new BundleParams(selectedBundleRawTxs, Integer.toHexString(2)));
+    final var sendSelectedBundleResponse =
+        sendSelectedBundleRequest.execute(minerNode.nodeRequests());
+
+    assertThat(sendSelectedBundleResponse.hasError()).isFalse();
+    assertThat(sendSelectedBundleResponse.getResult().bundleHash()).isNotBlank();
+
+    // assert second bundle is mined
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(mulmodOk.txHash));
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(inBundleTransferTx2.transactionHash()));
+
+    // while first bundle is not selected
+    minerNode.verify(eth.expectNoTransactionReceipt(mulmodOverflow.txHash));
+    minerNode.verify(eth.expectNoTransactionReceipt(inBundleTransferTx1.transactionHash()));
   }
 
   private TokenTransfer transferTokens(

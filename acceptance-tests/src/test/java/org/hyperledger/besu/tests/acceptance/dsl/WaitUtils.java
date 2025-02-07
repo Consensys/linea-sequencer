@@ -28,7 +28,7 @@ public class WaitUtils {
 
   public static void waitFor(final int timeout, final ThrowingRunnable condition) {
     Awaitility.await()
-        .pollInterval(1, TimeUnit.SECONDS)
+        .pollInterval(5, TimeUnit.SECONDS)
         .ignoreExceptions()
         .atMost(timeout, TimeUnit.SECONDS)
         .untilAsserted(condition);
