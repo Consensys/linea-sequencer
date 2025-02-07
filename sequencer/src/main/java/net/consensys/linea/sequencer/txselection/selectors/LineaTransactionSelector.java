@@ -33,10 +33,10 @@ import net.consensys.linea.jsonrpc.JsonRpcRequestBuilder;
 import net.consensys.linea.metrics.HistogramMetrics;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.rpc.services.BundlePoolService;
+import net.consensys.linea.zktracer.ZkTracer;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.BlockchainService;
-import org.hyperledger.besu.plugin.services.tracer.BlockAwareOperationTracer;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
 import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager;
 import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationContext;
@@ -221,7 +221,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
    * @return the operation tracer
    */
   @Override
-  public BlockAwareOperationTracer getOperationTracer() {
+  public ZkTracer getOperationTracer() {
     return traceLineLimitTransactionSelector.getOperationTracer();
   }
 }

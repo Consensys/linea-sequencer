@@ -18,6 +18,7 @@ package net.consensys.linea.sequencer.txselection;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaTracerConfiguration;
@@ -51,8 +52,8 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
   private final Optional<HistogramMetrics> maybeProfitabilityMetrics;
   private final BundlePoolService bundlePoolService;
   private final long maxBundleGasPerBlock;
-
   private final Map<String, Integer> limitsMap;
+  private final AtomicReference<LineaTransactionSelector> currSelector = new AtomicReference<>();
 
   public LineaTransactionSelectorFactory(
       final BlockchainService blockchainService,
@@ -79,17 +80,20 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
 
   @Override
   public PluginTransactionSelector create(final SelectorsStateManager selectorsStateManager) {
-    return new LineaTransactionSelector(
-        selectorsStateManager,
-        blockchainService,
-        txSelectorConfiguration,
-        l1L2BridgeConfiguration,
-        profitabilityConfiguration,
-        tracerConfiguration,
-        bundlePoolService,
-        limitsMap,
-        rejectedTxJsonRpcManager,
-        maybeProfitabilityMetrics);
+    final var selector =
+        new LineaTransactionSelector(
+            selectorsStateManager,
+            blockchainService,
+            txSelectorConfiguration,
+            l1L2BridgeConfiguration,
+            profitabilityConfiguration,
+            tracerConfiguration,
+            bundlePoolService,
+            limitsMap,
+            rejectedTxJsonRpcManager,
+            maybeProfitabilityMetrics);
+    currSelector.set(selector);
+    return selector;
   }
 
   public void selectPendingTransactions(
@@ -124,10 +128,21 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
                       .filter(evalRes -> !evalRes.selected())
                       .findFirst();
               if (badBundleRes.isPresent()) {
-                bts.rollback();
+                rollback(bts);
               } else {
-                bts.commit();
+                commit(bts);
               }
             });
+    currSelector.set(null);
+  }
+
+  private void commit(final BlockTransactionSelectionService bts) {
+    currSelector.get().getOperationTracer().commitTransactionBundle();
+    bts.commit();
+  }
+
+  private void rollback(final BlockTransactionSelectionService bts) {
+    currSelector.get().getOperationTracer().popTransactionBundle();
+    bts.rollback();
   }
 }
