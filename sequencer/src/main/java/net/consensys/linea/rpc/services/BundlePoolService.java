@@ -114,4 +114,11 @@ public interface BundlePoolService extends BesuService {
    * @param bundle to mark
    */
   void markBundleForEval(TransactionBundle bundle);
+
+  /**
+   * Get the number of bundles in the pool
+   *
+   * @return the number of bundles in the pool
+   */
+  long size();
 }

@@ -30,24 +30,21 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.google.auto.service.AutoService;
 import com.google.common.annotations.VisibleForTesting;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.plugin.data.AddedBlockContext;
 import org.hyperledger.besu.plugin.services.BesuEvents;
 import org.hyperledger.besu.plugin.services.BesuService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A pool for managing TransactionBundles with limited size and FIFO eviction. Provides access via
  * hash identifiers or block numbers.
  */
 @AutoService(BesuService.class)
+@Slf4j
 public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.BlockAddedListener {
-
-  private static final Logger logger = LoggerFactory.getLogger(LineaLimitedBundlePool.class);
-
   private final Cache<Hash, TransactionBundle> cache;
   private final Cache<Hash, TransactionBundle> evalCache;
   private final Map<Long, List<TransactionBundle>> blockIndex;
@@ -72,11 +69,12 @@ public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.Blo
             .removalListener(
                 (Hash key, TransactionBundle bundle, RemovalCause cause) -> {
                   if (bundle != null && cause.wasEvicted()) {
-                    logger.info(
-                        "Dropping transaction bundle {}:{} due to {}",
-                        bundle.blockNumber(),
-                        bundle.bundleIdentifier().toHexString(),
-                        cause.name());
+                    log.atTrace()
+                        .setMessage("Dropping transaction bundle {}:{} due to {}")
+                        .addArgument(bundle::blockNumber)
+                        .addArgument(() -> bundle.bundleIdentifier().toHexString())
+                        .addArgument(cause::name)
+                        .log();
                     removeFromBlockIndex(bundle);
                   }
                 })
@@ -212,6 +210,11 @@ public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.Blo
   @Override
   public void markBundleForEval(final TransactionBundle bundle) {
     evalCache.put(bundle.bundleIdentifier(), bundle);
+  }
+
+  @Override
+  public long size() {
+    return cache.estimatedSize();
   }
 
   /**
