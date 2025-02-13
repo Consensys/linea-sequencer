@@ -29,7 +29,7 @@ import org.apache.tuweni.toml.TomlParseResult;
 import org.apache.tuweni.toml.TomlTable;
 
 /**
- * Verifies line counts for modules based on provided limits. It supports verifying if current
+ * Verifies line counts for modules based on provided limits. It supports verifying whether current
  * transaction exceed these limits.
  */
 @Slf4j
@@ -58,8 +58,8 @@ public class ModuleLineCountValidator {
   }
 
   /**
-   * Verifies if the current accumulated line counts, against previous accumulation line counts, for
-   * modules exceed the predefined limits.
+   * Verifies whether the current accumulated line counts, against previous accumulation line
+   * counts, for modules exceed the predefined limits.
    *
    * @param currentAccumulatedLineCounts A map of module names to their current accumulated line
    *     counts.
