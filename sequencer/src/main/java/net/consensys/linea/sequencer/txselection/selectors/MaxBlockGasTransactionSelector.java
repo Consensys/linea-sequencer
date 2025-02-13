@@ -89,7 +89,7 @@ public class MaxBlockGasTransactionSelector
     if (newCumulativeBlockGasUsed > maxGasPerBlock) {
       log.atTrace()
           .setMessage(
-              "Not selecting transaction {}, its cumulative block gas used {} greater than max user gas per block {},"
+              "Not selecting transaction {}, its cumulative block gas used {} exceeds max user gas per block {},"
                   + " skipping it")
           .addArgument(transaction::getHash)
           .addArgument(newCumulativeBlockGasUsed)
