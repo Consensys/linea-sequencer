@@ -68,7 +68,7 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
         transactionSelectorConfiguration();
 
     // set maxBundleGasPerBlock
-    maxBundleGasPerBlock = txSelectorConfiguration.maxGasPerBlock();
+    maxBundleGasPerBlock = txSelectorConfiguration.maxBundleGasPerBlock();
 
     final LineaRejectedTxReportingConfiguration lineaRejectedTxReportingConfiguration =
         rejectedTxReportingConfiguration();

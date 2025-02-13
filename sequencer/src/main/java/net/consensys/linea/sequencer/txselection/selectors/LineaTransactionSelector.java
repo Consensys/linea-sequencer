@@ -127,6 +127,8 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
                 profitabilityConfiguration,
                 maybeProfitabilityMetrics),
             new LineaSendBundleTransactionSelector(bundlePoolService),
+            new MaxBundleGasPerBlockTransactionSelector(
+                selectorsStateManager, txSelectorConfiguration.maxBundleGasPerBlock()),
             traceLineLimitTransactionSelector);
 
     return selectors;

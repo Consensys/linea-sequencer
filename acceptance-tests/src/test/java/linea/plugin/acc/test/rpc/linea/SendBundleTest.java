@@ -15,32 +15,18 @@
 package linea.plugin.acc.test.rpc.linea;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.web3j.crypto.Hash.sha3;
 
-import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Arrays;
 
-import linea.plugin.acc.test.LineaPluginTestBase;
 import linea.plugin.acc.test.tests.web3j.generated.AcceptanceTestToken;
-import linea.plugin.acc.test.tests.web3j.generated.MulmodExecutor;
-import lombok.RequiredArgsConstructor;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Account;
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount;
-import org.hyperledger.besu.tests.acceptance.dsl.transaction.NodeRequests;
-import org.hyperledger.besu.tests.acceptance.dsl.transaction.Transaction;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.account.TransferTransaction;
 import org.junit.jupiter.api.Test;
-import org.web3j.crypto.RawTransaction;
-import org.web3j.crypto.TransactionEncoder;
-import org.web3j.protocol.core.Request;
-import org.web3j.utils.Numeric;
 
-public class SendBundleTest extends LineaPluginTestBase {
-  private static final BigInteger TRANSFER_GAS_LIMIT = BigInteger.valueOf(100_000L);
-  private static final BigInteger MULMOD_GAS_LIMIT = BigInteger.valueOf(10_000_000L);
-  private static final BigInteger GAS_PRICE = BigInteger.TEN.pow(9);
+public class SendBundleTest extends AbstractSendBundleTest {
 
   @Test
   public void singleTxBundleIsAcceptedAndMined() {
@@ -113,9 +99,9 @@ public class SendBundleTest extends LineaPluginTestBase {
     Arrays.stream(tokenTransfers)
         .forEach(
             tokenTransfer -> {
-              minerNode.verify(eth.expectSuccessfulTransactionReceipt(tokenTransfer.txHash));
+              minerNode.verify(eth.expectSuccessfulTransactionReceipt(tokenTransfer.txHash()));
               try {
-                assertThat(token.balanceOf(tokenTransfer.recipient.getAddress()).send())
+                assertThat(token.balanceOf(tokenTransfer.recipient().getAddress()).send())
                     .isEqualTo(1);
               } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -177,7 +163,7 @@ public class SendBundleTest extends LineaPluginTestBase {
 
     final var sendBundleRequest =
         new SendBundleRequest(
-            new BundleParams(new String[] {mulmodOverflow.rawTx}, Integer.toHexString(2)));
+            new BundleParams(new String[] {mulmodOverflow.rawTx()}, Integer.toHexString(2)));
     final var sendBundleResponse = sendBundleRequest.execute(minerNode.nodeRequests());
 
     assertThat(sendBundleResponse.hasError()).isFalse();
@@ -190,7 +176,7 @@ public class SendBundleTest extends LineaPluginTestBase {
             .execute(minerNode.nodeRequests());
 
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()));
-    minerNode.verify(eth.expectNoTransactionReceipt(mulmodOverflow.txHash));
+    minerNode.verify(eth.expectNoTransactionReceipt(mulmodOverflow.txHash()));
   }
 
   @Test
@@ -205,7 +191,7 @@ public class SendBundleTest extends LineaPluginTestBase {
 
     // first is not selected because exceeds line count limit
     final var bundleRawTxs =
-        new String[] {mulmodOverflow.rawTx, inBundleTransferTx.signedTransactionData()};
+        new String[] {mulmodOverflow.rawTx(), inBundleTransferTx.signedTransactionData()};
 
     final var sendBundleRequest =
         new SendBundleRequest(new BundleParams(bundleRawTxs, Integer.toHexString(2)));
@@ -222,12 +208,12 @@ public class SendBundleTest extends LineaPluginTestBase {
 
     // first sentry is mined and no tx of the bundle is mined
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash1.toHexString()));
-    minerNode.verify(eth.expectNoTransactionReceipt(mulmodOverflow.txHash));
+    minerNode.verify(eth.expectNoTransactionReceipt(mulmodOverflow.txHash()));
     minerNode.verify(eth.expectNoTransactionReceipt(inBundleTransferTx.transactionHash()));
 
     // try with a bundle where first is selected but second no
     final var reverseBundleRawTxs =
-        new String[] {inBundleTransferTx.signedTransactionData(), mulmodOverflow.rawTx};
+        new String[] {inBundleTransferTx.signedTransactionData(), mulmodOverflow.rawTx()};
     final var sendReverseBundleRequest =
         new SendBundleRequest(new BundleParams(reverseBundleRawTxs, Integer.toHexString(3)));
     final var sendReverseBundleResponse =
@@ -248,7 +234,7 @@ public class SendBundleTest extends LineaPluginTestBase {
 
     // second sentry is mined and no tx of the bundle is mined
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash2.toHexString()));
-    minerNode.verify(eth.expectNoTransactionReceipt(mulmodOverflow.txHash));
+    minerNode.verify(eth.expectNoTransactionReceipt(mulmodOverflow.txHash()));
     minerNode.verify(eth.expectNoTransactionReceipt(inBundleTransferTx.transactionHash()));
   }
 
@@ -264,7 +250,7 @@ public class SendBundleTest extends LineaPluginTestBase {
 
     // first is not selected because exceeds line count limit
     final var notSelectedBundleRawTxs =
-        new String[] {mulmodOverflow.rawTx, inBundleTransferTx1.signedTransactionData()};
+        new String[] {mulmodOverflow.rawTx(), inBundleTransferTx1.signedTransactionData()};
 
     final var sendNotSelectedBundleRequest =
         new SendBundleRequest(new BundleParams(notSelectedBundleRawTxs, Integer.toHexString(2)));
@@ -281,7 +267,7 @@ public class SendBundleTest extends LineaPluginTestBase {
 
     // both txs are valid
     final var selectedBundleRawTxs =
-        new String[] {mulmodOk.rawTx, inBundleTransferTx2.signedTransactionData()};
+        new String[] {mulmodOk.rawTx(), inBundleTransferTx2.signedTransactionData()};
 
     final var sendSelectedBundleRequest =
         new SendBundleRequest(new BundleParams(selectedBundleRawTxs, Integer.toHexString(2)));
@@ -292,94 +278,11 @@ public class SendBundleTest extends LineaPluginTestBase {
     assertThat(sendSelectedBundleResponse.getResult().bundleHash()).isNotBlank();
 
     // assert second bundle is mined
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(mulmodOk.txHash));
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(mulmodOk.txHash()));
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(inBundleTransferTx2.transactionHash()));
 
     // while first bundle is not selected
-    minerNode.verify(eth.expectNoTransactionReceipt(mulmodOverflow.txHash));
+    minerNode.verify(eth.expectNoTransactionReceipt(mulmodOverflow.txHash()));
     minerNode.verify(eth.expectNoTransactionReceipt(inBundleTransferTx1.transactionHash()));
   }
-
-  private TokenTransfer transferTokens(
-      final AcceptanceTestToken token,
-      final Account sender,
-      final int nonce,
-      final Account recipient,
-      final int amount) {
-    final var transferCalldata =
-        token.transfer(recipient.getAddress(), BigInteger.valueOf(amount)).encodeFunctionCall();
-
-    final var transferTx =
-        RawTransaction.createTransaction(
-            CHAIN_ID,
-            BigInteger.valueOf(nonce),
-            TRANSFER_GAS_LIMIT,
-            token.getContractAddress(),
-            BigInteger.ZERO,
-            transferCalldata,
-            GAS_PRICE,
-            GAS_PRICE.multiply(BigInteger.TEN).add(BigInteger.ONE));
-
-    final String signedTransferTx =
-        Numeric.toHexString(
-            TransactionEncoder.signMessage(transferTx, sender.web3jCredentialsOrThrow()));
-
-    final String hashTx = sha3(signedTransferTx);
-
-    return new TokenTransfer(recipient, hashTx, signedTransferTx);
-  }
-
-  private MulmodCall mulmodOperation(
-      final MulmodExecutor executor, final Account sender, final int nonce, final int iterations) {
-    final var operationCalldata =
-        executor.executeMulmod(BigInteger.valueOf(iterations)).encodeFunctionCall();
-
-    final var operationTx =
-        RawTransaction.createTransaction(
-            CHAIN_ID,
-            BigInteger.valueOf(nonce),
-            MULMOD_GAS_LIMIT,
-            executor.getContractAddress(),
-            BigInteger.ZERO,
-            operationCalldata,
-            GAS_PRICE,
-            GAS_PRICE.multiply(BigInteger.TEN).add(BigInteger.ONE));
-
-    final String signedTransferTx =
-        Numeric.toHexString(
-            TransactionEncoder.signMessage(operationTx, sender.web3jCredentialsOrThrow()));
-
-    final String hashTx = sha3(signedTransferTx);
-
-    return new MulmodCall(hashTx, signedTransferTx);
-  }
-
-  @RequiredArgsConstructor
-  static class SendBundleRequest implements Transaction<SendBundleRequest.SendBundleResponse> {
-    private final BundleParams bundleParams;
-
-    @Override
-    public SendBundleResponse execute(final NodeRequests nodeRequests) {
-      try {
-        return new Request<>(
-                "linea_sendBundle",
-                Arrays.asList(bundleParams),
-                nodeRequests.getWeb3jService(),
-                SendBundleResponse.class)
-            .send();
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    static class SendBundleResponse extends org.web3j.protocol.core.Response<Response> {}
-
-    record Response(String bundleHash) {}
-  }
-
-  record BundleParams(String[] txs, String blockNumber) {}
-
-  record TokenTransfer(Account recipient, String txHash, String rawTx) {}
-
-  record MulmodCall(String txHash, String rawTx) {}
 }

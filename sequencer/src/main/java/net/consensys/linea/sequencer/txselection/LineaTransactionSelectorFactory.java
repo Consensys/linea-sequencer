@@ -15,8 +15,6 @@
 
 package net.consensys.linea.sequencer.txselection;
 
-import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.BLOCK_OCCUPANCY_ABOVE_THRESHOLD;
-
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -120,27 +118,11 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
           bundlePoolService.markBundleForEval(bundle);
           var badBundleRes =
               bundle.pendingTransactions().stream()
-                  .map(
-                      pt -> {
-                        // restricting block bundles on the basis of gasLimit, not gas
-                        // used. gasUsed isn't returned from evaluatePendingTransaction
-                        // currently
-                        final var pendingGasLimit = pt.getTransaction().getGasLimit();
-                        if (pendingGasLimit + cumulativeBundleGasLimit.longValue()
-                            < maxBundleGasPerBlock) {
-                          var res = bts.evaluatePendingTransaction(pt);
-                          if (res.selected()) {
-                            cumulativeBundleGasLimit.add(pendingGasLimit);
-                          }
-                          return res;
-                        } else {
-                          return BLOCK_OCCUPANCY_ABOVE_THRESHOLD;
-                        }
-                      })
+                  .map(bts::evaluatePendingTransaction)
                   .filter(evalRes -> !evalRes.selected())
                   .findFirst();
           if (badBundleRes.isPresent()) {
-            log.trace("Failed bundle {}", bundle);
+            log.trace("Failed bundle {}, reason {}", bundle, badBundleRes);
             rollback(bts);
           } else {
             log.trace("Selected bundle {}", bundle);
