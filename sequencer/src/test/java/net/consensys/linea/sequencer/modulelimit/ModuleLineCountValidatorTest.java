@@ -49,8 +49,8 @@ class ModuleLineCountValidatorTest {
     final var prevLineCountTx = Map.of("MOD1", 1, "MOD2", 1, "MOD3", 1);
 
     final var lineCountTx = Map.of("MOD1", 1, "MOD2", 3, "MOD3", 3);
-
-    assertThat(moduleLineCountValidator.validate(lineCountTx, prevLineCountTx))
+    moduleLineCountValidator.updateAccumulatedLineCounts(prevLineCountTx);
+    assertThat(moduleLineCountValidator.validate(lineCountTx))
         .isEqualTo(ModuleLimitsValidationResult.blockModuleLineCountFull("MOD2", 2, 2, 3, 2));
   }
 
@@ -60,8 +60,7 @@ class ModuleLineCountValidatorTest {
         new ModuleLineCountValidator(Map.of("MOD1", 1, "MOD2", 2, "MOD3", 3));
 
     final var lineCountTx = Map.of("MOD4", 1, "MOD2", 1, "MOD3", 1);
-
-    assertThat(moduleLineCountValidator.validate(lineCountTx, lineCountTx))
+    assertThat(moduleLineCountValidator.validate(lineCountTx))
         .isEqualTo(ModuleLimitsValidationResult.moduleNotDefined("MOD4"));
   }
 
@@ -72,7 +71,7 @@ class ModuleLineCountValidatorTest {
 
     final var lineCountTx = Map.of("MOD1", 1, "MOD2", -2, "MOD3", 1);
 
-    assertThat(moduleLineCountValidator.validate(lineCountTx, lineCountTx))
+    assertThat(moduleLineCountValidator.validate(lineCountTx))
         .isEqualTo(ModuleLimitsValidationResult.invalidLineCount("MOD2", -2));
   }
 }
