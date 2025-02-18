@@ -34,7 +34,10 @@ public abstract class AbstractLineaRequiredPlugin extends AbstractLineaSharedPri
   public void register(final ServiceManager serviceManager) {
     super.register(serviceManager);
     try {
-      log.info("Registering Linea plugin {}", this.getClass().getName());
+      log.info(
+          "Registering Linea plugin of type {} with name {}",
+          this.getClass().getName(),
+          this.getName());
 
       doRegister(serviceManager);
 
