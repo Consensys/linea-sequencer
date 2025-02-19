@@ -83,13 +83,13 @@ public class MaxBundleGasPerBlockTransactionSelector
       if (newCumulativeBlockBundleGasUsed > maxBundleGasPerBlock) {
         log.atTrace()
             .setMessage(
-                "Not selecting bundle transaction {} since the current gas used by the bundle is greater than the max {};"
+                "Not selecting bundle transaction {} since the cumulative gas used by bundles in this block is greater than the max {};"
                     + " gas used by tx {} + gas already used by the bundle {} = {}")
             .addArgument(pendingBundleTx::toTraceLog)
             .addArgument(maxBundleGasPerBlock)
             .addArgument(gasUsedByTransaction)
-            .addArgument(currentBundleGasUsed)
-            .addArgument(newCurrentBundleGasUsed)
+            .addArgument(cumulativeBlockBundleGasUsed)
+            .addArgument(newCumulativeBlockBundleGasUsed)
             .log();
         return BUNDLE_TOO_LARGE_FOR_REMAINING_BUNDLE_BLOCK_GAS;
       }
@@ -102,7 +102,7 @@ public class MaxBundleGasPerBlockTransactionSelector
    *
    * @param cumulativeBlockBundleGasUsed the gas used by selected bundle transactions since the
    *     beginning of the block
-   * @param currentBundleGasUsed the gas use only by transactions belonging to the current bundle
+   * @param currentBundleGasUsed the gas used only by transactions belonging to the current bundle
    */
   public record BundleGasTracker(long cumulativeBlockBundleGasUsed, long currentBundleGasUsed) {
 
