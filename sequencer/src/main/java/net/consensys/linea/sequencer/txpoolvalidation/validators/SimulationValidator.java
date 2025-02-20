@@ -31,7 +31,7 @@ import net.consensys.linea.sequencer.modulelimit.ModuleLimitsValidationResult;
 import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator;
 import net.consensys.linea.zktracer.ZkTracer;
 import org.hyperledger.besu.datatypes.Transaction;
-import org.hyperledger.besu.plugin.data.BlockHeader;
+import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 import org.hyperledger.besu.plugin.data.TransactionSimulationResult;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.TransactionSimulationService;
@@ -84,11 +84,12 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
 
       final ModuleLineCountValidator moduleLineCountValidator =
           new ModuleLineCountValidator(moduleLineLimitsMap);
-      final var chainHeadHeader = blockchainService.getChainHeadHeader();
+      final var pendingBlockHeader = transactionSimulationService.simulatePendingBlockHeader();
 
-      final var zkTracer = createZkTracer(chainHeadHeader);
+      final var zkTracer = createZkTracer(pendingBlockHeader);
       final var maybeSimulationResults =
-          transactionSimulationService.simulate(transaction, Optional.empty(), zkTracer, true);
+          transactionSimulationService.simulate(
+              transaction, Optional.empty(), pendingBlockHeader, zkTracer, false, true);
 
       ModuleLimitsValidationResult moduleLimitResult =
           moduleLineCountValidator.validate(zkTracer.getModulesLineCount());
@@ -157,10 +158,10 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
         .log();
   }
 
-  private ZkTracer createZkTracer(final BlockHeader chainHeadHeader) {
+  private ZkTracer createZkTracer(final ProcessableBlockHeader pendingBlockHeader) {
     var zkTracer = new ZkTracer(l1L2BridgeConfiguration);
     zkTracer.traceStartConflation(1L);
-    zkTracer.traceStartBlock(chainHeadHeader);
+    zkTracer.traceStartBlock(pendingBlockHeader, pendingBlockHeader.getCoinbase());
     return zkTracer;
   }
 

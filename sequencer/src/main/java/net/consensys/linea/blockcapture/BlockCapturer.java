@@ -63,7 +63,8 @@ public class BlockCapturer implements ConflationAwareOperationTracer {
   public void traceEndConflation() {}
 
   @Override
-  public void traceStartBlock(BlockHeader blockHeader, BlockBody blockBody) {
+  public void traceStartBlock(
+      BlockHeader blockHeader, BlockBody blockBody, Address miningBeneficiary) {
     this.reaper.enterBlock(blockHeader, blockBody);
   }
 

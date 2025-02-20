@@ -76,9 +76,7 @@ public class TxInfo implements StackedContainer {
 
   public static long computeInitGas(Transaction tx) {
     boolean isDeployment = tx.getTo().isEmpty();
-    return tx.getGasLimit()
-        - gc.transactionIntrinsicGasCost(tx.getPayload(), isDeployment)
-        - tx.getAccessList().map(gc::accessListGasCost).orElse(0L);
+    return tx.getGasLimit() - gc.transactionIntrinsicGasCost(tx.getPayload(), isDeployment, 0);
   }
 
   /**

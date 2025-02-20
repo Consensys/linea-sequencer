@@ -128,9 +128,10 @@ public class SimulationValidatorTest {
             .moduleLimitsFilePath(lineLimitsConfPath.toString())
             .build();
     lineCountLimits = new HashMap<>(ModuleLineCountValidator.createLimitModules(tracerConf));
-    final var blockHeader = mock(BlockHeader.class);
-    when(blockHeader.getBaseFee()).thenReturn(Optional.of(BASE_FEE));
-    when(blockchainService.getChainHeadHeader()).thenReturn(blockHeader);
+    final var pendingBlockHeader = mock(BlockHeader.class);
+    when(pendingBlockHeader.getBaseFee()).thenReturn(Optional.of(BASE_FEE));
+    when(pendingBlockHeader.getCoinbase()).thenReturn(Address.ZERO);
+    when(transactionSimulationService.simulatePendingBlockHeader()).thenReturn(pendingBlockHeader);
 
     final var rejectedTxReportingConf =
         LineaRejectedTxReportingConfiguration.builder()

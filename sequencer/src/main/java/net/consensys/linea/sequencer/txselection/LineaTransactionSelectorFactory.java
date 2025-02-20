@@ -17,7 +17,9 @@ package net.consensys.linea.sequencer.txselection;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
+import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaTracerConfiguration;
@@ -28,11 +30,15 @@ import net.consensys.linea.sequencer.txselection.selectors.LineaTransactionSelec
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelectorFactory;
+import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager;
 
 /**
  * Represents a factory for creating transaction selectors. Note that a new instance of the
  * transaction selector is created everytime a new block creation time is started.
+ *
+ * <p>Also provides an entrypoint for bundle transactions
  */
+@Slf4j
 public class LineaTransactionSelectorFactory implements PluginTransactionSelectorFactory {
   private final BlockchainService blockchainService;
   private final Optional<JsonRpcManager> rejectedTxJsonRpcManager;
@@ -41,8 +47,8 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
   private final LineaProfitabilityConfiguration profitabilityConfiguration;
   private final LineaTracerConfiguration tracerConfiguration;
   private final Optional<HistogramMetrics> maybeProfitabilityMetrics;
-
   private final Map<String, Integer> limitsMap;
+  private final AtomicReference<LineaTransactionSelector> currSelector = new AtomicReference<>();
 
   public LineaTransactionSelectorFactory(
       final BlockchainService blockchainService,
@@ -64,15 +70,19 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
   }
 
   @Override
-  public PluginTransactionSelector create() {
-    return new LineaTransactionSelector(
-        blockchainService,
-        txSelectorConfiguration,
-        l1L2BridgeConfiguration,
-        profitabilityConfiguration,
-        tracerConfiguration,
-        limitsMap,
-        rejectedTxJsonRpcManager,
-        maybeProfitabilityMetrics);
+  public PluginTransactionSelector create(final SelectorsStateManager selectorsStateManager) {
+    final var selector =
+        new LineaTransactionSelector(
+            selectorsStateManager,
+            blockchainService,
+            txSelectorConfiguration,
+            l1L2BridgeConfiguration,
+            profitabilityConfiguration,
+            tracerConfiguration,
+            limitsMap,
+            rejectedTxJsonRpcManager,
+            maybeProfitabilityMetrics);
+    currSelector.set(selector);
+    return selector;
   }
 }
