@@ -30,23 +30,23 @@ public class BundleConstraintTransactionSelector implements PluginTransactionSel
   public TransactionSelectionResult evaluateTransactionPreProcessing(
       final TransactionEvaluationContext txContext) {
 
-    if (txContext.getPendingTransaction()
-        instanceof BundlePoolService.TransactionBundle.PendingBundleTx pendingBundleTx) {
-      final var bundle = pendingBundleTx.getBundle();
+    // short circuit if we are not a PendingBundleTx
+    if (!(txContext.getPendingTransaction()
+        instanceof BundlePoolService.TransactionBundle.PendingBundleTx pendingBundleTx)) {
+      return TransactionSelectionResult.SELECTED;
+    }
 
-      final var satisfiesCriteria =
-          bundle
-                  .minTimestamp()
-                  .map(minTime -> minTime < Instant.now().getEpochSecond())
-                  .orElse(TRUE)
-              && bundle
-                  .maxTimestamp()
-                  .map(maxTime -> maxTime > Instant.now().getEpochSecond())
-                  .orElse(TRUE);
+    final var bundle = pendingBundleTx.getBundle();
 
-      if (!satisfiesCriteria) {
-        return TransactionSelectionResult.invalid("Failed Bundled Transaction Criteria");
-      }
+    final var satisfiesCriteria =
+        bundle.minTimestamp().map(minTime -> minTime < Instant.now().getEpochSecond()).orElse(TRUE)
+            && bundle
+                .maxTimestamp()
+                .map(maxTime -> maxTime > Instant.now().getEpochSecond())
+                .orElse(TRUE);
+
+    if (!satisfiesCriteria) {
+      return TransactionSelectionResult.invalid("Failed Bundled Transaction Criteria");
     }
     return TransactionSelectionResult.SELECTED;
   }
@@ -56,19 +56,21 @@ public class BundleConstraintTransactionSelector implements PluginTransactionSel
       final TransactionEvaluationContext txContext,
       final TransactionProcessingResult transactionProcessingResult) {
 
-    if (txContext.getPendingTransaction()
-        instanceof BundlePoolService.TransactionBundle.PendingBundleTx pendingBundleTx) {
+    // short circuit if we are not a PendingBundleTx
+    if (!(txContext.getPendingTransaction()
+        instanceof BundlePoolService.TransactionBundle.PendingBundleTx pendingBundleTx)) {
+      return TransactionSelectionResult.SELECTED;
+    }
 
-      if (transactionProcessingResult.isFailed()) {
-        final var revertableList = pendingBundleTx.getBundle().revertingTxHashes();
+    if (transactionProcessingResult.isFailed()) {
+      final var revertableList = pendingBundleTx.getBundle().revertingTxHashes();
 
-        // if a bundle tx failed, but was not in a revertable list, we unselect and fail the bundle
-        if (revertableList.isEmpty()
-            || !revertableList
-                .get()
-                .contains(txContext.getPendingTransaction().getTransaction().getHash())) {
-          return TransactionSelectionResult.invalid("Failed non revertable transaction in bundle");
-        }
+      // if a bundle tx failed, but was not in a revertable list, we unselect and fail the bundle
+      if (revertableList.isEmpty()
+          || !revertableList
+              .get()
+              .contains(txContext.getPendingTransaction().getTransaction().getHash())) {
+        return TransactionSelectionResult.invalid("Failed non revertable transaction in bundle");
       }
     }
     return TransactionSelectionResult.SELECTED;

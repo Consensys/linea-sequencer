@@ -49,50 +49,50 @@ public class MaxBundleGasPerBlockTransactionSelector
       final TransactionEvaluationContext txContext,
       final TransactionProcessingResult transactionProcessingResult) {
 
-    if (txContext.getPendingTransaction()
-        instanceof BundlePoolService.TransactionBundle.PendingBundleTx pendingBundleTx) {
+    // short circuit if we are not a PendingBundleTx
+    if (!(txContext.getPendingTransaction()
+        instanceof BundlePoolService.TransactionBundle.PendingBundleTx pendingBundleTx)) {
+      return SELECTED;
+    }
 
-      final long gasUsedByTransaction =
-          transactionProcessingResult.getEstimateGasUsedByTransaction();
+    final long gasUsedByTransaction = transactionProcessingResult.getEstimateGasUsedByTransaction();
 
-      final long currentBundleGasUsed =
-          pendingBundleTx.isBundleStart() ? 0L : getWorkingState().currentBundleGasUsed();
-      final long newCurrentBundleGasUsed = currentBundleGasUsed + gasUsedByTransaction;
+    final long currentBundleGasUsed =
+        pendingBundleTx.isBundleStart() ? 0L : getWorkingState().currentBundleGasUsed();
+    final long newCurrentBundleGasUsed = currentBundleGasUsed + gasUsedByTransaction;
 
-      final long cumulativeBlockBundleGasUsed = getWorkingState().cumulativeBlockBundleGasUsed();
-      final long newCumulativeBlockBundleGasUsed =
-          cumulativeBlockBundleGasUsed + gasUsedByTransaction;
+    final long cumulativeBlockBundleGasUsed = getWorkingState().cumulativeBlockBundleGasUsed();
+    final long newCumulativeBlockBundleGasUsed =
+        cumulativeBlockBundleGasUsed + gasUsedByTransaction;
 
-      setWorkingState(
-          new BundleGasTracker(newCumulativeBlockBundleGasUsed, newCurrentBundleGasUsed));
+    setWorkingState(new BundleGasTracker(newCumulativeBlockBundleGasUsed, newCurrentBundleGasUsed));
 
-      if (newCurrentBundleGasUsed > maxBundleGasPerBlock) {
-        log.atTrace()
-            .setMessage(
-                "Not selecting bundle transaction {} since the current gas used by the bundle is greater than the max {};"
-                    + " gas used by tx {} + gas already used by the bundle {} = {}")
-            .addArgument(pendingBundleTx::toTraceLog)
-            .addArgument(maxBundleGasPerBlock)
-            .addArgument(gasUsedByTransaction)
-            .addArgument(currentBundleGasUsed)
-            .addArgument(newCurrentBundleGasUsed)
-            .log();
-        return BUNDLE_GAS_EXCEEDS_MAX_BUNDLE_BLOCK_GAS;
-      }
+    if (newCurrentBundleGasUsed > maxBundleGasPerBlock) {
+      log.atTrace()
+          .setMessage(
+              "Not selecting bundle transaction {} since the current gas used by the bundle is greater than the max {};"
+                  + " gas used by tx {} + gas already used by the bundle {} = {}")
+          .addArgument(pendingBundleTx::toTraceLog)
+          .addArgument(maxBundleGasPerBlock)
+          .addArgument(gasUsedByTransaction)
+          .addArgument(currentBundleGasUsed)
+          .addArgument(newCurrentBundleGasUsed)
+          .log();
+      return BUNDLE_GAS_EXCEEDS_MAX_BUNDLE_BLOCK_GAS;
+    }
 
-      if (newCumulativeBlockBundleGasUsed > maxBundleGasPerBlock) {
-        log.atTrace()
-            .setMessage(
-                "Not selecting bundle transaction {} since the cumulative gas used by bundles in this block is greater than the max {};"
-                    + " gas used by tx {} + gas already used by the bundle {} = {}")
-            .addArgument(pendingBundleTx::toTraceLog)
-            .addArgument(maxBundleGasPerBlock)
-            .addArgument(gasUsedByTransaction)
-            .addArgument(cumulativeBlockBundleGasUsed)
-            .addArgument(newCumulativeBlockBundleGasUsed)
-            .log();
-        return BUNDLE_TOO_LARGE_FOR_REMAINING_BUNDLE_BLOCK_GAS;
-      }
+    if (newCumulativeBlockBundleGasUsed > maxBundleGasPerBlock) {
+      log.atTrace()
+          .setMessage(
+              "Not selecting bundle transaction {} since the cumulative gas used by bundles in this block is greater than the max {};"
+                  + " gas used by tx {} + gas already used by the bundle {} = {}")
+          .addArgument(pendingBundleTx::toTraceLog)
+          .addArgument(maxBundleGasPerBlock)
+          .addArgument(gasUsedByTransaction)
+          .addArgument(cumulativeBlockBundleGasUsed)
+          .addArgument(newCumulativeBlockBundleGasUsed)
+          .log();
+      return BUNDLE_TOO_LARGE_FOR_REMAINING_BUNDLE_BLOCK_GAS;
     }
     return SELECTED;
   }
