@@ -82,7 +82,7 @@ public class TransactionPoolDenialTest extends LineaPluginTestBase {
         .mapToObj(
             index ->
                 accountTransactions.createTransfer(
-                    accounts.getSecondaryBenefactor(),
+                    accounts.getPrimaryBenefactor(),
                     accounts.createAccount(Address.precompiled(index)),
                     1,
                     BigInteger.valueOf(1)))

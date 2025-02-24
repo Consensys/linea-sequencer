@@ -41,9 +41,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import linea.plugin.acc.test.tests.web3j.generated.AcceptanceTestToken;
+import linea.plugin.acc.test.tests.web3j.generated.ExcludedPrecompiles;
 import linea.plugin.acc.test.tests.web3j.generated.MulmodExecutor;
 import linea.plugin.acc.test.tests.web3j.generated.RevertExample;
 import linea.plugin.acc.test.tests.web3j.generated.SimpleStorage;
+import linea.plugin.acc.test.utils.MemoryAppender;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.tuweni.bytes.Bytes;
@@ -111,6 +113,7 @@ public class LineaPluginTestBase extends AcceptanceTestBase {
   public void stop() {
     cluster.stop();
     cluster.close();
+    MemoryAppender.reset();
   }
 
   protected Optional<Bytes32> maybeCustomGenesisExtraData() {
@@ -288,6 +291,17 @@ public class LineaPluginTestBase extends AcceptanceTestBase {
     return contract;
   }
 
+  protected ExcludedPrecompiles deployExcludedPrecompiles() throws Exception {
+    final Web3j web3j = minerNode.nodeRequests().eth();
+    final Credentials credentials = Credentials.create(Accounts.GENESIS_ACCOUNT_ONE_PRIVATE_KEY);
+    TransactionManager txManager =
+        new RawTransactionManager(web3j, credentials, CHAIN_ID, createReceiptProcessor(web3j));
+
+    final RemoteCall<ExcludedPrecompiles> deploy =
+        ExcludedPrecompiles.deploy(web3j, txManager, new DefaultGasProvider());
+    return deploy.send();
+  }
+
   public static String getResourcePath(String resource) {
     return Objects.requireNonNull(LineaPluginTestBase.class.getResource(resource)).getPath();
   }
@@ -393,5 +407,9 @@ public class LineaPluginTestBase extends AcceptanceTestBase {
         .map(line -> line.substring(searchString.length()).trim())
         .map(Double::valueOf)
         .orElse(Double.NaN);
+  }
+
+  protected String getLog() {
+    return MemoryAppender.getLog();
   }
 }
