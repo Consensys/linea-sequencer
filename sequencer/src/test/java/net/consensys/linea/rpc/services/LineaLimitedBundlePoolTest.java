@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -37,9 +38,10 @@ import org.hyperledger.besu.plugin.data.BlockHeader;
 import org.hyperledger.besu.plugin.services.BesuEvents;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class LineaLimitedBundlePoolTest {
-
+  @TempDir Path dataDir;
   private LineaLimitedBundlePool pool;
   private BesuEvents eventService;
   private AddedBlockContext addedBlockContext;
@@ -49,7 +51,8 @@ class LineaLimitedBundlePoolTest {
   void setUp() {
     eventService = mock(BesuEvents.class);
     addedBlockContext = mock(AddedBlockContext.class);
-    pool = new LineaLimitedBundlePool(10_000L, eventService); // Max 100 entries, 10 KB size
+    pool =
+        new LineaLimitedBundlePool(dataDir, 10_000L, eventService); // Max 100 entries, 10 KB size
     blockHeader = mock(BlockHeader.class);
   }
 
