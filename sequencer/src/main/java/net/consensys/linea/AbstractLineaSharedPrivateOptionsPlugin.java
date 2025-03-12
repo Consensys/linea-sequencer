@@ -44,6 +44,7 @@ import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.RpcEndpointService;
 import org.hyperledger.besu.plugin.services.metrics.MetricCategoryRegistry;
+import org.hyperledger.besu.plugin.services.transactionpool.TransactionPoolService;
 
 /**
  * This abstract class is used as superclass for all the plugins that share one or more
@@ -68,6 +69,7 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
   protected static BundlePoolService bundlePoolService;
   protected static MetricCategoryRegistry metricCategoryRegistry;
   protected static RpcEndpointService rpcEndpointService;
+  protected static TransactionPoolService transactionPoolService;
 
   private static final AtomicBoolean sharedRegisterTasksDone = new AtomicBoolean(false);
   private static final AtomicBoolean sharedStartTasksDone = new AtomicBoolean(false);
@@ -211,6 +213,14 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
             .getService(BesuEvents.class)
             .orElseThrow(
                 () -> new RuntimeException("Failed to obtain BesuEvents from the ServiceManager."));
+
+    transactionPoolService =
+        serviceManager
+            .getService(TransactionPoolService.class)
+            .orElseThrow(
+                () ->
+                    new RuntimeException(
+                        "Failed to obtain TransactionPoolService from the ServiceManager."));
 
     bundlePoolService =
         new LineaLimitedBundlePool(

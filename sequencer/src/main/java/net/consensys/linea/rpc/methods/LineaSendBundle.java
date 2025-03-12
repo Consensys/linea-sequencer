@@ -34,15 +34,19 @@ import org.hyperledger.besu.ethereum.api.util.DomainObjectDecodeUtils;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.plugin.services.exception.PluginRpcEndpointException;
 import org.hyperledger.besu.plugin.services.rpc.PluginRpcRequest;
-import org.hyperledger.besu.plugin.services.rpc.RpcMethodError;
+import org.hyperledger.besu.plugin.services.transactionpool.TransactionPoolService;
 
 @Slf4j
 public class LineaSendBundle {
   private static final AtomicInteger LOG_SEQUENCE = new AtomicInteger();
   private final JsonRpcParameter parameterParser = new JsonRpcParameter();
+  private TransactionPoolService transactionPoolService;
   private BundlePoolService bundlePool;
 
-  public LineaSendBundle init(BundlePoolService bundlePoolService) {
+  public LineaSendBundle init(
+      final TransactionPoolService transactionPoolService,
+      final BundlePoolService bundlePoolService) {
+    this.transactionPoolService = transactionPoolService;
     this.bundlePool = bundlePoolService;
     return this;
   }
@@ -81,9 +85,24 @@ public class LineaSendBundle {
                           .map(Hash::hash));
 
       if (optBundleHash.isPresent()) {
-        Hash bundleHash = optBundleHash.get();
+        final Hash bundleHash = optBundleHash.get();
         final List<Transaction> txs =
             bundleParams.txs.stream().map(DomainObjectDecodeUtils::decodeRawTransaction).toList();
+
+        for (int i = 0; i < txs.size(); i++) {
+          final var tx = txs.get(i);
+          final var res = transactionPoolService.validateTransaction(tx, true, false);
+          if (!res.isValid()) {
+            throw new PluginRpcEndpointException(
+                LineaBundleError.invalidTransaction(
+                    "Invalid transaction: idx="
+                        + i
+                        + ",hash="
+                        + tx.getHash()
+                        + ",reason="
+                        + res.getErrorMessage()));
+          }
+        }
 
         if (!txs.isEmpty()) {
           bundlePool.putOrReplace(
@@ -102,7 +121,7 @@ public class LineaSendBundle {
       throw new RuntimeException("Malformed bundle, no bundle transactions present");
 
     } catch (final Exception e) {
-      throw new PluginRpcEndpointException(new LineaSendBundleError(e.getMessage()));
+      throw new PluginRpcEndpointException(LineaBundleError.invalidParams(e.getMessage()));
     }
   }
 
@@ -121,25 +140,6 @@ public class LineaSendBundle {
   }
 
   public record BundleResponse(String bundleHash) {}
-
-  static class LineaSendBundleError implements RpcMethodError {
-
-    final String errMessage;
-
-    LineaSendBundleError(String errMessage) {
-      this.errMessage = errMessage;
-    }
-
-    @Override
-    public int getCode() {
-      return INVALID_PARAMS_ERROR_CODE;
-    }
-
-    @Override
-    public String getMessage() {
-      return errMessage;
-    }
-  }
 
   public record BundleParameter(
       /*  array of signed transactions to execute in a bundle */
