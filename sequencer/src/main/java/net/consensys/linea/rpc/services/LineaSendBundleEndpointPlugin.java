@@ -57,7 +57,7 @@ public class LineaSendBundleEndpointPlugin extends AbstractLineaRequiredPlugin {
   @Override
   public void doStart() {
     // set the pool
-    lineaSendBundleMethod.init(bundlePoolService);
+    lineaSendBundleMethod.init(transactionPoolService, bundlePoolService);
     lineaCancelBundleMethod.init(bundlePoolService);
   }
 

@@ -57,7 +57,7 @@ public class LineaCancelBundle {
           .setCause(e)
           .log();
       throw new PluginRpcEndpointException(
-          new LineaSendBundle.LineaSendBundleError("malformed linea_cancelBundle json param"));
+          LineaBundleError.invalidParams("malformed linea_cancelBundle json param"));
     }
   }
 }

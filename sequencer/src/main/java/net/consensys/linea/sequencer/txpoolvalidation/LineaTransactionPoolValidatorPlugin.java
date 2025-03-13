@@ -39,7 +39,6 @@ import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.BesuEvents;
 import org.hyperledger.besu.plugin.services.TransactionPoolValidatorService;
 import org.hyperledger.besu.plugin.services.TransactionSimulationService;
-import org.hyperledger.besu.plugin.services.transactionpool.TransactionPoolService;
 
 /**
  * This class extends the default transaction validation rules for adding transactions to the
@@ -123,14 +122,6 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
                     () ->
                         new RuntimeException(
                             "Failed to obtain BesuEvents from the ServiceManager."));
-
-        final var transactionPoolService =
-            serviceManager
-                .getService(TransactionPoolService.class)
-                .orElseThrow(
-                    () ->
-                        new RuntimeException(
-                            "Failed to obtain TransactionPoolService from the ServiceManager."));
 
         final var transactionPoolProfitabilityMetrics =
             new TransactionPoolProfitabilityMetrics(
