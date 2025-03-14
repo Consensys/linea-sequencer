@@ -17,10 +17,10 @@ package linea.plugin.acc.test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigInteger;
-import java.util.Arrays;
 import java.util.List;
 
 import org.apache.tuweni.bytes.Bytes;
+import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Account;
 import org.junit.jupiter.api.Test;
 import org.web3j.protocol.Web3j;
@@ -38,93 +38,174 @@ public class EcPairingLimitsTest extends LineaPluginTestBase {
         .build();
   }
 
+  /*
+  Structure of the input:
+  Ax + Ay
+  BxIm + BxRe
+  ByIm + ByRe
+  */
+
+  // Requires 1 Miller Loop and 1 Final Exponentiation
+  static final String nonTrivial =
+      "01395d002b3ca9180fb924650ef0656ead838fd027d487fed681de0d674c30da097c3a9a072f9c85edf7a36812f8ee05e2cc73140749dcd7d29ceb34a8412188"
+          + "2bd3295ff81c577fe772543783411c36f463676d9692ca4250588fbad0b44dc707d8d8329e62324af8091e3a4ffe5a57cb8664d1f5f6838c55261177118e9313"
+          + "230f1851ba0d3d7d36c8603c7118c86bd2b6a7a1610c4af9e907cb702beff1d812843e703009c1c1a2f1088dcf4d91e9ed43189aa6327cae9a68be22a1aee5cb";
+
+  // Requires 1 G2 membership check and 1 Final Exponentiation
+  static final String leftTrivialValid =
+      "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+          + "266152e278e5dab4e14f0d93a3e54550d08dc30ef4fe911257bd3e313864b85922cebabf989f812c0a6e67362bcb83d55c6378a4f500ecc8a6a5518b3d1695e0"
+          + "070a5a339edbbb67c35d0d44b3ffff6b5803b198af7645c892f6af2fa8abf6f2117f82e731f61e688908fa2c831c6a1c7775e6f9cfd49e06d1d24d3d13e5936a";
+
   @Test
-  public void ecPairingTest() throws Exception {
+  public void finalExponentiationsTest() throws Exception {
     final var ecPairing = deployEcPairing();
 
-    // TODO: fix naming and remove unnecessary stuff, use
-    // ExcludedPrecompilesTest.invalidModExpCallsAreNotMined
-    //  as reference
-    final var ecPairingSenders = new Account[3];
-    final var fundTxHashes = new String[3];
+    Account ecPairingSender = accounts.createAccount("ecPairingSender");
+    String fundTxHash =
+        accountTransactions
+            .createTransfer(accounts.getSecondaryBenefactor(), ecPairingSender, 1, BigInteger.ZERO)
+            .execute(minerNode.nodeRequests())
+            .toHexString();
+    // Verify that the transaction for transferring funds was successful
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(fundTxHash));
 
-    // Send funds to the accounts so as those accounts can pay for their own transactions
-    for (int i = 0; i < 3; i++) {
-      ecPairingSenders[i] = accounts.createAccount("sender" + i);
-      fundTxHashes[i] =
-          accountTransactions
-              .createTransfer(
-                  accounts.getSecondaryBenefactor(), ecPairingSenders[i], 1, BigInteger.valueOf(i))
-              .execute(minerNode.nodeRequests())
-              .toHexString();
+    final int nTransactions = 17; // 1 final exponentiation per transaction
+    String[] txHashes = new String[nTransactions];
+
+    for (int k = 0; k < nTransactions; k++) {
+      // With decreasing nonce we force the transactions to be included in the same block
+      // k     = 0                , 1                , ..., nTransactions - 1
+      // nonce = nTransactions - 1, nTransactions - 2, ..., 0
+      int nonce = nTransactions - 1 - k;
+      final byte[] encodedCallEcPairing =
+          encodedCallEcPairing(ecPairing, ecPairingSender, nonce, Bytes.fromHexString(nonTrivial));
+      final Web3j web3j = minerNode.nodeRequests().eth();
+      final EthSendTransaction resp =
+          web3j.ethSendRawTransaction(Numeric.toHexString(encodedCallEcPairing)).send();
+      txHashes[nonce] = resp.getTransactionHash();
     }
 
-    // Verify that the transactions for transferring funds were successful
-    Arrays.stream(fundTxHashes)
-        .forEach(
-            fundTxHash -> minerNode.verify(eth.expectSuccessfulTransactionReceipt(fundTxHash)));
+    // transfer used as sentry to ensure a new block is mined
+    final Hash transferTxHash =
+        accountTransactions
+            .createTransfer(
+                accounts.getPrimaryBenefactor(),
+                accounts.getSecondaryBenefactor(),
+                1,
+                BigInteger.ONE) // TODO: why does it require 1 and 0 is not fine?
+            .execute(minerNode.nodeRequests());
+    // sentry is mined
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()));
 
-    // Actual input we send to the ECPAIRING contract
-    // transactionInputs x block
+    // TODO: this should pass, but it does not. The transaction exceeding the limit is probably
+    //  included in the next block
+    //  minerNode.verify(eth.expectNoTransactionReceipt(txHashes[nTransactions-1]));
 
-    String inputTwoNonTrivialValidPairing =
-        "01395d002b3ca9180fb924650ef0656ead838fd027d487fed681de0d674c30da097c3a9a072f9c85edf7a36812f8ee05e2cc73140749dcd7d29ceb34a84121882bd3295ff81c577fe772543783411c36f463676d9692ca4250588fbad0b44dc707d8d8329e62324af8091e3a4ffe5a57cb8664d1f5f6838c55261177118e9313230f1851ba0d3d7d36c8603c7118c86bd2b6a7a1610c4af9e907cb702beff1d812843e703009c1c1a2f1088dcf4d91e9ed43189aa6327cae9a68be22a1aee5cb05dcb6449ff95e1a04c3132ce3be82a897811d2087e082e0399985449942a45b0cb5122006e9b7ceb5307fa4015b132b3945bb972c83459f598659fc4b5a9d32127a664dd11342beb666506dac296731e404de80a25e05f40b2405c4c00c28fc2bd236cb7a7b0e0543e6b6e0d7308576aeeec4dea2f740654854215d7813826f1b28f411c2931b52b2ad62de524be4eaac555dfed67d59e2d0f6c4607b23526b181c4319cc974dd174c5918ac1892326badb2603a04bc8f565221c06eec8a126";
+    // TODO: first should pass and second should not pass, but they both pass.
+    //  however, the transaction exceeding the limit cannot be included in the same block
+    //  assertTransactionsMinedInSameBlock(minerNode.nodeRequests().eth(),
+    //  Arrays.asList(txHashes).subList(0, nTransactions-2));
+    //  assertTransactionsMinedInSameBlock(minerNode.nodeRequests().eth(),
+    //  Arrays.asList(txHashes).subList(0, nTransactions-1));
 
-    final Bytes[][] invalidInputs = {
-      {Bytes.fromHexString(inputTwoNonTrivialValidPairing)},
-    };
+    final var blockLog = getAndResetLog();
+    assertThat(blockLog)
+        .contains(
+            "Cumulated line count for module PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS=17 is above the limit 16, stopping selection");
+  }
 
-    for (int i = 0; i < invalidInputs.length; i++) {
-      final var invalidCallTxHashes = new String[invalidInputs[i].length];
-      for (int j = 0; j < invalidInputs[i].length; j++) {
+  @Test
+  public void millerLoopsTest() throws Exception {
+    final var ecPairing = deployEcPairing();
 
-        int nTransactions = 17;
-        for (int k = 0; k < nTransactions; k++) {
-          final var mulmodOverflow =
-              encodedCallEcPairing(
-                  ecPairing, ecPairingSenders[j], nTransactions - 1 - k, invalidInputs[i][j]);
-          // With decreasing nonce we force the transactions to be mined in the same block
+    Account ecPairingSender = accounts.createAccount("ecPairingSender");
+    String fundTxHash =
+      accountTransactions
+        .createTransfer(accounts.getSecondaryBenefactor(), ecPairingSender, 1, BigInteger.ZERO)
+        .execute(minerNode.nodeRequests())
+        .toHexString();
+    // Verify that the transaction for transferring funds was successful
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(fundTxHash));
 
-          final Web3j web3j = minerNode.nodeRequests().eth();
-          final EthSendTransaction resp =
-              web3j.ethSendRawTransaction(Numeric.toHexString(mulmodOverflow)).send();
-          invalidCallTxHashes[j] = resp.getTransactionHash();
-        }
-      }
+    final int nTransactions = 9; // 8 Miller Loops per transaction except the last one which has 1
+    String[] txHashes = new String[nTransactions];
 
-      // TODO: is this necessary?
-      // transfer used as sentry to ensure a new block is mined without the invalid modexp call
-      final var transferTxHash =
-          accountTransactions
-              .createTransfer(
-                  accounts.getPrimaryBenefactor(),
-                  accounts.getSecondaryBenefactor(),
-                  1,
-                  BigInteger.valueOf(i + 1))
-              .execute(minerNode.nodeRequests());
-
-      // sentry is mined and the invalid modexp txs are not
-      minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()));
-
-      // TODO: check LineaPluginTestBase::assertTransactionsMinedInSameBlock
-
-      final var blockLog = getAndResetLog();
-      assertThat(blockLog)
-          .contains(
-              "Cumulated line count for module PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS=17 is above the limit 16, stopping selection");
-
-      // TODO: we may want to assert that it is exactly the 17th transaction that is not mined
-
-      /*
-      Arrays.stream(invalidCallTxHashes)
-          .forEach(
-              invalidCallTxHash -> {
-                minerNode.verify(eth.expectNoTransactionReceipt(invalidCallTxHash));
-                assertThat(blockLog)
-                    .contains(
-                      "Cumulated line count for module PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS=17 is above the limit 16, stopping selection");
-              });
-      */
+    for (int k = 0; k < nTransactions; k++) {
+      // With decreasing nonce we force the transactions to be included in the same block
+      // k     = 0                , 1                , ..., nTransactions - 1
+      // nonce = nTransactions - 1, nTransactions - 2, ..., 0
+      int nonce = nTransactions - 1 - k;
+      final byte[] encodedCallEcPairing =
+        encodedCallEcPairing(ecPairing, ecPairingSender, nonce, Bytes.fromHexString(nonTrivial.repeat(k < nTransactions - 1 ? 8 : 1)));
+      final Web3j web3j = minerNode.nodeRequests().eth();
+      final EthSendTransaction resp =
+        web3j.ethSendRawTransaction(Numeric.toHexString(encodedCallEcPairing)).send();
+      txHashes[nonce] = resp.getTransactionHash();
     }
+
+    // transfer used as sentry to ensure a new block is mined
+    final Hash transferTxHash =
+      accountTransactions
+        .createTransfer(
+          accounts.getPrimaryBenefactor(),
+          accounts.getSecondaryBenefactor(),
+          1,
+          BigInteger.ONE)
+        .execute(minerNode.nodeRequests());
+    // sentry is mined
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()));
+
+    final var blockLog = getAndResetLog();
+    assertThat(blockLog)
+      .contains(
+        "Cumulated line count for module PRECOMPILE_ECPAIRING_MILLER_LOOPS=65 is above the limit 64, stopping selection");
+  }
+
+  @Test
+  public void g2MembershipTest() throws Exception {
+    final var ecPairing = deployEcPairing();
+
+    Account ecPairingSender = accounts.createAccount("ecPairingSender");
+    String fundTxHash =
+      accountTransactions
+        .createTransfer(accounts.getSecondaryBenefactor(), ecPairingSender, 1, BigInteger.ZERO)
+        .execute(minerNode.nodeRequests())
+        .toHexString();
+    // Verify that the transaction for transferring funds was successful
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(fundTxHash));
+
+    final int nTransactions = 9; // 8 g2 membership checks per transaction except the last one which has 1
+    String[] txHashes = new String[nTransactions];
+
+    for (int k = 0; k < nTransactions; k++) {
+      // With decreasing nonce we force the transactions to be included in the same block
+      // k     = 0                , 1                , ..., nTransactions - 1
+      // nonce = nTransactions - 1, nTransactions - 2, ..., 0
+      int nonce = nTransactions - 1 - k;
+      final byte[] encodedCallEcPairing =
+        encodedCallEcPairing(ecPairing, ecPairingSender, nonce, Bytes.fromHexString(leftTrivialValid.repeat(k < nTransactions - 1 ? 8 : 1)));
+      final Web3j web3j = minerNode.nodeRequests().eth();
+      final EthSendTransaction resp =
+        web3j.ethSendRawTransaction(Numeric.toHexString(encodedCallEcPairing)).send();
+      txHashes[nonce] = resp.getTransactionHash();
+    }
+
+    // transfer used as sentry to ensure a new block is mined
+    final Hash transferTxHash =
+      accountTransactions
+        .createTransfer(
+          accounts.getPrimaryBenefactor(),
+          accounts.getSecondaryBenefactor(),
+          1,
+          BigInteger.ONE)
+        .execute(minerNode.nodeRequests());
+    // sentry is mined
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()));
+
+    final var blockLog = getAndResetLog();
+    assertThat(blockLog)
+      .contains(
+        "Cumulated line count for module PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS=65 is above the limit 64, stopping selection");
   }
 }
