@@ -41,6 +41,7 @@ public class EcPairingLimitsTest extends LineaPluginTestBase {
     return new TestCommandLineOptionsBuilder()
         // disable line count validation to accept excluded precompile txs in the txpool
         .set("--plugin-linea-tx-pool-simulation-check-api-enabled=", "false")
+        // set the module limits file
         .set("--plugin-linea-module-limit-file-path=", getResourcePath("/moduleLimits.toml"))
         .build();
   }
@@ -52,18 +53,29 @@ public class EcPairingLimitsTest extends LineaPluginTestBase {
   ByIm + ByRe
   */
 
-  // Requires 1 Miller Loop and 1 final exponentiation
+  // Valid pair requiring 1 Miller Loop and 1 final exponentiation
   static final String nonTrivial =
       "01395d002b3ca9180fb924650ef0656ead838fd027d487fed681de0d674c30da097c3a9a072f9c85edf7a36812f8ee05e2cc73140749dcd7d29ceb34a8412188"
           + "2bd3295ff81c577fe772543783411c36f463676d9692ca4250588fbad0b44dc707d8d8329e62324af8091e3a4ffe5a57cb8664d1f5f6838c55261177118e9313"
           + "230f1851ba0d3d7d36c8603c7118c86bd2b6a7a1610c4af9e907cb702beff1d812843e703009c1c1a2f1088dcf4d91e9ed43189aa6327cae9a68be22a1aee5cb";
 
-  // Requires 1 G2 membership check
+  // Valid pair requiring 1 G2 membership test
   static final String leftTrivialValid =
       "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
           + "266152e278e5dab4e14f0d93a3e54550d08dc30ef4fe911257bd3e313864b85922cebabf989f812c0a6e67362bcb83d55c6378a4f500ecc8a6a5518b3d1695e0"
           + "070a5a339edbbb67c35d0d44b3ffff6b5803b198af7645c892f6af2fa8abf6f2117f82e731f61e688908fa2c831c6a1c7775e6f9cfd49e06d1d24d3d13e5936a";
 
+  /**
+   * Tests the EcPairing limits, that are the number of times a certain circuit may be invoked in a
+   * single block. Specifically: PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS = 16,
+   * PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS = 64, PRECOMPILE_ECPAIRING_MILLER_LOOPS = 64.
+   *
+   * @param nTransactions the number of transactions to try to include in the same block. The last
+   *     one is not supposed to fit as it exceeds the limit
+   * @param input a function that generates the input data for each transaction
+   * @param target the expected string to be found in the block log
+   * @throws Exception if an error occurs during the test
+   */
   @ParameterizedTest
   @MethodSource("ecPairingLimitsTestSource")
   public void ecPairingLimitsTest(
@@ -86,11 +98,11 @@ public class EcPairingLimitsTest extends LineaPluginTestBase {
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(fundTxHash));
 
     String[] txHashes = new String[nTransactions];
-    for (int k = 0; k < nTransactions; k++) {
+    for (int i = 0; i < nTransactions; i++) {
       // With decreasing nonce we force the transactions to be included in the same block
-      // k     = 0                , 1                , ..., nTransactions - 1
+      // i     = 0                , 1                , ..., nTransactions - 1
       // nonce = nTransactions - 1, nTransactions - 2, ..., 0
-      int nonce = nTransactions - 1 - k;
+      int nonce = nTransactions - 1 - i;
 
       // Craft the transaction data
       final byte[] encodedCallEcPairing =
@@ -98,7 +110,7 @@ public class EcPairingLimitsTest extends LineaPluginTestBase {
               ecPairing,
               ecPairingSender,
               nonce,
-              Bytes.fromHexString(input.apply(k, nTransactions)));
+              Bytes.fromHexString(input.apply(i, nTransactions)));
 
       // Send the transaction
       final Web3j web3j = minerNode.nodeRequests().eth();
@@ -138,24 +150,74 @@ public class EcPairingLimitsTest extends LineaPluginTestBase {
   private static Stream<Arguments> ecPairingLimitsTestSource() {
     List<Arguments> arguments = new ArrayList<>();
 
+    /*
+    This test case produces 17 transactions performing one ECPAIRING.
+    All ECPAIRING are well-formed and none of the points is ever the point at infinity,
+    leading in total to:
+    - 1 Miller loops
+    - 0 G2 membership tests
+    - 1 final exponentiations
+    per pairing.
+
+    In total:
+    - 17 Miller loops
+    - 0 G2 membership tests
+    - 17 final exponentiations
+
+    This final transaction exceeds the PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS and must be rejected.
+     */
     arguments.add(
         Arguments.of(
             17, // 1 final exponentiation per transaction
-            (BiFunction<Integer, Integer, String>) (k, nTransactions) -> nonTrivial,
+            (BiFunction<Integer, Integer, String>) (i, nTransactions) -> nonTrivial,
             "Cumulated line count for module PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS=17 is above the limit 16, stopping selection"));
 
+    /*
+    This test case produces 9 transactions each performing 8 ECPAIRING's
+    except the last transaction which requires only 1.
+    All ECPAIRING are well-formed and none of the points is ever the point at infinity,
+    leading in total to:
+    - 1 Miller loops
+    - 0 G2 membership tests
+    - 1 final exponentiations
+    per pairing.
+
+    In total:
+    - 65 Miller loops
+    - 0 G2 membership tests
+    - 1 final exponentiations
+
+    This final transaction exceeds the PRECOMPILE_ECPAIRING_MILLER_LOOPS and must be rejected.
+     */
     arguments.add(
         Arguments.of(
             9, // 8 Miller Loops per transaction except the last one which has 1
             (BiFunction<Integer, Integer, String>)
-                (k, nTransactions) -> nonTrivial.repeat(k < nTransactions - 1 ? 8 : 1),
+                (i, nTransactions) -> nonTrivial.repeat(i < nTransactions - 1 ? 8 : 1),
             "Cumulated line count for module PRECOMPILE_ECPAIRING_MILLER_LOOPS=65 is above the limit 64, stopping selection"));
 
+    /*
+    This test case produces 9 transactions each performing 8 ECPAIRING's
+    except the last transaction which requires only 1.
+    All ECPAIRING are well-formed and the small point is always the point at infinity
+    leading to:
+    - 0 Miller loops
+    - 1 G2 membership tests
+    - 0 final exponentiations
+    per pairing.
+
+    In total:
+    - 0 Miller loops
+    - 65 G2 membership tests
+    - 0 final exponentiations
+
+    This final transaction exceeds the PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS and must be rejected.
+     */
     arguments.add(
         Arguments.of(
-            9, // 8 g2 membership checks per transaction except the last one which has 1
+            9, // 8 g2 membership test per transaction except the last one which has 1
             (BiFunction<Integer, Integer, String>)
-                (k, nTransactions) -> leftTrivialValid.repeat(k < nTransactions - 1 ? 8 : 1),
+                (i, nTransactions) -> leftTrivialValid.repeat(i < nTransactions - 1 ? 8 : 1),
             "Cumulated line count for module PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS=65 is above the limit 64, stopping selection"));
 
     return arguments.stream();
