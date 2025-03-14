@@ -30,7 +30,7 @@ import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.rlp.BytesValueRLPOutput;
 
-/** TransactionBundle record representing a collection of pending transactions with metadata. */
+/** TransactionBundle class representing a collection of pending transactions with metadata. */
 @Accessors(fluent = true)
 @Getter
 @EqualsAndHashCode

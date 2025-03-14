@@ -60,7 +60,6 @@ public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.Blo
   private final Cache<Hash, TransactionBundle> cache;
   private final Map<Long, List<TransactionBundle>> blockIndex;
   private final Path saveFilePath;
-  private final AtomicLong maxBlockHeight = new AtomicLong(0L);
   private final AtomicBoolean isFrozen = new AtomicBoolean(false);
 
   /**
@@ -332,7 +331,7 @@ public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.Blo
     synchronized (isFrozen) {
       if (!isFrozen.get()) { // do nothing if frozen
         final var lastSeen = addedBlockContext.getBlockHeader().getNumber();
-        final var latest = maxBlockHeight.updateAndGet(current -> Math.max(current, lastSeen));
+        final var latest = Math.max(lastSeen, blockchainService.getChainHeadHeader().getNumber());
         // keep it simple regarding reorgs and, cull the pool for any block numbers lower than
         // latest
         blockIndex.keySet().stream()
