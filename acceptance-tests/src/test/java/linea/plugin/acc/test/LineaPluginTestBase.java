@@ -286,7 +286,8 @@ public class LineaPluginTestBase extends AcceptanceTestBase {
     TransactionManager txManager =
         new RawTransactionManager(web3j, credentials, CHAIN_ID, createReceiptProcessor(web3j));
 
-    final RemoteCall<EcPairing> deploy = EcPairing.deploy(web3j, txManager, new DefaultGasProvider());
+    final RemoteCall<EcPairing> deploy =
+        EcPairing.deploy(web3j, txManager, new DefaultGasProvider());
     return deploy.send();
   }
 
@@ -462,19 +463,21 @@ public class LineaPluginTestBase extends AcceptanceTestBase {
     return TransactionEncoder.signMessage(modExpCall, sender.web3jCredentialsOrThrow());
   }
 
-  protected byte[] encodedCallEcPairing(final EcPairing ecPairing, final Account sender, final int nonce, final Bytes input) {
-    final var ecPairingCalldata = ecPairing.callEcPairing(input.toArrayUnsafe()).encodeFunctionCall();
+  protected byte[] encodedCallEcPairing(
+      final EcPairing ecPairing, final Account sender, final int nonce, final Bytes input) {
+    final var ecPairingCalldata =
+        ecPairing.callEcPairing(input.toArrayUnsafe()).encodeFunctionCall();
 
     final var ecPairingCall =
-      RawTransaction.createTransaction(
-        CHAIN_ID,
-        BigInteger.valueOf(nonce),
-        DefaultGasProvider.GAS_LIMIT,
-        ecPairing.getContractAddress(),
-        BigInteger.ZERO,
-        ecPairingCalldata,
-        DefaultGasProvider.GAS_PRICE,
-        DefaultGasProvider.GAS_PRICE.multiply(BigInteger.TEN).add(BigInteger.ONE));
+        RawTransaction.createTransaction(
+            CHAIN_ID,
+            BigInteger.valueOf(nonce),
+            DefaultGasProvider.GAS_LIMIT,
+            ecPairing.getContractAddress(),
+            BigInteger.ZERO,
+            ecPairingCalldata,
+            DefaultGasProvider.GAS_PRICE,
+            DefaultGasProvider.GAS_PRICE.multiply(BigInteger.TEN).add(BigInteger.ONE));
 
     return TransactionEncoder.signMessage(ecPairingCall, sender.web3jCredentialsOrThrow());
   }
