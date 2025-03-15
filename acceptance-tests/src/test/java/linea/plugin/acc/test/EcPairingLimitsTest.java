@@ -185,7 +185,7 @@ public class EcPairingLimitsTest extends LineaPluginTestBase {
     In total:
     - 65 Miller loops
     - 0 G2 membership tests
-    - 1 final exponentiations
+    - 9 final exponentiations
 
     This final transaction exceeds the PRECOMPILE_ECPAIRING_MILLER_LOOPS and must be rejected.
      */
