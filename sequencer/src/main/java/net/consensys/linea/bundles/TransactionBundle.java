@@ -13,15 +13,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.consensys.linea.rpc.services;
+package net.consensys.linea.bundles;
 
 import static java.util.stream.Collectors.joining;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.annotation.JsonRawValue;
+import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -35,9 +39,11 @@ import org.hyperledger.besu.ethereum.rlp.BytesValueRLPOutput;
 @Getter
 @EqualsAndHashCode
 public class TransactionBundle {
+  private static final AtomicLong BUNDLE_COUNT = new AtomicLong(0L);
   private static final String FIELD_SEPARATOR = "|";
   private static final String ITEM_SEPARATOR = ",";
   private static final String LINE_TERMINATOR = "$";
+  private final long sequence = BUNDLE_COUNT.incrementAndGet();
   private final Hash bundleIdentifier;
   private final List<PendingBundleTx> pendingTransactions;
   private final Long blockNumber;
@@ -148,6 +154,13 @@ public class TransactionBundle {
       final var rlpOutput = new BytesValueRLPOutput();
       getTransaction().writeTo(rlpOutput);
       return rlpOutput.encoded().toBase64String();
+    }
+
+    @JsonValue
+    String toJson() {
+      final var rlpOutput = new BytesValueRLPOutput();
+      getTransaction().writeTo(rlpOutput);
+      return rlpOutput.encoded().toHexString();
     }
   }
 }

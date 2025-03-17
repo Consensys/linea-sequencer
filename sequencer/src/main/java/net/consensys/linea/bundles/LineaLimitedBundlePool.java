@@ -13,7 +13,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.consensys.linea.rpc.services;
+package net.consensys.linea.bundles;
 
 import static java.util.Collections.emptyList;
 
@@ -37,6 +37,7 @@ import java.util.stream.Collectors;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalCause;
+import com.github.benmanes.caffeine.cache.Scheduler;
 import com.google.auto.service.AutoService;
 import com.google.common.annotations.VisibleForTesting;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +48,7 @@ import org.hyperledger.besu.plugin.data.AddedBlockContext;
 import org.hyperledger.besu.plugin.services.BesuEvents;
 import org.hyperledger.besu.plugin.services.BesuService;
 import org.hyperledger.besu.plugin.services.BlockchainService;
+import org.hyperledger.besu.util.Subscribers;
 
 /**
  * A pool for managing TransactionBundles with limited size and FIFO eviction. Provides access via
@@ -62,6 +64,10 @@ public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.Blo
   private final Path saveFilePath;
   private final AtomicLong maxBlockHeight = new AtomicLong(0L);
   private final AtomicBoolean isFrozen = new AtomicBoolean(false);
+  private final Subscribers<TransactionBundleAddedListener> transactionBundleAddedListeners =
+      Subscribers.create();
+  private final Subscribers<TransactionBundleRemovedListener> transactionBundleRemovedListeners =
+      Subscribers.create();
 
   /**
    * Initializes the LineaLimitedBundlePool with a maximum size and expiration time, and registers
@@ -80,6 +86,9 @@ public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.Blo
     this.cache =
         Caffeine.newBuilder()
             .maximumWeight(maxSizeInBytes) // Maximum size in bytes
+            .scheduler(
+                Scheduler
+                    .systemScheduler()) // To ensure maintenance operation are not delayed too much
             .weigher(
                 (Hash key, TransactionBundle value) -> {
                   // Calculate the size of a TransactionBundle in bytes
@@ -95,6 +104,8 @@ public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.Blo
                         .addArgument(cause::name)
                         .log();
                     removeFromBlockIndex(bundle);
+                    transactionBundleRemovedListeners.forEach(
+                        listener -> listener.onTransactionBundleRemoved(bundle));
                   }
                 })
             .build();
@@ -279,6 +290,26 @@ public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.Blo
         });
   }
 
+  @Override
+  public long subscribeTransactionBundleAdded(final TransactionBundleAddedListener listener) {
+    return transactionBundleAddedListeners.subscribe(listener);
+  }
+
+  @Override
+  public long subscribeTransactionBundleRemoved(final TransactionBundleRemovedListener listener) {
+    return transactionBundleRemovedListeners.subscribe(listener);
+  }
+
+  @Override
+  public void unsubscribeTransactionBundleAdded(final long listenerId) {
+    transactionBundleAddedListeners.unsubscribe(listenerId);
+  }
+
+  @Override
+  public void unsubscribeTransactionBundleRemoved(final long listenerId) {
+    transactionBundleRemovedListeners.unsubscribe(listenerId);
+  }
+
   /**
    * Adds a TransactionBundle to the block index.
    *
@@ -287,6 +318,7 @@ public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.Blo
   private void addToBlockIndex(TransactionBundle bundle) {
     long blockNumber = bundle.blockNumber();
     blockIndex.computeIfAbsent(blockNumber, k -> new ArrayList<>()).add(bundle);
+    transactionBundleAddedListeners.forEach(listener -> listener.onTransactionBundleAdded(bundle));
   }
 
   /**

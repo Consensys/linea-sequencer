@@ -22,6 +22,7 @@ import java.math.BigInteger;
 import java.util.List;
 import java.util.Optional;
 
+import net.consensys.linea.bundles.TransactionBundle;
 import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SECPPrivateKey;
 import org.hyperledger.besu.crypto.SECPPublicKey;

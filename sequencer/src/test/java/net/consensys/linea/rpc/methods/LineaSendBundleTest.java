@@ -32,8 +32,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import net.consensys.linea.rpc.services.LineaLimitedBundlePool;
-import net.consensys.linea.rpc.services.TransactionBundle;
+import net.consensys.linea.bundles.LineaLimitedBundlePool;
+import net.consensys.linea.bundles.TransactionBundle;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.TransactionTestFixture;
