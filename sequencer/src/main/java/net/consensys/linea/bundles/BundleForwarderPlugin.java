@@ -27,7 +27,6 @@ import com.google.auto.service.AutoService;
 import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
-import net.consensys.linea.rpc.methods.LineaSendBundle;
 import okhttp3.OkHttpClient;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
@@ -64,9 +63,7 @@ public class BundleForwarderPlugin extends AbstractLineaRequiredPlugin {
     private final int retryCount;
 
     @Override
-    public void run() {
-
-    }
+    public void run() {}
 
     @Override
     public int compareTo(@NotNull final ForwardBundleTask o) {

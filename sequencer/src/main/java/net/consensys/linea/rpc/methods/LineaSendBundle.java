@@ -17,22 +17,19 @@ package net.consensys.linea.rpc.methods;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.consensys.linea.bundles.BundleParameter;
 import net.consensys.linea.bundles.BundlePoolService;
 import net.consensys.linea.bundles.LineaLimitedBundlePool;
 import net.consensys.linea.bundles.TransactionBundle;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Hash;
-import org.hyperledger.besu.datatypes.parameters.UnsignedLongParameter;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.JsonRpcParameter;
 import org.hyperledger.besu.ethereum.api.util.DomainObjectDecodeUtils;
 import org.hyperledger.besu.ethereum.core.Transaction;
@@ -77,7 +74,7 @@ public class LineaSendBundle {
 
       validateParameters(bundleParams);
 
-      final var optBundleUUID = bundleParams.replacementUUID.map(UUID::fromString);
+      final var optBundleUUID = bundleParams.replacementUUID().map(UUID::fromString);
 
       // use replacement UUID hashed if present, otherwise the hash of the transactions themselves
       final var optBundleHash =
@@ -94,7 +91,7 @@ public class LineaSendBundle {
           .map(
               bundleHash -> {
                 final List<Transaction> txs =
-                    bundleParams.txs.stream()
+                    bundleParams.txs().stream()
                         .map(DomainObjectDecodeUtils::decodeRawTransaction)
                         .toList();
 
@@ -103,10 +100,11 @@ public class LineaSendBundle {
                     new TransactionBundle(
                         bundleHash,
                         txs,
-                        bundleParams.blockNumber,
-                        bundleParams.minTimestamp,
-                        bundleParams.maxTimestamp,
-                        bundleParams.revertingTxHashes()));
+                        bundleParams.blockNumber(),
+                        bundleParams.minTimestamp(),
+                        bundleParams.maxTimestamp(),
+                        bundleParams.revertingTxHashes(),
+                        optBundleUUID));
                 return new BundleResponse(bundleHash.toHexString());
               })
           .orElseThrow(
@@ -132,25 +130,27 @@ public class LineaSendBundle {
     }
 
     final var chainHeadBlockNumber = blockchainService.getChainHeadHeader().getNumber();
-    if (bundleParams.blockNumber <= chainHeadBlockNumber) {
+    if (bundleParams.blockNumber() <= chainHeadBlockNumber) {
       throw new IllegalArgumentException(
           "bundle block number "
-              + bundleParams.blockNumber
+              + bundleParams.blockNumber()
               + " is not greater than current chain head block number "
               + chainHeadBlockNumber);
     }
 
-    bundleParams.maxTimestamp.ifPresent(
-        maxTimestamp -> {
-          final var now = Instant.now().getEpochSecond();
-          if (maxTimestamp < now) {
-            throw new IllegalArgumentException(
-                "bundle max timestamp "
-                    + maxTimestamp
-                    + " is in the past, current timestamp is "
-                    + now);
-          }
-        });
+    bundleParams
+        .maxTimestamp()
+        .ifPresent(
+            maxTimestamp -> {
+              final var now = Instant.now().getEpochSecond();
+              if (maxTimestamp < now) {
+                throw new IllegalArgumentException(
+                    "bundle max timestamp "
+                        + maxTimestamp
+                        + " is in the past, current timestamp is "
+                        + now);
+              }
+            });
   }
 
   private BundleParameter parseRequest(final int logId, final Object[] params) {
@@ -185,41 +185,6 @@ public class LineaSendBundle {
     @Override
     public String getMessage() {
       return errMessage;
-    }
-  }
-
-  public record BundleParameter(
-      /*  array of signed transactions to execute in a bundle */
-      List<String> txs,
-      /* block number for which this bundle is valid */
-      Long blockNumber,
-      /* Optional minimum timestamp from which this bundle is valid */
-      Optional<Long> minTimestamp,
-      /* Optional max timestamp for which this bundle is valid */
-      Optional<Long> maxTimestamp,
-      /* Optional list of transaction hashes which are allowed to revert */
-      Optional<List<Hash>> revertingTxHashes,
-      /* Optional UUID which can be used to replace or cancel this bundle */
-      Optional<String> replacementUUID,
-      /* Optional list of builders to share this bundle with */
-      Optional<List<String>> builders) {
-    @JsonCreator
-    public BundleParameter(
-        @JsonProperty("txs") final List<String> txs,
-        @JsonProperty("blockNumber") final UnsignedLongParameter blockNumber,
-        @JsonProperty("minTimestamp") final Optional<Long> minTimestamp,
-        @JsonProperty("maxTimestamp") final Optional<Long> maxTimestamp,
-        @JsonProperty("revertingTxHashes") final Optional<List<Hash>> revertingTxHashes,
-        @JsonProperty("replacementUUID") final Optional<String> replacementUUID,
-        @JsonProperty("builders") final Optional<List<String>> builders) {
-      this(
-          txs,
-          blockNumber.getValue(),
-          minTimestamp,
-          maxTimestamp,
-          revertingTxHashes,
-          replacementUUID,
-          builders);
     }
   }
 }
