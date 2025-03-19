@@ -41,7 +41,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import linea.plugin.acc.test.tests.web3j.generated.AcceptanceTestToken;
+import linea.plugin.acc.test.tests.web3j.generated.EcAdd;
+import linea.plugin.acc.test.tests.web3j.generated.EcMul;
 import linea.plugin.acc.test.tests.web3j.generated.EcPairing;
+import linea.plugin.acc.test.tests.web3j.generated.EcRecover;
 import linea.plugin.acc.test.tests.web3j.generated.ExcludedPrecompiles;
 import linea.plugin.acc.test.tests.web3j.generated.ModExp;
 import linea.plugin.acc.test.tests.web3j.generated.MulmodExecutor;
@@ -288,6 +291,37 @@ public class LineaPluginTestBase extends AcceptanceTestBase {
 
     final RemoteCall<EcPairing> deploy =
         EcPairing.deploy(web3j, txManager, new DefaultGasProvider());
+    return deploy.send();
+  }
+
+  protected EcAdd deployEcAdd() throws Exception {
+    final Web3j web3j = minerNode.nodeRequests().eth();
+    final Credentials credentials = Credentials.create(Accounts.GENESIS_ACCOUNT_ONE_PRIVATE_KEY);
+    TransactionManager txManager =
+        new RawTransactionManager(web3j, credentials, CHAIN_ID, createReceiptProcessor(web3j));
+
+    final RemoteCall<EcAdd> deploy = EcAdd.deploy(web3j, txManager, new DefaultGasProvider());
+    return deploy.send();
+  }
+
+  protected EcMul deployEcMul() throws Exception {
+    final Web3j web3j = minerNode.nodeRequests().eth();
+    final Credentials credentials = Credentials.create(Accounts.GENESIS_ACCOUNT_ONE_PRIVATE_KEY);
+    TransactionManager txManager =
+        new RawTransactionManager(web3j, credentials, CHAIN_ID, createReceiptProcessor(web3j));
+
+    final RemoteCall<EcMul> deploy = EcMul.deploy(web3j, txManager, new DefaultGasProvider());
+    return deploy.send();
+  }
+
+  protected EcRecover deployEcRecover() throws Exception {
+    final Web3j web3j = minerNode.nodeRequests().eth();
+    final Credentials credentials = Credentials.create(Accounts.GENESIS_ACCOUNT_ONE_PRIVATE_KEY);
+    TransactionManager txManager =
+        new RawTransactionManager(web3j, credentials, CHAIN_ID, createReceiptProcessor(web3j));
+
+    final RemoteCall<EcRecover> deploy =
+        EcRecover.deploy(web3j, txManager, new DefaultGasProvider());
     return deploy.send();
   }
 
