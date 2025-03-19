@@ -298,7 +298,8 @@ public class EcDataLimitsTest extends LineaPluginTestBase {
      * nTransactions: the number of transactions to try to include in the same block. The last
      *     one is not supposed to fit as it exceeds the limit, thus it is included in the next block. Note
      *     that in this specific test more than one call to the ECADD precompile is executed within the
-     *     same transaction
+     *     same transaction to reach the limit with a smaller number of transaction
+     *
      * input: input data for each transaction
      * target: the expected string to be found in the blocks log
      */
