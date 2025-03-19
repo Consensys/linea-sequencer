@@ -533,4 +533,41 @@ public class LineaPluginTestBase extends AcceptanceTestBase {
 
     return TransactionEncoder.signMessage(ecAddCall, sender.web3jCredentialsOrThrow());
   }
+
+  protected byte[] encodedCallEcMul(
+      final EcMul ecMul, final Account sender, final int nonce, final Bytes input) {
+    final var ecMulCalldata = ecMul.callEcMul(input.toArrayUnsafe()).encodeFunctionCall();
+
+    final var ecMulCall =
+        RawTransaction.createTransaction(
+            CHAIN_ID,
+            BigInteger.valueOf(nonce),
+            DefaultGasProvider.GAS_LIMIT,
+            ecMul.getContractAddress(),
+            BigInteger.ZERO,
+            ecMulCalldata,
+            DefaultGasProvider.GAS_PRICE,
+            DefaultGasProvider.GAS_PRICE.multiply(BigInteger.TEN).add(BigInteger.ONE));
+
+    return TransactionEncoder.signMessage(ecMulCall, sender.web3jCredentialsOrThrow());
+  }
+
+  protected byte[] encodedCallEcRecover(
+      final EcRecover ecRecover, final Account sender, final int nonce, final Bytes input) {
+    final var ecRecoverCalldata =
+        ecRecover.callEcRecover(input.toArrayUnsafe()).encodeFunctionCall();
+
+    final var ecRecoverCall =
+        RawTransaction.createTransaction(
+            CHAIN_ID,
+            BigInteger.valueOf(nonce),
+            DefaultGasProvider.GAS_LIMIT,
+            ecRecover.getContractAddress(),
+            BigInteger.ZERO,
+            ecRecoverCalldata,
+            DefaultGasProvider.GAS_PRICE,
+            DefaultGasProvider.GAS_PRICE.multiply(BigInteger.TEN).add(BigInteger.ONE));
+
+    return TransactionEncoder.signMessage(ecRecoverCall, sender.web3jCredentialsOrThrow());
+  }
 }

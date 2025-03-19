@@ -25,7 +25,9 @@ import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
 import linea.plugin.acc.test.tests.web3j.generated.EcAdd;
+import linea.plugin.acc.test.tests.web3j.generated.EcMul;
 import linea.plugin.acc.test.tests.web3j.generated.EcPairing;
+import linea.plugin.acc.test.tests.web3j.generated.EcRecover;
 import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator;
 import org.apache.tuweni.bytes.Bytes;
@@ -280,6 +282,10 @@ public class EcDataLimitsTest extends LineaPluginTestBase {
     return arguments.stream();
   }
 
+  /**
+   * Tests the EcAdd PRECOMPILE_ECADD_EFFECTIVE_CALLS limit, that is the number of times the
+   * corresponding circuit may be invoked in a single block.
+   */
   @Test
   public void ecAddLimitTest() throws Exception {
     Map<String, Integer> moduleLimits =
@@ -288,6 +294,14 @@ public class EcDataLimitsTest extends LineaPluginTestBase {
     final int PRECOMPILE_ECADD_EFFECTIVE_CALLS =
         moduleLimits.get("PRECOMPILE_ECADD_EFFECTIVE_CALLS");
 
+    /*
+     * nTransactions: the number of transactions to try to include in the same block. The last
+     *     one is not supposed to fit as it exceeds the limit, thus it is included in the next block. Note
+     *     that in this specific test more than one call to the ECADD precompile is executed within the
+     *     same transaction
+     * input: input data for each transaction
+     * target: the expected string to be found in the blocks log
+     */
     final int callsPerTransaction = 32;
     final int nTransactions = PRECOMPILE_ECADD_EFFECTIVE_CALLS / callsPerTransaction + 1;
     final String input =
@@ -329,6 +343,184 @@ public class EcDataLimitsTest extends LineaPluginTestBase {
       final Web3j web3j = minerNode.nodeRequests().eth();
       final EthSendTransaction resp =
           web3j.ethSendRawTransaction(Numeric.toHexString(encodedCallEcAdd)).send();
+
+      // Store the transaction hash
+      txHashes[nonce] = resp.getTransactionHash();
+    }
+
+    // Transfer used as sentry to ensure a new block is mined
+    final Hash transferTxHash =
+        accountTransactions
+            .createTransfer(
+                accounts.getPrimaryBenefactor(),
+                accounts.getSecondaryBenefactor(),
+                1,
+                BigInteger.ONE) // nonce is 1 as primary benefactor also deploys the contract
+            .execute(minerNode.nodeRequests());
+    // Wait for the sentry to be mined
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()));
+
+    // Assert that all the transactions involving the EcPairing precompile, but the last one, were
+    // included in the same block
+    assertTransactionsMinedInSameBlock(
+        minerNode.nodeRequests().eth(), Arrays.asList(txHashes).subList(0, nTransactions - 1));
+
+    // Assert that the last transaction was included in another block
+    assertTransactionsMinedInSeparateBlocks(
+        minerNode.nodeRequests().eth(), List.of(txHashes[0], txHashes[nTransactions - 1]));
+
+    // Assert that the target string is contained in the blocks log
+    final String blockLog = getAndResetLog();
+    assertThat(blockLog).contains(target);
+  }
+
+  /**
+   * Tests the EcAdd PRECOMPILE_ECMUL_EFFECTIVE_CALLS limit, that is the number of times the
+   * corresponding circuit may be invoked in a single block.
+   */
+  @Test
+  public void ecMulLimitTest() throws Exception {
+    Map<String, Integer> moduleLimits =
+        ModuleLineCountValidator.createLimitModules(
+            new LineaTracerConfiguration(getResourcePath("/moduleLimits.toml")));
+    final int PRECOMPILE_ECMUL_EFFECTIVE_CALLS =
+        moduleLimits.get("PRECOMPILE_ECMUL_EFFECTIVE_CALLS");
+
+    /*
+     * nTransactions: the number of transactions to try to include in the same block. The last
+     *     one is not supposed to fit as it exceeds the limit, thus it is included in the next block
+     * input: input data for each transaction
+     * target: the expected string to be found in the blocks log
+     */
+    final int nTransactions = PRECOMPILE_ECMUL_EFFECTIVE_CALLS + 1;
+    final String input =
+        "030644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd315ed738c0e0a7c92e7845f96b2ae9c0a68a6a449e3538fc7ff3ebf7a5a18a2c40000000000000000000000000000000000000000000000000000000000000001";
+    final String target =
+        "Cumulated line count for module PRECOMPILE_ECMUL_EFFECTIVE_CALLS="
+            + (PRECOMPILE_ECMUL_EFFECTIVE_CALLS + 1)
+            + " is above the limit "
+            + PRECOMPILE_ECMUL_EFFECTIVE_CALLS
+            + ", stopping selection";
+
+    // Deploy the EcMul contract
+    final EcMul ecMul = deployEcMul();
+
+    // Create an account to send the transactions
+    Account ecPairingSender = accounts.createAccount("ecPairingSender");
+
+    // Fund the account using secondary benefactor
+    String fundTxHash =
+        accountTransactions
+            .createTransfer(accounts.getSecondaryBenefactor(), ecPairingSender, 1, BigInteger.ZERO)
+            .execute(minerNode.nodeRequests())
+            .toHexString();
+    // Verify that the transaction for transferring funds was successful
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(fundTxHash));
+
+    String[] txHashes = new String[nTransactions];
+    for (int i = 0; i < nTransactions; i++) {
+      // With decreasing nonce we force the transactions to be included in the same block
+      // i     = 0                , 1                , ..., nTransactions - 1
+      // nonce = nTransactions - 1, nTransactions - 2, ..., 0
+      int nonce = nTransactions - 1 - i;
+
+      // Craft the transaction data
+      final byte[] encodedCallEcMul =
+          encodedCallEcMul(ecMul, ecPairingSender, nonce, Bytes.fromHexString(input));
+
+      // Send the transaction
+      final Web3j web3j = minerNode.nodeRequests().eth();
+      final EthSendTransaction resp =
+          web3j.ethSendRawTransaction(Numeric.toHexString(encodedCallEcMul)).send();
+
+      // Store the transaction hash
+      txHashes[nonce] = resp.getTransactionHash();
+    }
+
+    // Transfer used as sentry to ensure a new block is mined
+    final Hash transferTxHash =
+        accountTransactions
+            .createTransfer(
+                accounts.getPrimaryBenefactor(),
+                accounts.getSecondaryBenefactor(),
+                1,
+                BigInteger.ONE) // nonce is 1 as primary benefactor also deploys the contract
+            .execute(minerNode.nodeRequests());
+    // Wait for the sentry to be mined
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()));
+
+    // Assert that all the transactions involving the EcPairing precompile, but the last one, were
+    // included in the same block
+    assertTransactionsMinedInSameBlock(
+        minerNode.nodeRequests().eth(), Arrays.asList(txHashes).subList(0, nTransactions - 1));
+
+    // Assert that the last transaction was included in another block
+    assertTransactionsMinedInSeparateBlocks(
+        minerNode.nodeRequests().eth(), List.of(txHashes[0], txHashes[nTransactions - 1]));
+
+    // Assert that the target string is contained in the blocks log
+    final String blockLog = getAndResetLog();
+    assertThat(blockLog).contains(target);
+  }
+
+  /**
+   * Tests the EcAdd PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS limit, that is the number of times the
+   * corresponding circuit may be invoked in a single block.
+   */
+  @Test
+  public void ecRecoverLimitTest() throws Exception {
+    Map<String, Integer> moduleLimits =
+        ModuleLineCountValidator.createLimitModules(
+            new LineaTracerConfiguration(getResourcePath("/moduleLimits.toml")));
+    final int PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS =
+        moduleLimits.get("PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS");
+
+    /*
+     * nTransactions: the number of transactions to try to include in the same block. The last
+     *     one is not supposed to fit as it exceeds the limit, thus it is included in the next block
+     * input: input data for each transaction
+     * target: the expected string to be found in the blocks log
+     */
+    final int nTransactions = PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS + 1;
+    final String input =
+        "279d94621558f755796898fc4bd36b6d407cae77537865afe523b79c74cc680b000000000000000000000000000000000000000000000000000000000000001bc2ff96feed8749a5ad1c0714f950b5ac939d8acedbedcbc2949614ab8af063121feecd50adc6273fdd5d11c6da18c8cfe14e2787f5a90af7c7c1328e7d0a2c42";
+    final String target =
+        "Cumulated line count for module PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS="
+            + (PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS + 1)
+            + " is above the limit "
+            + PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS
+            + ", stopping selection";
+
+    // Deploy the EcRecover contract
+    final EcRecover ecRecover = deployEcRecover();
+
+    // Create an account to send the transactions
+    Account ecPairingSender = accounts.createAccount("ecPairingSender");
+
+    // Fund the account using secondary benefactor
+    String fundTxHash =
+        accountTransactions
+            .createTransfer(accounts.getSecondaryBenefactor(), ecPairingSender, 1, BigInteger.ZERO)
+            .execute(minerNode.nodeRequests())
+            .toHexString();
+    // Verify that the transaction for transferring funds was successful
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(fundTxHash));
+
+    String[] txHashes = new String[nTransactions];
+    for (int i = 0; i < nTransactions; i++) {
+      // With decreasing nonce we force the transactions to be included in the same block
+      // i     = 0                , 1                , ..., nTransactions - 1
+      // nonce = nTransactions - 1, nTransactions - 2, ..., 0
+      int nonce = nTransactions - 1 - i;
+
+      // Craft the transaction data
+      final byte[] encodedCallEcRecover =
+          encodedCallEcRecover(ecRecover, ecPairingSender, nonce, Bytes.fromHexString(input));
+
+      // Send the transaction
+      final Web3j web3j = minerNode.nodeRequests().eth();
+      final EthSendTransaction resp =
+          web3j.ethSendRawTransaction(Numeric.toHexString(encodedCallEcRecover)).send();
 
       // Store the transaction hash
       txHashes[nonce] = resp.getTransactionHash();
