@@ -225,7 +225,7 @@ public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.Blo
       isFrozen.set(true);
       log.info("Saving bundles to {}", saveFilePath);
 
-      try (final BufferedWriter bw = Files.newBufferedWriter(saveFilePath);
+      try (final BufferedWriter bw = Files.newBufferedWriter(saveFilePath, StandardCharsets.UTF_8);
           final SequenceWriter sequenceWriter =
               objectMapper
                   .writerFor(TransactionBundle.class)
@@ -268,7 +268,7 @@ public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.Blo
             final var skippedCount = new AtomicLong(0L);
 
             try (final BufferedReader br =
-                Files.newBufferedReader(saveFilePath, StandardCharsets.US_ASCII)) {
+                Files.newBufferedReader(saveFilePath, StandardCharsets.UTF_8)) {
 
               // read header and check version
               final var headerNode = objectMapper.readTree(br.readLine());

@@ -19,6 +19,7 @@ import static com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility.ANY;
 
 import java.io.IOException;
 import java.net.URL;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -48,6 +49,7 @@ import org.jetbrains.annotations.NotNull;
 @Slf4j
 @AutoService(BesuPlugin.class)
 public class BundleForwarderPlugin extends AbstractLineaRequiredPlugin {
+  private static final Duration DEFAULT_CALL_TIMEOUT_MILLIS = Duration.ofSeconds(5);
   private List<BundleForwarder> forwarders;
 
   @Override
@@ -57,10 +59,14 @@ public class BundleForwarderPlugin extends AbstractLineaRequiredPlugin {
   public void doStart() {
     final var forwardUrls = bundleConfiguration().bundleForwardUrls();
     if (!forwardUrls.isEmpty()) {
-      final var rpcClient = new OkHttpClient();
+      final var rpcClient = createRpcClient();
       forwarders = forwardUrls.stream().map(url -> new BundleForwarder(rpcClient, url)).toList();
       bundlePoolService.subscribeTransactionBundleAdded(this::forwardBundle);
     }
+  }
+
+  private OkHttpClient createRpcClient() {
+    return new OkHttpClient.Builder().callTimeout(DEFAULT_CALL_TIMEOUT_MILLIS).build();
   }
 
   private void forwardBundle(final TransactionBundle bundle) {
