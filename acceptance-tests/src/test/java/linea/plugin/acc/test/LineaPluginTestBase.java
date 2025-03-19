@@ -515,4 +515,22 @@ public class LineaPluginTestBase extends AcceptanceTestBase {
 
     return TransactionEncoder.signMessage(ecPairingCall, sender.web3jCredentialsOrThrow());
   }
+
+  protected byte[] encodedCallEcAdd(
+      final EcAdd ecAdd, final Account sender, final int nonce, final Bytes input) {
+    final var ecAddCalldata = ecAdd.callEcAdd(input.toArrayUnsafe()).encodeFunctionCall();
+
+    final var ecAddCall =
+        RawTransaction.createTransaction(
+            CHAIN_ID,
+            BigInteger.valueOf(nonce),
+            DefaultGasProvider.GAS_LIMIT,
+            ecAdd.getContractAddress(),
+            BigInteger.ZERO,
+            ecAddCalldata,
+            DefaultGasProvider.GAS_PRICE,
+            DefaultGasProvider.GAS_PRICE.multiply(BigInteger.TEN).add(BigInteger.ONE));
+
+    return TransactionEncoder.signMessage(ecAddCall, sender.web3jCredentialsOrThrow());
+  }
 }
