@@ -13,7 +13,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.consensys.linea.rpc.services;
+package net.consensys.linea.bundles;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static net.consensys.linea.bundles.LineaLimitedBundlePool.BUNDLE_SAVE_FILENAME;
@@ -29,24 +29,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
-import net.consensys.linea.bundles.LineaLimitedBundlePool;
-import net.consensys.linea.bundles.TransactionBundle;
 import org.apache.tuweni.bytes.Bytes;
-import org.hyperledger.besu.crypto.KeyPair;
-import org.hyperledger.besu.crypto.SECPPrivateKey;
-import org.hyperledger.besu.crypto.SECPPublicKey;
-import org.hyperledger.besu.crypto.SignatureAlgorithm;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.ethereum.core.Transaction;
-import org.hyperledger.besu.ethereum.core.TransactionTestFixture;
 import org.hyperledger.besu.ethereum.eth.transactions.PendingTransaction;
 import org.hyperledger.besu.plugin.data.AddedBlockContext;
 import org.hyperledger.besu.plugin.data.BlockHeader;
@@ -56,19 +47,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-class LineaLimitedBundlePoolTest {
-  private static final KeyPair KEY_PAIR_1 =
-      new KeyPair(
-          SECPPrivateKey.create(BigInteger.valueOf(Long.MAX_VALUE), SignatureAlgorithm.ALGORITHM),
-          SECPPublicKey.create(BigInteger.valueOf(Long.MIN_VALUE), SignatureAlgorithm.ALGORITHM));
-
-  private static final Transaction TX1 =
-      new TransactionTestFixture().nonce(0).gasLimit(21000).createTransaction(KEY_PAIR_1);
-  private static final Transaction TX2 =
-      new TransactionTestFixture().nonce(1).gasLimit(21000).createTransaction(KEY_PAIR_1);
-  private static final Transaction TX3 =
-      new TransactionTestFixture().nonce(2).gasLimit(21000).createTransaction(KEY_PAIR_1);
-
+class LineaLimitedBundlePoolTest extends AbstractBundleTest {
   @TempDir Path dataDir;
   private LineaLimitedBundlePool pool;
   private BesuEvents eventService;
@@ -400,16 +379,5 @@ class LineaLimitedBundlePoolTest {
 
   private TransactionBundle createBundle(Hash hash, long blockNumber) {
     return createBundle(hash, blockNumber, Collections.emptyList());
-  }
-
-  private TransactionBundle createBundle(Hash hash, long blockNumber, List<Transaction> maybeTxs) {
-    return new TransactionBundle(
-        hash,
-        maybeTxs,
-        blockNumber,
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty());
   }
 }
