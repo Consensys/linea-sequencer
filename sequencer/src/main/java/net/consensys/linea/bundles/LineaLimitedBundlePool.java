@@ -100,14 +100,17 @@ public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.Blo
                 })
             .removalListener(
                 (Hash key, TransactionBundle bundle, RemovalCause cause) -> {
-                  if (bundle != null && cause.wasEvicted()) {
-                    log.atTrace()
-                        .setMessage("Dropping transaction bundle {}:{} due to {}")
-                        .addArgument(bundle::blockNumber)
-                        .addArgument(() -> bundle.bundleIdentifier().toHexString())
-                        .addArgument(cause::name)
-                        .log();
-                    removeFromBlockIndex(bundle);
+                  if (bundle != null) {
+                    if (cause.wasEvicted()) {
+                      log.atTrace()
+                          .setMessage("Dropping transaction bundle {}:{} due to {}")
+                          .addArgument(bundle::blockNumber)
+                          .addArgument(() -> bundle.bundleIdentifier().toHexString())
+                          .addArgument(cause::name)
+                          .log();
+                      removeFromBlockIndex(bundle);
+                    }
+
                     transactionBundleRemovedListeners.forEach(
                         listener -> listener.onTransactionBundleRemoved(bundle));
                   }
