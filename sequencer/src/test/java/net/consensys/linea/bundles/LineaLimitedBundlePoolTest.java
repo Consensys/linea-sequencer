@@ -17,8 +17,10 @@ package net.consensys.linea.bundles;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static net.consensys.linea.bundles.LineaLimitedBundlePool.BUNDLE_SAVE_FILENAME;
+import static net.consensys.linea.bundles.LineaLimitedBundlePool.UUIDToHash;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -32,9 +34,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
+import lombok.Getter;
+import net.consensys.linea.bundles.BundlePoolService.TransactionBundleAddedListener;
+import net.consensys.linea.bundles.BundlePoolService.TransactionBundleRemovedListener;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.ethereum.core.Transaction;
@@ -54,6 +61,7 @@ class LineaLimitedBundlePoolTest extends AbstractBundleTest {
   private AddedBlockContext addedBlockContext;
   private BlockHeader blockHeader;
   private BlockchainService blockchainService;
+  private NotificationCollector notificationCollector;
 
   @BeforeEach
   void setUp() {
@@ -65,6 +73,9 @@ class LineaLimitedBundlePoolTest extends AbstractBundleTest {
         new LineaLimitedBundlePool(
             dataDir, 10_000L, eventService, blockchainService); // Max 100 entries, 10 KB size
     blockHeader = mock(BlockHeader.class);
+    notificationCollector = new NotificationCollector();
+    pool.subscribeTransactionBundleRemoved(notificationCollector);
+    pool.subscribeTransactionBundleAdded(notificationCollector);
   }
 
   @Test
@@ -75,6 +86,7 @@ class LineaLimitedBundlePoolTest extends AbstractBundleTest {
     pool.putOrReplace(hash, bundle);
     TransactionBundle retrieved = pool.get(hash);
 
+    notificationCollector.assertAddNotificationReceived(bundle);
     assertNotNull(retrieved, "Bundle should be retrieved by hash");
     assertEquals(hash, retrieved.bundleIdentifier(), "Retrieved bundle hash should match");
   }
@@ -87,7 +99,10 @@ class LineaLimitedBundlePoolTest extends AbstractBundleTest {
     TransactionBundle bundle2 = createBundle(hash2, 1);
 
     pool.putOrReplace(hash1, bundle1);
+    notificationCollector.assertAddNotificationReceived(bundle1);
+
     pool.putOrReplace(hash2, bundle2);
+    notificationCollector.assertAddNotificationReceived(bundle2);
 
     List<TransactionBundle> bundles = pool.getBundlesByBlockNumber(1);
 
@@ -103,6 +118,7 @@ class LineaLimitedBundlePoolTest extends AbstractBundleTest {
 
     pool.putOrReplace(uuid, bundle);
 
+    notificationCollector.assertAddNotificationReceived(bundle);
     assertNotNull(pool.get(uuid));
     assertEquals(bundle, pool.get(uuid));
   }
@@ -114,8 +130,28 @@ class LineaLimitedBundlePoolTest extends AbstractBundleTest {
 
     pool.putOrReplace(hash, bundle);
 
+    notificationCollector.assertAddNotificationReceived(bundle);
     assertNotNull(pool.get(hash));
     assertEquals(bundle, pool.get(hash));
+  }
+
+  @Test
+  void testPutAndGet_ReplaceExistingBundle() {
+    Hash hash = Hash.hash(Bytes.fromHexStringLenient("0x1234"));
+    TransactionBundle bundleOrig = createBundle(hash, 1L);
+
+    pool.putOrReplace(hash, bundleOrig);
+
+    notificationCollector.assertAddNotificationReceived(bundleOrig);
+    assertNotNull(pool.get(hash));
+    assertEquals(bundleOrig, pool.get(hash));
+
+    TransactionBundle bundleReplace = createBundle(hash, 2L);
+    pool.putOrReplace(hash, bundleReplace);
+    notificationCollector.assertAddNotificationReceived(bundleReplace);
+    notificationCollector.assertRemoveNotificationReceived(bundleOrig);
+    assertEquals(bundleReplace, pool.get(hash));
+    assertThat(pool.getBundlesByBlockNumber(1L)).isEmpty();
   }
 
   @Test
@@ -135,12 +171,14 @@ class LineaLimitedBundlePoolTest extends AbstractBundleTest {
   @Test
   void testRemoveByUUID() {
     UUID uuid = UUID.randomUUID();
-    TransactionBundle bundle = createBundle(Hash.ZERO, 1L);
+    TransactionBundle bundle = createBundle(UUIDToHash(uuid), 1L);
 
     pool.putOrReplace(uuid, bundle);
 
+    notificationCollector.assertAddNotificationReceived(bundle);
+
     assertTrue(pool.remove(uuid));
-    assertNull(pool.get(uuid));
+    notificationCollector.assertRemoveNotificationReceived(bundle);
   }
 
   @Test
@@ -149,9 +187,10 @@ class LineaLimitedBundlePoolTest extends AbstractBundleTest {
     TransactionBundle bundle = createBundle(hash, 1L);
 
     pool.putOrReplace(hash, bundle);
+    notificationCollector.assertAddNotificationReceived(bundle);
 
     assertTrue(pool.remove(hash));
-    assertNull(pool.get(hash));
+    notificationCollector.assertRemoveNotificationReceived(bundle);
   }
 
   @Test
@@ -206,6 +245,7 @@ class LineaLimitedBundlePoolTest extends AbstractBundleTest {
 
     // Manually insert old bundle into the block index
     pool.putOrReplace(mockOldHash, oldBundle);
+    notificationCollector.assertAddNotificationReceived(oldBundle);
 
     // Ensure bundle exists before adding new block
     assert !pool.getBundlesByBlockNumber(oldBlockNumber).isEmpty();
@@ -215,6 +255,7 @@ class LineaLimitedBundlePoolTest extends AbstractBundleTest {
 
     // Verify that the old bundle is removed
     assert pool.getBundlesByBlockNumber(oldBlockNumber).isEmpty();
+    notificationCollector.assertRemoveNotificationReceived(oldBundle);
   }
 
   @Test
@@ -285,6 +326,7 @@ class LineaLimitedBundlePoolTest extends AbstractBundleTest {
     Hash hash1 = Hash.fromHexStringLenient("0x1234");
     TransactionBundle bundle1 = pool.get(hash1);
 
+    notificationCollector.assertAddNotificationReceived(bundle1);
     assertThat(bundle1.blockNumber()).isEqualTo(11);
     assertThat(bundle1.bundleIdentifier()).isEqualTo(hash1);
     assertThat(bundle1.pendingTransactions())
@@ -296,6 +338,7 @@ class LineaLimitedBundlePoolTest extends AbstractBundleTest {
 
     TransactionBundle bundle2 = pool.get(hash2);
 
+    notificationCollector.assertAddNotificationReceived(bundle2);
     assertThat(bundle2.blockNumber()).isEqualTo(12);
     assertThat(bundle2.bundleIdentifier()).isEqualTo(hash2);
     assertThat(bundle2.pendingTransactions())
@@ -336,6 +379,7 @@ class LineaLimitedBundlePoolTest extends AbstractBundleTest {
     Hash hash1 = Hash.fromHexStringLenient("0x1234");
     TransactionBundle bundle1 = pool.get(hash1);
 
+    notificationCollector.assertAddNotificationReceived(bundle1);
     assertThat(bundle1.blockNumber()).isEqualTo(11);
     assertThat(bundle1.bundleIdentifier()).isEqualTo(hash1);
     assertThat(bundle1.pendingTransactions())
@@ -365,6 +409,7 @@ class LineaLimitedBundlePoolTest extends AbstractBundleTest {
     Hash hash1 = Hash.fromHexStringLenient("0x1234");
     TransactionBundle bundle1 = pool.get(hash1);
 
+    notificationCollector.assertAddNotificationReceived(bundle1);
     assertThat(bundle1.blockNumber()).isEqualTo(11);
     assertThat(bundle1.bundleIdentifier()).isEqualTo(hash1);
     assertThat(bundle1.pendingTransactions())
@@ -379,5 +424,33 @@ class LineaLimitedBundlePoolTest extends AbstractBundleTest {
 
   private TransactionBundle createBundle(Hash hash, long blockNumber) {
     return createBundle(hash, blockNumber, Collections.emptyList());
+  }
+
+  private static class NotificationCollector
+      implements TransactionBundleRemovedListener, TransactionBundleAddedListener {
+    @Getter private final Map<TransactionBundle, EventType> events = new LinkedHashMap<>();
+
+    enum EventType {
+      ADDED,
+      REMOVED
+    }
+
+    @Override
+    public void onTransactionBundleAdded(final TransactionBundle transactionBundle) {
+      events.put(transactionBundle, EventType.ADDED);
+    }
+
+    @Override
+    public void onTransactionBundleRemoved(final TransactionBundle transactionBundle) {
+      events.put(transactionBundle, EventType.REMOVED);
+    }
+
+    public void assertAddNotificationReceived(final TransactionBundle bundle) {
+      await().until(() -> events.get(bundle) == EventType.ADDED);
+    }
+
+    public void assertRemoveNotificationReceived(final TransactionBundle bundle) {
+      await().until(() -> events.get(bundle) == EventType.REMOVED);
+    }
   }
 }
