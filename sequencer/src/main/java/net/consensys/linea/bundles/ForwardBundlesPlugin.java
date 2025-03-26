@@ -40,13 +40,14 @@ public class ForwardBundlesPlugin extends AbstractLineaRequiredPlugin {
     final var forwardUrls = config.forwardUrls();
     if (!forwardUrls.isEmpty()) {
       final var rpcClient = createRpcClient(config.timeoutMillis());
+      final var retryScheduler = createRetryScheduler();
       forwardUrls.stream()
           .map(
               url ->
                   new BundleForwarder(
                       config,
                       createExecutor(url),
-                      createScheduledExecutor(),
+                      retryScheduler,
                       blockchainService,
                       rpcClient,
                       url))
@@ -56,7 +57,10 @@ public class ForwardBundlesPlugin extends AbstractLineaRequiredPlugin {
   }
 
   private OkHttpClient createRpcClient(final int timeoutMillis) {
-    return new OkHttpClient.Builder().callTimeout(Duration.ofMillis(timeoutMillis)).build();
+    return new OkHttpClient.Builder()
+        .retryOnConnectionFailure(false)
+        .callTimeout(Duration.ofMillis(timeoutMillis))
+        .build();
   }
 
   private PriorityThreadPoolExecutor createExecutor(final URL recipientUrl) {
@@ -68,7 +72,7 @@ public class ForwardBundlesPlugin extends AbstractLineaRequiredPlugin {
         Thread.ofVirtual().name("BundleForwarder[" + recipientUrl.toString() + "]", 0L).factory());
   }
 
-  private ScheduledExecutorService createScheduledExecutor() {
+  private ScheduledExecutorService createRetryScheduler() {
     return Executors.newSingleThreadScheduledExecutor(
         Thread.ofPlatform().name("BundleForwarderRetry", 0L).factory());
   }

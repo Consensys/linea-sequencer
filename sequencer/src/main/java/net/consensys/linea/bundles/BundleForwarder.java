@@ -47,12 +47,13 @@ import org.hyperledger.besu.plugin.services.BlockchainService;
 
 @Slf4j
 @RequiredArgsConstructor
-class BundleForwarder implements TransactionBundleAddedListener, TransactionBundleRemovedListener {
+public class BundleForwarder
+    implements TransactionBundleAddedListener, TransactionBundleRemovedListener {
   public static final String RETRY_COUNT_HEADER = "X-Retry-Count";
   private final AtomicLong reqIdProvider = new AtomicLong(0L);
   private final LineaBundleConfiguration config;
   private final PriorityThreadPoolExecutor executor;
-  private final ScheduledExecutorService scheduledExecutor;
+  private final ScheduledExecutorService retryScheduler;
   private final BlockchainService blockchainService;
   private final OkHttpClient rpcClient;
   private final URL recipientUrl;
@@ -68,7 +69,7 @@ class BundleForwarder implements TransactionBundleAddedListener, TransactionBund
   }
 
   void retry(final TransactionBundle bundle, final int retry) {
-    scheduledExecutor.schedule(
+    retryScheduler.schedule(
         () -> executor.submit(new SendBundleTask(bundle, retry)),
         config.retryDelayMillis(),
         TimeUnit.MILLISECONDS);
@@ -131,7 +132,7 @@ class BundleForwarder implements TransactionBundleAddedListener, TransactionBund
         return result;
       } catch (IOException e) {
         log.warn(
-            "Error send bundle request {}, at retry count {}, retrying later",
+            "Error forwarding bundle request {}, at retry count {}, retrying later",
             jsonRpcRequest,
             retryCount,
             e);

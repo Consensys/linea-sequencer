@@ -55,7 +55,7 @@ public class LineaBundleCliOptions implements LineaCliOptions {
       names = {BUNDLES_FORWARD_TIMEOUT},
       paramLabel = "<INTEGER>",
       description =
-          "Number of milliseconds to wait before a forward timeouts (default: ${DEFAULT-VALUE})")
+          "Number of milliseconds to wait before a forward times out (default: ${DEFAULT-VALUE})")
   private int timeoutMillis = DEFAULT_BUNDLES_FORWARD_TIMEOUT_MILLIS;
 
   private LineaBundleCliOptions() {}

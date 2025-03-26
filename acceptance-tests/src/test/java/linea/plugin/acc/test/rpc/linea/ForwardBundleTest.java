@@ -26,6 +26,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static net.consensys.linea.bundles.BundleForwarder.RETRY_COUNT_HEADER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -73,17 +74,16 @@ public class ForwardBundleTest extends AbstractSendBundleTest {
   @Test
   public void bundleIsForwarded() {
     final var bundleParams = sendBundle(1);
-    stubSuccessResponseFor(bundleParams);
+    stubSuccessResponseFor(bundleParams, 0);
     verifyRequestForwarded(bundleParams);
   }
 
   @Test
   public void forwardIsRetriedAfterTimeout() {
     final var bundleParams = sendBundle(2);
-    stubSuccessResponseFor(bundleParams, Duration.ofSeconds(2));
+    stubSuccessResponseFor(bundleParams, 0, Duration.ofSeconds(2));
 
     verifyResponseSent(bundleParams);
-    stubSuccessResponseFor(bundleParams);
 
     verifyRequestForwarded(bundleParams, 1);
   }
@@ -92,20 +92,28 @@ public class ForwardBundleTest extends AbstractSendBundleTest {
   public void forwardIsRetriedAfterNetworkFailure() {
     final var bundleParams = sendBundle(3);
     stubFailureFor(bundleParams);
-    verifyRequestForwarded(bundleParams);
+    stubSuccessResponseFor(bundleParams, 1);
 
-    stubSuccessResponseFor(bundleParams);
+    verifyRequestForwarded(bundleParams);
     verifyRequestForwarded(bundleParams, 1);
   }
 
-  private static void stubSuccessResponseFor(final BundleParams bundleParams) {
-    stubSuccessResponseFor(bundleParams, Duration.ZERO);
+  private void stubSuccessResponseFor(final BundleParams bundleParams, final int retryCount) {
+    stubSuccessResponseFor(bundleParams, retryCount, Duration.ZERO);
   }
 
-  private static void stubSuccessResponseFor(
-      final BundleParams bundleParams, final Duration delay) {
+  private void stubSuccessResponseFor(
+      final BundleParams bundleParams, final int retryCount, final Duration delay) {
+    final var requestMatcher = post(urlEqualTo("/"));
+
+    if (retryCount > 0) {
+      requestMatcher.withHeader(RETRY_COUNT_HEADER, equalTo(String.valueOf(retryCount)));
+    } else {
+      requestMatcher.andMatching(this::noRetryCountHeader);
+    }
+
     stubFor(
-        post(urlEqualTo("/"))
+        requestMatcher
             .withHeader("Content-Type", equalTo("application/json; charset=UTF-8"))
             .withRequestBody(matchingBlockNumber(bundleParams.blockNumber()))
             .willReturn(
@@ -139,7 +147,7 @@ public class ForwardBundleTest extends AbstractSendBundleTest {
     return new MatchResult() {
       @Override
       public boolean isExactMatch() {
-        return !request.getAllHeaderKeys().contains("X-Retry-Count");
+        return !request.getAllHeaderKeys().contains(RETRY_COUNT_HEADER);
       }
 
       @Override
@@ -166,9 +174,9 @@ public class ForwardBundleTest extends AbstractSendBundleTest {
             .withRequestBody(matchingBundleParams(bundleParams));
 
     if (retryCount > 0) {
-      patternBuilder.withHeader("X-Retry-Count", equalTo(String.valueOf(retryCount)));
+      patternBuilder.withHeader(RETRY_COUNT_HEADER, equalTo(String.valueOf(retryCount)));
     } else {
-      patternBuilder.withoutHeader("X-Retry-Count");
+      patternBuilder.withoutHeader(RETRY_COUNT_HEADER);
     }
 
     await().atMost(2, SECONDS).untilAsserted(() -> verify(exactly(1), patternBuilder));
