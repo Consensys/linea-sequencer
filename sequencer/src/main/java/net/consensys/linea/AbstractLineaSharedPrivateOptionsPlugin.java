@@ -73,7 +73,6 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
 
   private static final AtomicBoolean sharedRegisterTasksDone = new AtomicBoolean(false);
   private static final AtomicBoolean sharedStartTasksDone = new AtomicBoolean(false);
-  private static final AtomicBoolean sharedStopTasksDone = new AtomicBoolean(false);
 
   private ServiceManager serviceManager;
 
@@ -233,14 +232,6 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
   @Override
   public void stop() {
     super.stop();
-
-    if (sharedStopTasksDone.compareAndSet(false, true)) {
-      performSharedStopTasksOnce(serviceManager);
-    }
-  }
-
-  private void performSharedStopTasksOnce(final ServiceManager serviceManager) {
-    bundlePoolService.saveToDisk();
     sharedRegisterTasksDone.set(false);
     sharedStartTasksDone.set(false);
     blockchainService = null;
