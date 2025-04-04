@@ -101,12 +101,13 @@ public class LivenessPluginIntegrationTest {
     cliOptionsField.setAccessible(true);
     cliOptionsField.set(livenessPlugin, cliOptions);
 
-    Field contractAddressField = LivenessPlugin.class.getDeclaredField("contractAddress");
+    Field contractAddressField =
+        LivenessPlugin.class.getDeclaredField("livenessStateContractAddress");
     contractAddressField.setAccessible(true);
     contractAddressField.set(
         livenessPlugin, Address.fromHexString("0x1230000000000000000000000000000000000000"));
 
-    Field enabledField = LivenessPlugin.class.getDeclaredField("enabled");
+    Field enabledField = LivenessPlugin.class.getDeclaredField("isPluginEnabled");
     enabledField.setAccessible(true);
     enabledField.set(livenessPlugin, true);
 
@@ -133,7 +134,7 @@ public class LivenessPluginIntegrationTest {
 
   @Test
   public void shouldNotReportWhenBlockIsRecent() throws Exception {
-    Field enabledField = LivenessPlugin.class.getDeclaredField("enabled");
+    Field enabledField = LivenessPlugin.class.getDeclaredField("isPluginEnabled");
     enabledField.setAccessible(true);
     enabledField.set(livenessPlugin, true);
 
@@ -141,7 +142,8 @@ public class LivenessPluginIntegrationTest {
     maxBlockAgeSecondsField.setAccessible(true);
     maxBlockAgeSecondsField.set(livenessPlugin, 60L);
 
-    Field contractAddressField = LivenessPlugin.class.getDeclaredField("contractAddress");
+    Field contractAddressField =
+        LivenessPlugin.class.getDeclaredField("livenessStateContractAddress");
     contractAddressField.setAccessible(true);
     contractAddressField.set(
         livenessPlugin, Address.fromHexString("0x1230000000000000000000000000000000000000"));

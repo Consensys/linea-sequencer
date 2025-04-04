@@ -66,6 +66,7 @@ public class LivenessPlugin extends AbstractLineaRequiredPlugin
 
   private static final String PLUGIN_NAME = "LivenessPlugin";
   private static final BigInteger DEFAULT_CHAIN_ID = new BigInteger("59144");
+  public static final BigInteger ZERO_TRANSACTION_VALUE = BigInteger.ZERO;
 
   private BlockchainService blockchainService;
   private Web3j web3j;
@@ -74,11 +75,11 @@ public class LivenessPlugin extends AbstractLineaRequiredPlugin
   private ScheduledExecutorService scheduler;
   private final AtomicReference<BlockHeader> lastProcessedBlock = new AtomicReference<>();
   private final AtomicLong lastReportedTimestamp = new AtomicLong(0);
-  private boolean enabled = false;
+  private boolean isPluginEnabled = false;
 
   // Configuration options
   private long maxBlockAgeSeconds;
-  private Address contractAddress;
+  private Address livenessStateContractAddress;
   private long gasLimit;
   private BigInteger chainId;
 
@@ -142,37 +143,34 @@ public class LivenessPlugin extends AbstractLineaRequiredPlugin
             .gasLimit(cliOptions.getGasLimit())
             .build();
 
-    enabled = config.isEnabled();
+    isPluginEnabled = config.isEnabled();
 
-    if (!enabled) {
+    if (!isPluginEnabled) {
       log.info("{} is disabled", PLUGIN_NAME);
       return;
     }
 
     maxBlockAgeSeconds = config.getMaxBlockAgeSeconds();
     long checkIntervalSeconds = config.getCheckIntervalSeconds();
-    contractAddress = Address.fromHexString(config.getContractAddress());
+    livenessStateContractAddress = Address.fromHexString(config.getContractAddress());
     String signerUrl = config.getSignerUrl();
     String signerKeyId = config.getSignerKeyId();
     gasLimit = config.getGasLimit();
     chainId = blockchainService.getChainId().orElse(DEFAULT_CHAIN_ID);
 
     // Initialize Web3j client for Web3Signer
-    if (signerUrl != null && !signerUrl.isEmpty()) {
+    if (signerUrl != null
+        && !signerUrl.isEmpty()
+        && signerKeyId != null
+        && !signerKeyId.isEmpty()) {
       web3j = Web3j.build(new HttpService(signerUrl));
 
-      // TODO: initialise credentials from Web3Signer
-      // For now, we'll use a placeholder
-      if (signerKeyId != null && !signerKeyId.isEmpty()) {
-        log.info("Using Web3Signer with key ID: {}", signerKeyId);
-        credentials =
-            Credentials.create(
-                "0x0000000000000000000000000000000000000000000000000000000000000000");
-      } else {
-        log.warn("No signer key ID provided, transactions will not be signed");
-      }
+      // TODO: initialise credentials from Web3Signer (for now, we'll use a placeholder)
+      log.info("Using Web3Signer with key ID: {}", signerKeyId);
+      credentials =
+          Credentials.create("0x0000000000000000000000000000000000000000000000000000000000000000");
     } else {
-      log.warn("No signer URL provided, transactions will not be signed");
+      throw new RuntimeException("No signer URL or key ID provided");
     }
 
     // Initialize with current block
@@ -197,7 +195,7 @@ public class LivenessPlugin extends AbstractLineaRequiredPlugin
         PLUGIN_NAME,
         maxBlockAgeSeconds,
         checkIntervalSeconds,
-        contractAddress,
+        livenessStateContractAddress,
         signerUrl,
         gasLimit);
   }
@@ -212,6 +210,7 @@ public class LivenessPlugin extends AbstractLineaRequiredPlugin
           scheduler.shutdownNow();
         }
       } catch (InterruptedException e) {
+        log.error("Terminating badly: {}", e.getMessage());
         scheduler.shutdownNow();
         Thread.currentThread().interrupt();
       }
@@ -226,7 +225,7 @@ public class LivenessPlugin extends AbstractLineaRequiredPlugin
 
   @Override
   public void onBlockAdded(AddedBlockContext addedBlockContext) {
-    if (!enabled) return;
+    if (!isPluginEnabled) return;
 
     BlockHeader newBlock = addedBlockContext.getBlockHeader();
     lastProcessedBlock.set(newBlock);
@@ -239,7 +238,7 @@ public class LivenessPlugin extends AbstractLineaRequiredPlugin
   }
 
   private void checkBlockTimestampAndReport() {
-    if (!enabled) return;
+    if (!isPluginEnabled) return;
 
     try {
       BlockHeader lastBlock = lastProcessedBlock.get();
@@ -299,8 +298,9 @@ public class LivenessPlugin extends AbstractLineaRequiredPlugin
       Bytes callDataDown = Bytes.wrap(callDataBytesDown);
 
       // Create first transaction
-      Transaction transactionDown = createTransaction(callDataDown);
-      submitTransactionViaJsonRpc(transactionDown);
+      RawTransaction rawTransactionDown = createTransaction(callDataDown);
+      Transaction transactionDown = signTransaction(rawTransactionDown);
+      submitTransaction(transactionDown);
 
       // Second call: updateStatus(true, currentTimestamp)
       Function functionUp =
@@ -314,8 +314,9 @@ public class LivenessPlugin extends AbstractLineaRequiredPlugin
       Bytes callDataUp = Bytes.wrap(callDataBytesUp);
 
       // Create second transaction
-      Transaction transactionUp = createTransaction(callDataUp);
-      submitTransactionViaJsonRpc(transactionUp);
+      RawTransaction rawTransactionUp = createTransaction(callDataUp);
+      Transaction transactionUp = signTransaction(rawTransactionUp);
+      submitTransaction(transactionUp);
 
       log.info("Sequencer uptime transactions submitted via JSON-RPC.");
     } catch (Exception e) {
@@ -323,7 +324,7 @@ public class LivenessPlugin extends AbstractLineaRequiredPlugin
     }
   }
 
-  private Transaction createTransaction(Bytes callData) throws IOException {
+  private RawTransaction createTransaction(Bytes callData) throws IOException {
     // Get nonce from the account
     BigInteger nonce = BigInteger.ZERO;
     if (web3j != null && credentials != null) {
@@ -344,42 +345,23 @@ public class LivenessPlugin extends AbstractLineaRequiredPlugin
     Wei gasPrice = Wei.of(1_000_000_000L);
 
     // Create transaction
-    Transaction.Builder builder =
-        Transaction.builder()
-            .nonce(nonce.longValue())
-            .gasPrice(gasPrice)
-            .gasLimit(gasLimit)
-            .to(contractAddress)
-            .value(Wei.ZERO)
-            .payload(callData)
-            .chainId(chainId);
-
-    // Sign the transaction if credentials are available
-    if (credentials != null) {
-      // Create a raw transaction for signing
-      RawTransaction rawTransaction =
-          RawTransaction.createTransaction(
-              nonce,
-              gasPrice.getAsBigInteger(),
-              BigInteger.valueOf(gasLimit),
-              contractAddress.toString(),
-              BigInteger.ZERO,
-              callData.toHexString());
-
-      // Sign the transaction
-      byte[] signedMessage =
-          TransactionEncoder.signMessage(rawTransaction, chainId.longValue(), credentials);
-      String hexValue = Numeric.toHexString(signedMessage);
-
-      // Parse the signed transaction
-      return Transaction.readFrom(Bytes.fromHexString(hexValue));
-    }
-
-    // Return unsigned transaction if no credentials
-    return builder.build();
+    return RawTransaction.createTransaction(
+        nonce,
+        gasPrice.getAsBigInteger(),
+        BigInteger.valueOf(gasLimit),
+        livenessStateContractAddress.toString(),
+        ZERO_TRANSACTION_VALUE,
+        callData.toHexString());
   }
 
-  private void submitTransactionViaJsonRpc(Transaction transaction) {
+  private Transaction signTransaction(RawTransaction rawTransaction) {
+    byte[] signedMessage =
+        TransactionEncoder.signMessage(rawTransaction, chainId.longValue(), credentials);
+    String hexValue = Numeric.toHexString(signedMessage);
+    return Transaction.readFrom(Bytes.fromHexString(hexValue));
+  }
+
+  private void submitTransaction(Transaction transaction) {
     try {
       String jsonRpcCall =
           JsonRpcRequestBuilder.generateSaveRejectedTxJsonRpc(
