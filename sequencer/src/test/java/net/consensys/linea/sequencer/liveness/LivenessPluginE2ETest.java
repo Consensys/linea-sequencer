@@ -82,7 +82,7 @@ public class LivenessPluginE2ETest {
 
   @Test
   public void shouldDetectAndReportSequencerInactivity() throws Exception {
-    Field enabledField = LivenessPlugin.class.getDeclaredField("enabled");
+    Field enabledField = LivenessPlugin.class.getDeclaredField("isPluginEnabled");
     enabledField.setAccessible(true);
     enabledField.set(livenessPlugin, true);
 
@@ -90,7 +90,8 @@ public class LivenessPluginE2ETest {
     maxBlockAgeSecondsField.setAccessible(true);
     maxBlockAgeSecondsField.set(livenessPlugin, 60L);
 
-    Field contractAddressField = LivenessPlugin.class.getDeclaredField("contractAddress");
+    Field contractAddressField =
+        LivenessPlugin.class.getDeclaredField("livenessStateContractAddress");
     contractAddressField.setAccessible(true);
     contractAddressField.set(
         livenessPlugin, Address.fromHexString("0x1230000000000000000000000000000000000000"));
@@ -140,7 +141,7 @@ public class LivenessPluginE2ETest {
     String contractAddress = "0x1230000000000000000000000000000000000000";
     long gasLimit = 100000L;
 
-    Field enabledField = LivenessPlugin.class.getDeclaredField("enabled");
+    Field enabledField = LivenessPlugin.class.getDeclaredField("isPluginEnabled");
     enabledField.setAccessible(true);
     enabledField.set(livenessPlugin, enabled);
 
@@ -148,7 +149,8 @@ public class LivenessPluginE2ETest {
     maxBlockAgeSecondsField.setAccessible(true);
     maxBlockAgeSecondsField.set(livenessPlugin, maxBlockAgeSeconds);
 
-    Field contractAddressField = LivenessPlugin.class.getDeclaredField("contractAddress");
+    Field contractAddressField =
+        LivenessPlugin.class.getDeclaredField("livenessStateContractAddress");
     contractAddressField.setAccessible(true);
     contractAddressField.set(livenessPlugin, Address.fromHexString(contractAddress));
 
@@ -204,7 +206,7 @@ public class LivenessPluginE2ETest {
 
   @Test
   public void shouldCallUpdateStatusWithCorrectParameters() throws Exception {
-    Field enabledField = LivenessPlugin.class.getDeclaredField("enabled");
+    Field enabledField = LivenessPlugin.class.getDeclaredField("isPluginEnabled");
     enabledField.setAccessible(true);
     enabledField.set(livenessPlugin, true);
 
@@ -212,7 +214,8 @@ public class LivenessPluginE2ETest {
     maxBlockAgeSecondsField.setAccessible(true);
     maxBlockAgeSecondsField.set(livenessPlugin, 60L);
 
-    Field contractAddressField = LivenessPlugin.class.getDeclaredField("contractAddress");
+    Field contractAddressField =
+        LivenessPlugin.class.getDeclaredField("livenessStateContractAddress");
     contractAddressField.setAccessible(true);
     contractAddressField.set(
         livenessPlugin, Address.fromHexString("0x1230000000000000000000000000000000000000"));
