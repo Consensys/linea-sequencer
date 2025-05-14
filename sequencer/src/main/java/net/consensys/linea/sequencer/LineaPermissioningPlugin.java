@@ -18,25 +18,23 @@ package net.consensys.linea.sequencer;
 import com.google.auto.service.AutoService;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
-
 import org.hyperledger.besu.datatypes.TransactionType;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.PermissioningService;
 
 /**
- * This plugin uses the {@link PermissioningService} to filter transactions at multiple critical 
- * lifecycle stages:
- * i.) Block import - when a Besu validator receives a block via P2P gossip
- * ii.) Transaction pool - when a Besu node adds to its local transaction pool
- * iii.) Block production - when a Besu node builds a block
- * 
- * As PermissioningService executes rules over a broad scope, we may in the future consolidate logic
- * from the {@code LineaTransactionSelectorPlugin} and {@code LineaTransactionPoolValidatorPlugin} to unify
- * transaction filtering logic.
- * 
- * In addition to transaction permissioning, {@link PermissioningService} also supports node-
- * and message-level permissioning, which can be implemented to control peer connections and devp2p
+ * This plugin uses the {@link PermissioningService} to filter transactions at multiple critical
+ * lifecycle stages: i.) Block import - when a Besu validator receives a block via P2P gossip ii.)
+ * Transaction pool - when a Besu node adds to its local transaction pool iii.) Block production -
+ * when a Besu node builds a block
+ *
+ * <p>As PermissioningService executes rules over a broad scope, we may in the future consolidate
+ * logic from the {@code LineaTransactionSelectorPlugin} and {@code
+ * LineaTransactionPoolValidatorPlugin} to unify transaction filtering logic.
+ *
+ * <p>In addition to transaction permissioning, {@link PermissioningService} also supports node- and
+ * message-level permissioning, which can be implemented to control peer connections and devp2p
  * message exchanges.
  */
 @Slf4j
@@ -57,13 +55,14 @@ public class LineaPermissioningPlugin extends AbstractLineaRequiredPlugin {
 
   @Override
   public void doStart() {
-    permissioningService.registerTransactionPermissioningProvider((tx) -> {
-        // TODO: Enable configurable rather than hardcoded behaviour for tx filtering
-        if (tx.getType() == TransactionType.BLOB) {
+    permissioningService.registerTransactionPermissioningProvider(
+        (tx) -> {
+          // TODO: Enable configurable rather than hardcoded behaviour for tx filtering
+          if (tx.getType() == TransactionType.BLOB) {
             return false;
-        }
-        return true;
-    });
+          }
+          return true;
+        });
   }
 
   @Override

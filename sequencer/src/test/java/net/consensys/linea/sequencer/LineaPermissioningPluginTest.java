@@ -17,17 +17,16 @@ package net.consensys.linea.sequencer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
-import java.util.function.Predicate;
 
 import org.hyperledger.besu.datatypes.TransactionType;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.PermissioningService;
+import org.hyperledger.besu.plugin.services.permissioning.TransactionPermissioningProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -47,7 +46,8 @@ public class LineaPermissioningPluginTest {
   @BeforeEach
   public void setUp() {
     plugin = new LineaPermissioningPlugin();
-    when(serviceManager.getService(PermissioningService.class)).thenReturn(Optional.of(permissioningService));
+    when(serviceManager.getService(PermissioningService.class))
+        .thenReturn(Optional.of(permissioningService));
   }
 
   @Test
@@ -79,7 +79,8 @@ public class LineaPermissioningPluginTest {
     plugin.doStart();
 
     // Then
-    verify(permissioningService).registerTransactionPermissioningProvider(any(Predicate.class));
+    verify(permissioningService)
+        .registerTransactionPermissioningProvider(any(TransactionPermissioningProvider.class));
   }
 
   @Test
@@ -89,13 +90,14 @@ public class LineaPermissioningPluginTest {
     plugin.doStart();
 
     // Capture the transaction permissioning provider
-    ArgumentCaptor<Predicate<Transaction>> providerCaptor = ArgumentCaptor.forClass(Predicate.class);
+    ArgumentCaptor<TransactionPermissioningProvider> providerCaptor =
+        ArgumentCaptor.forClass(TransactionPermissioningProvider.class);
     verify(permissioningService).registerTransactionPermissioningProvider(providerCaptor.capture());
-    Predicate<Transaction> provider = providerCaptor.getValue();
+    TransactionPermissioningProvider provider = providerCaptor.getValue();
 
     // When - BLOB transaction
     when(transaction.getType()).thenReturn(TransactionType.BLOB);
-    boolean blobResult = provider.test(transaction);
+    boolean blobResult = provider.isPermitted(transaction);
 
     // Then
     assertThat(blobResult).isFalse();
@@ -108,21 +110,22 @@ public class LineaPermissioningPluginTest {
     plugin.doStart();
 
     // Capture the transaction permissioning provider
-    ArgumentCaptor<Predicate<Transaction>> providerCaptor = ArgumentCaptor.forClass(Predicate.class);
+    ArgumentCaptor<TransactionPermissioningProvider> providerCaptor =
+        ArgumentCaptor.forClass(TransactionPermissioningProvider.class);
     verify(permissioningService).registerTransactionPermissioningProvider(providerCaptor.capture());
-    Predicate<Transaction> provider = providerCaptor.getValue();
+    TransactionPermissioningProvider provider = providerCaptor.getValue();
 
     // When - FRONTIER transaction
     when(transaction.getType()).thenReturn(TransactionType.FRONTIER);
-    boolean frontierResult = provider.test(transaction);
+    boolean frontierResult = provider.isPermitted(transaction);
 
     // When - ACCESS_LIST transaction
     when(transaction.getType()).thenReturn(TransactionType.ACCESS_LIST);
-    boolean accessListResult = provider.test(transaction);
+    boolean accessListResult = provider.isPermitted(transaction);
 
     // When - EIP1559 transaction
     when(transaction.getType()).thenReturn(TransactionType.EIP1559);
-    boolean eip1559Result = provider.test(transaction);
+    boolean eip1559Result = provider.isPermitted(transaction);
 
     // Then
     assertThat(frontierResult).isTrue();
