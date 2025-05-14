@@ -52,19 +52,19 @@ public class LineaPermissioningPluginTest {
 
   @Test
   public void shouldRegisterWithServiceManager() {
-    // When
+    // Act
     plugin.doRegister(serviceManager);
 
-    // Then
+    // Assert
     verify(serviceManager).getService(PermissioningService.class);
   }
 
   @Test
   public void shouldThrowExceptionWhenPermissioningServiceNotAvailable() {
-    // Given
+    // Arrange
     when(serviceManager.getService(PermissioningService.class)).thenReturn(Optional.empty());
 
-    // When/Then
+    // Act/Assert
     assertThatThrownBy(() -> plugin.doRegister(serviceManager))
         .isInstanceOf(RuntimeException.class)
         .hasMessageContaining("Failed to obtain PermissioningService from the ServiceManager");
@@ -72,64 +72,96 @@ public class LineaPermissioningPluginTest {
 
   @Test
   public void shouldRegisterTransactionPermissioningProvider() {
-    // Given
+    // Arrange
     plugin.doRegister(serviceManager);
 
-    // When
+    // Act
     plugin.doStart();
 
-    // Then
+    // Assert
     verify(permissioningService)
         .registerTransactionPermissioningProvider(any(TransactionPermissioningProvider.class));
   }
 
   @Test
   public void shouldRejectBlobTransactions() {
-    // Given
+    // Arrange
     plugin.doRegister(serviceManager);
     plugin.doStart();
 
-    // Capture the transaction permissioning provider
+    // Get TransactionPermissioningProvider instance
     ArgumentCaptor<TransactionPermissioningProvider> providerCaptor =
         ArgumentCaptor.forClass(TransactionPermissioningProvider.class);
     verify(permissioningService).registerTransactionPermissioningProvider(providerCaptor.capture());
     TransactionPermissioningProvider provider = providerCaptor.getValue();
 
-    // When - BLOB transaction
+    // Act - BLOB transaction
     when(transaction.getType()).thenReturn(TransactionType.BLOB);
     boolean blobResult = provider.isPermitted(transaction);
 
-    // Then
+    // Assert
     assertThat(blobResult).isFalse();
   }
 
   @Test
-  public void shouldAcceptNonBlobTransactions() {
-    // Given
+  public void shouldPermitLegacyTransactions() {
+    // Arrange
     plugin.doRegister(serviceManager);
     plugin.doStart();
 
-    // Capture the transaction permissioning provider
+    // Get TransactionPermissioningProvider instance
     ArgumentCaptor<TransactionPermissioningProvider> providerCaptor =
         ArgumentCaptor.forClass(TransactionPermissioningProvider.class);
     verify(permissioningService).registerTransactionPermissioningProvider(providerCaptor.capture());
     TransactionPermissioningProvider provider = providerCaptor.getValue();
 
-    // When - FRONTIER transaction
+    // Act - LEGACY/FRONTIER transaction
     when(transaction.getType()).thenReturn(TransactionType.FRONTIER);
-    boolean frontierResult = provider.isPermitted(transaction);
+    boolean result = provider.isPermitted(transaction);
 
-    // When - ACCESS_LIST transaction
-    when(transaction.getType()).thenReturn(TransactionType.ACCESS_LIST);
-    boolean accessListResult = provider.isPermitted(transaction);
-
-    // When - EIP1559 transaction
-    when(transaction.getType()).thenReturn(TransactionType.EIP1559);
-    boolean eip1559Result = provider.isPermitted(transaction);
-
-    // Then
-    assertThat(frontierResult).isTrue();
-    assertThat(accessListResult).isTrue();
-    assertThat(eip1559Result).isTrue();
+    // Assert
+    assertThat(result).isTrue();
   }
+
+  @Test
+  public void shouldPermitAccessListTransactions() {
+    // Arrange
+    plugin.doRegister(serviceManager);
+    plugin.doStart();
+
+    // Get TransactionPermissioningProvider instance
+    ArgumentCaptor<TransactionPermissioningProvider> providerCaptor =
+        ArgumentCaptor.forClass(TransactionPermissioningProvider.class);
+    verify(permissioningService).registerTransactionPermissioningProvider(providerCaptor.capture());
+    TransactionPermissioningProvider provider = providerCaptor.getValue();
+
+    // Act - ACCESS_LIST transaction
+    when(transaction.getType()).thenReturn(TransactionType.ACCESS_LIST);
+    boolean result = provider.isPermitted(transaction);
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void shouldPermitEIP1559ransactions() {
+    // Arrange
+    plugin.doRegister(serviceManager);
+    plugin.doStart();
+
+    // Get TransactionPermissioningProvider instance
+    ArgumentCaptor<TransactionPermissioningProvider> providerCaptor =
+        ArgumentCaptor.forClass(TransactionPermissioningProvider.class);
+    verify(permissioningService).registerTransactionPermissioningProvider(providerCaptor.capture());
+    TransactionPermissioningProvider provider = providerCaptor.getValue();
+
+    // Act - EIP1559 transaction
+    when(transaction.getType()).thenReturn(TransactionType.EIP1559);
+    boolean result = provider.isPermitted(transaction);
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  // TODO: Discuss if we should permit or block DELEGATE_CODE or EIP7702 tx
 }
