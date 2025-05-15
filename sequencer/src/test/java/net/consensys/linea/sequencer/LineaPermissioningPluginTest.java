@@ -97,12 +97,7 @@ public class LineaPermissioningPluginTest {
     when(lineaPermissioningConfiguration.blobTxEnabled()).thenReturn(false);
     plugin.doRegister(serviceManager);
     plugin.doStart();
-
-    // Get TransactionPermissioningProvider instance
-    ArgumentCaptor<TransactionPermissioningProvider> providerCaptor =
-        ArgumentCaptor.forClass(TransactionPermissioningProvider.class);
-    verify(permissioningService).registerTransactionPermissioningProvider(providerCaptor.capture());
-    TransactionPermissioningProvider provider = providerCaptor.getValue();
+    final TransactionPermissioningProvider provider = this.getTransactionPermissioningProvider();
 
     // Act - BLOB transaction
     when(transaction.getType()).thenReturn(TransactionType.BLOB);
@@ -118,12 +113,7 @@ public class LineaPermissioningPluginTest {
     when(lineaPermissioningConfiguration.blobTxEnabled()).thenReturn(false);
     plugin.doRegister(serviceManager);
     plugin.doStart();
-
-    // Get TransactionPermissioningProvider instance
-    ArgumentCaptor<TransactionPermissioningProvider> providerCaptor =
-        ArgumentCaptor.forClass(TransactionPermissioningProvider.class);
-    verify(permissioningService).registerTransactionPermissioningProvider(providerCaptor.capture());
-    TransactionPermissioningProvider provider = providerCaptor.getValue();
+    final TransactionPermissioningProvider provider = this.getTransactionPermissioningProvider();
 
     // Act - EIP7702 transaction
     when(transaction.getType()).thenReturn(TransactionType.DELEGATE_CODE);
@@ -139,12 +129,7 @@ public class LineaPermissioningPluginTest {
     when(lineaPermissioningConfiguration.blobTxEnabled()).thenReturn(false);
     plugin.doRegister(serviceManager);
     plugin.doStart();
-
-    // Get TransactionPermissioningProvider instance
-    ArgumentCaptor<TransactionPermissioningProvider> providerCaptor =
-        ArgumentCaptor.forClass(TransactionPermissioningProvider.class);
-    verify(permissioningService).registerTransactionPermissioningProvider(providerCaptor.capture());
-    TransactionPermissioningProvider provider = providerCaptor.getValue();
+    final TransactionPermissioningProvider provider = this.getTransactionPermissioningProvider();
 
     // Act - LEGACY/FRONTIER transaction
     when(transaction.getType()).thenReturn(TransactionType.FRONTIER);
@@ -160,12 +145,7 @@ public class LineaPermissioningPluginTest {
     when(lineaPermissioningConfiguration.blobTxEnabled()).thenReturn(false);
     plugin.doRegister(serviceManager);
     plugin.doStart();
-
-    // Get TransactionPermissioningProvider instance
-    ArgumentCaptor<TransactionPermissioningProvider> providerCaptor =
-        ArgumentCaptor.forClass(TransactionPermissioningProvider.class);
-    verify(permissioningService).registerTransactionPermissioningProvider(providerCaptor.capture());
-    TransactionPermissioningProvider provider = providerCaptor.getValue();
+    final TransactionPermissioningProvider provider = this.getTransactionPermissioningProvider();
 
     // Act - ACCESS_LIST transaction
     when(transaction.getType()).thenReturn(TransactionType.ACCESS_LIST);
@@ -181,12 +161,7 @@ public class LineaPermissioningPluginTest {
     when(lineaPermissioningConfiguration.blobTxEnabled()).thenReturn(false);
     plugin.doRegister(serviceManager);
     plugin.doStart();
-
-    // Get TransactionPermissioningProvider instance
-    ArgumentCaptor<TransactionPermissioningProvider> providerCaptor =
-        ArgumentCaptor.forClass(TransactionPermissioningProvider.class);
-    verify(permissioningService).registerTransactionPermissioningProvider(providerCaptor.capture());
-    TransactionPermissioningProvider provider = providerCaptor.getValue();
+    final TransactionPermissioningProvider provider = this.getTransactionPermissioningProvider();
 
     // Act - EIP1559 transaction
     when(transaction.getType()).thenReturn(TransactionType.EIP1559);
@@ -202,12 +177,7 @@ public class LineaPermissioningPluginTest {
     when(lineaPermissioningConfiguration.blobTxEnabled()).thenReturn(true);
     plugin.doRegister(serviceManager);
     plugin.doStart();
-
-    // Get TransactionPermissioningProvider instance
-    ArgumentCaptor<TransactionPermissioningProvider> providerCaptor =
-        ArgumentCaptor.forClass(TransactionPermissioningProvider.class);
-    verify(permissioningService).registerTransactionPermissioningProvider(providerCaptor.capture());
-    TransactionPermissioningProvider provider = providerCaptor.getValue();
+    final TransactionPermissioningProvider provider = this.getTransactionPermissioningProvider();
 
     // Act - BLOB transaction
     when(transaction.getType()).thenReturn(TransactionType.BLOB);
@@ -215,5 +185,12 @@ public class LineaPermissioningPluginTest {
 
     // Assert
     assertThat(result).isTrue();
+  }
+
+  private TransactionPermissioningProvider getTransactionPermissioningProvider() {
+    ArgumentCaptor<TransactionPermissioningProvider> providerCaptor =
+        ArgumentCaptor.forClass(TransactionPermissioningProvider.class);
+    verify(permissioningService).registerTransactionPermissioningProvider(providerCaptor.capture());
+    return providerCaptor.getValue();
   }
 }
