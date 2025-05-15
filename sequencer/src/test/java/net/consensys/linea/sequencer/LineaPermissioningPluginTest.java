@@ -104,6 +104,26 @@ public class LineaPermissioningPluginTest {
   }
 
   @Test
+  public void shouldRejectEIP7702Transactions() {
+    // Arrange
+    plugin.doRegister(serviceManager);
+    plugin.doStart();
+
+    // Get TransactionPermissioningProvider instance
+    ArgumentCaptor<TransactionPermissioningProvider> providerCaptor =
+        ArgumentCaptor.forClass(TransactionPermissioningProvider.class);
+    verify(permissioningService).registerTransactionPermissioningProvider(providerCaptor.capture());
+    TransactionPermissioningProvider provider = providerCaptor.getValue();
+
+    // Act - BLOB transaction
+    when(transaction.getType()).thenReturn(TransactionType.DELEGATE_CODE);
+    boolean blobResult = provider.isPermitted(transaction);
+
+    // Assert
+    assertThat(blobResult).isFalse();
+  }
+
+  @Test
   public void shouldPermitLegacyTransactions() {
     // Arrange
     plugin.doRegister(serviceManager);

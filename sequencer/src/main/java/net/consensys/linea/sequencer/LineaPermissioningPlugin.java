@@ -57,11 +57,14 @@ public class LineaPermissioningPlugin extends AbstractLineaRequiredPlugin {
   public void doStart() {
     permissioningService.registerTransactionPermissioningProvider(
         (tx) -> {
-          // TODO: Enable configurable rather than hardcoded behaviour for tx filtering
-          if (tx.getType() == TransactionType.BLOB) {
-            return false;
+          if (tx.getType() == TransactionType.FRONTIER
+              || tx.getType() == TransactionType.ACCESS_LIST
+              || tx.getType() == TransactionType.EIP1559) {
+            return true;
           }
-          return true;
+          // TODO: Enable configurable rather than hardcoded behaviour for tx filtering, e.g. flag
+          // for enable blob tx
+          return false;
         });
   }
 
