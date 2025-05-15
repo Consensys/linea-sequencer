@@ -20,9 +20,10 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import lombok.extern.slf4j.Slf4j;
+import net.consensys.linea.blob.BlobCompressorVersion;
+import net.consensys.linea.blob.GoNativeBlobCompressorFactory;
 import net.consensys.linea.bundles.BundlePoolService;
 import net.consensys.linea.bundles.LineaLimitedBundlePool;
-import net.consensys.linea.compress.LibCompress;
 import net.consensys.linea.config.LineaBundleCliOptions;
 import net.consensys.linea.config.LineaBundleConfiguration;
 import net.consensys.linea.config.LineaProfitabilityCliOptions;
@@ -78,7 +79,7 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
 
   static {
     // force the initialization of the gnark compress native library to fail fast in case of issues
-    LibCompress.CompressedSize(new byte[0], 0);
+    GoNativeBlobCompressorFactory.Companion.getInstance(BlobCompressorVersion.V1_0_1);
   }
 
   @Override
