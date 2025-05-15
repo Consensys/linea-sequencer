@@ -18,6 +18,7 @@ package net.consensys.linea.sequencer;
 import com.google.auto.service.AutoService;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
+import net.consensys.linea.config.LineaPermissioningConfiguration;
 import org.hyperledger.besu.datatypes.TransactionType;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
@@ -55,6 +56,9 @@ public class LineaPermissioningPlugin extends AbstractLineaRequiredPlugin {
 
   @Override
   public void doStart() {
+    LineaPermissioningConfiguration config = permissioningConfiguration();
+    log.info("Linea Permissioning Plugin starting with blobTxEnabled={}", config.getBlobTxEnabled());
+    
     permissioningService.registerTransactionPermissioningProvider(
         (tx) -> {
           if (tx.getType() == TransactionType.FRONTIER
@@ -62,8 +66,10 @@ public class LineaPermissioningPlugin extends AbstractLineaRequiredPlugin {
               || tx.getType() == TransactionType.EIP1559) {
             return true;
           }
-          // TODO: Enable configurable rather than hardcoded behaviour for tx filtering, e.g. flag
-          // for enable blob tx
+          // Check if BLOB transactions are enabled via configuration
+          if (tx.getType() == TransactionType.BLOB && config.getBlobTxEnabled()) {
+            return true;
+          }
           return false;
         });
   }

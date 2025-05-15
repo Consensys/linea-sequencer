@@ -102,6 +102,8 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
         LineaRejectedTxReportingCliOptions.create().asPluginConfig());
     configMap.put(
         LineaBundleCliOptions.CONFIG_KEY, LineaBundleCliOptions.create().asPluginConfig());
+    configMap.put(
+        LineaPermissioningCliOptions.CONFIG_KEY, new LineaPermissioningCliOptions().create().asPluginConfig());
     return configMap;
   }
 
@@ -138,6 +140,11 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
   public LineaBundleConfiguration bundleConfiguration() {
     return (LineaBundleConfiguration)
         getConfigurationByKey(LineaBundleCliOptions.CONFIG_KEY).optionsConfig();
+  }
+
+  public LineaPermissioningConfiguration permissioningConfiguration() {
+    return (LineaPermissioningConfiguration)
+        getConfigurationByKey(LineaPermissioningCliOptions.CONFIG_KEY).optionsConfig();
   }
 
   @Override

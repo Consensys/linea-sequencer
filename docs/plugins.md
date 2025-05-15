@@ -98,12 +98,13 @@ This plugin uses Besu's `PermissioningService` to filter transactions at multipl
 2. Transaction pool - when a Besu node adds to its local transaction pool
 3. Block production - when a Besu node builds a block
 
-The plugin currently implements transaction filtering to reject BLOB transactions (EIP-4844). In the future, this plugin
-may consolidate logic from other transaction-filtering plugins to unify transaction filtering logic.
+The plugin implements transaction filtering for BLOB transactions (EIP-4844), which can be enabled or disabled via configuration. In the future, this plugin may consolidate logic from other transaction-filtering plugins to unify transaction filtering logic.
 
 #### CLI options
 
-Currently, there are no specific CLI options for this plugin, as its behavior is hardcoded to reject BLOB transactions.
+| Command Line Argument                | Default Value |
+|--------------------------------------|---------------|
+| `--plugin-linea-blob-tx-enabled`     | false         |
 
 ### Reporting rejected transactions 
 The transaction selection and validation plugins can report rejected transactions as JSON-RPC calls to an external 

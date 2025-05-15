@@ -22,6 +22,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.Optional;
 
+import net.consensys.linea.config.LineaPermissioningConfiguration;
 import org.hyperledger.besu.datatypes.TransactionType;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.plugin.ServiceManager;
@@ -84,7 +85,7 @@ public class LineaPermissioningPluginTest {
   }
 
   @Test
-  public void shouldRejectBlobTransactions() {
+  public void shouldRejectBlobTransactionsByDefault() {
     // Arrange
     plugin.doRegister(serviceManager);
     plugin.doStart();
@@ -177,6 +178,33 @@ public class LineaPermissioningPluginTest {
 
     // Act - EIP1559 transaction
     when(transaction.getType()).thenReturn(TransactionType.EIP1559);
+    boolean result = provider.isPermitted(transaction);
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+  
+  @Test
+  public void shouldPermitBlobTransactionsWhenEnabled() {
+    // Arrange
+    LineaPermissioningPlugin blobEnabledPlugin = new LineaPermissioningPlugin() {
+      @Override
+      public LineaPermissioningConfiguration permissioningConfiguration() {
+        boolean blobTxEnabled = true;
+        return new LineaPermissioningConfiguration(blobTxEnabled);
+      }
+    };
+    blobEnabledPlugin.doRegister(serviceManager);
+    blobEnabledPlugin.doStart();
+
+    // Get TransactionPermissioningProvider instance
+    ArgumentCaptor<TransactionPermissioningProvider> providerCaptor =
+        ArgumentCaptor.forClass(TransactionPermissioningProvider.class);
+    verify(permissioningService).registerTransactionPermissioningProvider(providerCaptor.capture());
+    TransactionPermissioningProvider provider = providerCaptor.getValue();
+
+    // Act - BLOB transaction
+    when(transaction.getType()).thenReturn(TransactionType.BLOB);
     boolean result = provider.isPermitted(transaction);
 
     // Assert
