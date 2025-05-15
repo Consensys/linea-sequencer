@@ -92,10 +92,10 @@ public class BlobTransactionDenialTest extends LineaPluginTestBase {
 
   @Test
   public void blobTransactionsAreRejected() throws Exception {
-    // Send a blob transaction
+    // Act - Send a blob transaction
     EthSendTransaction response = sendRawBlobTransaction();
 
-    // Verify the transaction was rejected
+    // Assert
     assertThat(response.hasError()).isTrue();
     assertThat(response.getError().getMessage()).contains("transaction type not supported");
   }
