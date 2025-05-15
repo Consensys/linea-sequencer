@@ -41,9 +41,12 @@ public class BlobTransactionDenialTest extends LineaPluginTestBase {
   private static final BigInteger GAS_PRICE = DefaultGasProvider.GAS_PRICE;
   private static final BigInteger GAS_LIMIT = DefaultGasProvider.GAS_LIMIT;
   private static final BigInteger VALUE = BigInteger.ZERO;
+  private static final String DATA = "0x";
+
   private Web3j web3j;
   private Credentials credentials;
   private TransactionManager txManager;
+  private String recipient;
 
   @Override
   @BeforeEach
@@ -52,81 +55,53 @@ public class BlobTransactionDenialTest extends LineaPluginTestBase {
     web3j = minerNode.nodeRequests().eth();
     credentials = Credentials.create(Accounts.GENESIS_ACCOUNT_ONE_PRIVATE_KEY);
     txManager = new RawTransactionManager(web3j, credentials, CHAIN_ID);
+    recipient = accounts.getSecondaryBenefactor().getAddress();
+  }
+
+  @Test
+  public void legacyTransactionsAreAccepted() throws Exception {
+    // Act - Send a legacy transaction
+    String txHash =
+        txManager
+            .sendTransaction(GAS_PRICE, GAS_LIMIT, recipient, DATA, VALUE)
+            .getTransactionHash();
+
+    // Assert
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(txHash));
+  }
+
+  @Test
+  public void eip1559TransactionsAreAccepted() throws Exception {
+    // Act - Send an EIP-1559 transaction
+    String txHash =
+        txManager
+            .sendEIP1559Transaction(
+                CHAIN_ID, GAS_PRICE, GAS_PRICE, GAS_LIMIT, recipient, DATA, VALUE)
+            .getTransactionHash();
+
+    // Assert
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(txHash));
   }
 
   @Test
   public void blobTransactionsAreRejected() throws Exception {
-    // Create a blob transaction
-    String recipient = accounts.getSecondaryBenefactor().getAddress();
-    String data = "0x"; // Empty data
-
-    // Send a raw blob transaction
-    EthSendTransaction response = sendRawBlobTransaction(recipient, data);
+    // Send a blob transaction
+    EthSendTransaction response = sendRawBlobTransaction();
 
     // Verify the transaction was rejected
     assertThat(response.hasError()).isTrue();
     assertThat(response.getError().getMessage()).contains("transaction type not supported");
   }
 
-  @Test
-  public void nonBlobTransactionsAreAccepted() throws Exception {
-    // Create a regular transaction
-    String recipient = accounts.getSecondaryBenefactor().getAddress();
-    String data = "0x"; // Empty data
-
-    // Send a regular transaction
-    String txHash =
-        txManager
-            .sendTransaction(GAS_PRICE, GAS_LIMIT, recipient, data, VALUE)
-            .getTransactionHash();
-
-    // Verify the transaction was accepted and mined
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(txHash));
-  }
-
-  @Test
-  public void mixedTransactionTypesAreFilteredCorrectly() throws Exception {
-    // Create a regular transaction
-    String recipient = accounts.getSecondaryBenefactor().getAddress();
-    String data = "0x"; // Empty data
-
-    // Send a regular transaction
-    String regularTxHash =
-        txManager
-            .sendTransaction(GAS_PRICE, GAS_LIMIT, recipient, data, VALUE)
-            .getTransactionHash();
-
-    // Send a blob transaction
-    EthSendTransaction blobResponse = sendRawBlobTransaction(recipient, data);
-
-    // Send another regular transaction
-    String regularTxHash2 =
-        txManager
-            .sendTransaction(GAS_PRICE, GAS_LIMIT, recipient, data, VALUE)
-            .getTransactionHash();
-
-    // Verify the regular transactions were accepted and mined
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(regularTxHash));
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(regularTxHash2));
-
-    // Verify the blob transaction was rejected
-    assertThat(blobResponse.hasError()).isTrue();
-    assertThat(blobResponse.getError().getMessage()).contains("transaction type not supported");
-  }
+  // TODO - Test that block import from one node to another fails for blob tx
 
   /**
    * Helper method to send a raw blob transaction.
    *
-   * @param to The recipient address
-   * @param data The transaction data
    * @return The response from the node
    * @throws IOException If there's an error sending the transaction
    */
-  private EthSendTransaction sendRawBlobTransaction(String to, String data) throws IOException {
-    // Create a blob transaction (type 0x03)
-    // Note: This is a simplified version that creates the transaction envelope
-    // with the correct type but doesn't include actual blob data
-
+  private EthSendTransaction sendRawBlobTransaction() throws IOException {
     // Get the next nonce
     BigInteger nonce =
         web3j
@@ -135,38 +110,16 @@ public class BlobTransactionDenialTest extends LineaPluginTestBase {
             .send()
             .getTransactionCount();
 
-    // Create a raw transaction with type 0x03 (BLOB)
-    byte[] signedTx =
-        createSignedBlobTransaction(
-            nonce, to, VALUE, GAS_LIMIT, GAS_PRICE, Numeric.hexStringToByteArray(data));
-
-    // Send the raw transaction
-    return web3j.ethSendRawTransaction(Numeric.toHexString(signedTx)).send();
-  }
-
-  /**
-   * Creates a signed blob transaction.
-   *
-   * @param nonce The transaction nonce
-   * @param to The recipient address
-   * @param value The transaction value
-   * @param gasLimit The gas limit
-   * @param gasPrice The gas price
-   * @param data The transaction data
-   * @return The signed transaction bytes
-   */
-  private byte[] createSignedBlobTransaction(
-      BigInteger nonce,
-      String to,
-      BigInteger value,
-      BigInteger gasLimit,
-      BigInteger gasPrice,
-      byte[] data) {
-
-    // Create a transaction with type 0x03 (BLOB)
     RawTransaction rawTransaction =
         RawTransaction.createTransaction(
-            CHAIN_ID, nonce, gasLimit, to, value, Numeric.toHexString(data), gasPrice, gasPrice);
+            CHAIN_ID,
+            nonce,
+            GAS_LIMIT,
+            recipient,
+            VALUE,
+            Numeric.toHexString(Numeric.hexStringToByteArray(DATA)),
+            GAS_PRICE,
+            GAS_PRICE);
 
     // Sign the transaction
     byte[] signedMessage = TransactionEncoder.signMessage(rawTransaction, credentials);
@@ -176,6 +129,7 @@ public class BlobTransactionDenialTest extends LineaPluginTestBase {
     modifiedSignedMessage[0] = 0x03; // BLOB transaction type
     System.arraycopy(signedMessage, 1, modifiedSignedMessage, 1, signedMessage.length - 1);
 
-    return modifiedSignedMessage;
+    // Send the raw transaction
+    return web3j.ethSendRawTransaction(Numeric.toHexString(modifiedSignedMessage)).send();
   }
 }
