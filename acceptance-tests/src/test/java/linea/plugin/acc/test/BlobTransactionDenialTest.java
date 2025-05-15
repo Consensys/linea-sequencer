@@ -18,14 +18,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.util.List;
 
+import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes48;
+import org.hyperledger.besu.datatypes.Hash;
+import org.hyperledger.besu.datatypes.VersionedHash;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Accounts;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.web3j.crypto.Blob;
 import org.web3j.crypto.Credentials;
 import org.web3j.crypto.RawTransaction;
 import org.web3j.crypto.TransactionEncoder;
 import org.web3j.protocol.Web3j;
+import org.web3j.protocol.core.DefaultBlockParameterName;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.tx.RawTransactionManager;
 import org.web3j.tx.TransactionManager;
@@ -95,41 +102,33 @@ public class BlobTransactionDenialTest extends LineaPluginTestBase {
 
   // TODO - Test that block import from one node to another fails for blob tx
 
-  /**
-   * Helper method to send a raw blob transaction.
-   *
-   * @return The response from the node
-   * @throws IOException If there's an error sending the transaction
-   */
   private EthSendTransaction sendRawBlobTransaction() throws IOException {
-    // Get the next nonce
     BigInteger nonce =
         web3j
-            .ethGetTransactionCount(
-                credentials.getAddress(), org.web3j.protocol.core.DefaultBlockParameterName.PENDING)
+            .ethGetTransactionCount(credentials.getAddress(), DefaultBlockParameterName.PENDING)
             .send()
             .getTransactionCount();
-
-    RawTransaction rawTransaction =
+    List<Blob> blobs = List.of(new Blob(Bytes.random(32 * 4096)));
+    final List<Bytes> kzgCommitments = List.of(Bytes48.random());
+    final List<Bytes> kzgProofs = List.of(Bytes48.random());
+    final List<Bytes> versionedHashes = List.of((new VersionedHash((byte) 1, Hash.ZERO)).toBytes());
+    final RawTransaction rawTransaction =
         RawTransaction.createTransaction(
+            blobs,
+            kzgCommitments,
+            kzgProofs,
             CHAIN_ID,
             nonce,
+            GAS_PRICE,
+            GAS_PRICE,
             GAS_LIMIT,
             recipient,
             VALUE,
-            Numeric.toHexString(Numeric.hexStringToByteArray(DATA)),
-            GAS_PRICE,
-            GAS_PRICE);
-
-    // Sign the transaction
+            DATA,
+            BigInteger.ONE,
+            versionedHashes);
     byte[] signedMessage = TransactionEncoder.signMessage(rawTransaction, credentials);
-
-    // Modify the transaction type to BLOB (0x03)
-    byte[] modifiedSignedMessage = new byte[signedMessage.length + 1];
-    modifiedSignedMessage[0] = 0x03; // BLOB transaction type
-    System.arraycopy(signedMessage, 1, modifiedSignedMessage, 1, signedMessage.length - 1);
-
-    // Send the raw transaction
-    return web3j.ethSendRawTransaction(Numeric.toHexString(modifiedSignedMessage)).send();
+    String hexValue = Numeric.toHexString(signedMessage);
+    return web3j.ethSendRawTransaction(hexValue).send();
   }
 }
