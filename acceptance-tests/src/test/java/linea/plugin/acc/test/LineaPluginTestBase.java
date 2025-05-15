@@ -167,7 +167,8 @@ public abstract class LineaPluginTestBase extends AcceptanceTestBase {
                     "LineaTransactionPoolValidatorPlugin",
                     "LineaTransactionSelectorPlugin",
                     "LineaBundleEndpointsPlugin",
-                    "ForwardBundlesPlugin"));
+                    "ForwardBundlesPlugin",
+                    "LineaPermissioningPlugin"));
 
     return besu.create(nodeConfBuilder.build());
   }

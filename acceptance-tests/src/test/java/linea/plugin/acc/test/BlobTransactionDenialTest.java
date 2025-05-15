@@ -16,18 +16,20 @@ package linea.plugin.acc.test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import com.google.common.io.Resources;
 import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.bytes.Bytes48;
-import org.hyperledger.besu.datatypes.Hash;
-import org.hyperledger.besu.datatypes.VersionedHash;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Accounts;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.web3j.crypto.Blob;
+import org.web3j.crypto.BlobUtils;
 import org.web3j.crypto.Credentials;
 import org.web3j.crypto.RawTransaction;
 import org.web3j.crypto.TransactionEncoder;
@@ -90,6 +92,8 @@ public class BlobTransactionDenialTest extends LineaPluginTestBase {
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(txHash));
   }
 
+  // Note that this currently passes as Besu Node does not support blob tx
+  // It is not currently a test that the LineaPermissioningPlugin is blocking blob tx
   @Test
   public void blobTransactionsAreRejected() throws Exception {
     // Act - Send a blob transaction
@@ -97,7 +101,7 @@ public class BlobTransactionDenialTest extends LineaPluginTestBase {
 
     // Assert
     assertThat(response.hasError()).isTrue();
-    assertThat(response.getError().getMessage()).contains("transaction type not supported");
+    assertThat(response.getError().getMessage()).contains("Invalid transaction type");
   }
 
   // TODO - Test that block import from one node to another fails for blob tx
@@ -108,15 +112,18 @@ public class BlobTransactionDenialTest extends LineaPluginTestBase {
             .ethGetTransactionCount(credentials.getAddress(), DefaultBlockParameterName.PENDING)
             .send()
             .getTransactionCount();
-    List<Blob> blobs = List.of(new Blob(Bytes.random(32 * 4096)));
-    final List<Bytes> kzgCommitments = List.of(Bytes48.random());
-    final List<Bytes> kzgProofs = List.of(Bytes48.random());
-    final List<Bytes> versionedHashes = List.of((new VersionedHash((byte) 1, Hash.ZERO)).toBytes());
+
+    URL blobUrl = new File(getResourcePath("/blob.txt")).toURI().toURL();
+    final var blobHexString = Resources.toString(blobUrl, StandardCharsets.UTF_8);
+    final Blob blob = new Blob(Numeric.hexStringToByteArray(blobHexString));
+    final Bytes kzgCommitment = BlobUtils.getCommitment(blob);
+    final Bytes kzgProof = BlobUtils.getProof(blob, kzgCommitment);
+    final Bytes versionedHash = BlobUtils.kzgToVersionedHash(kzgCommitment);
     final RawTransaction rawTransaction =
         RawTransaction.createTransaction(
-            blobs,
-            kzgCommitments,
-            kzgProofs,
+            List.of(blob),
+            List.of(kzgCommitment),
+            List.of(kzgProof),
             CHAIN_ID,
             nonce,
             GAS_PRICE,
@@ -126,7 +133,7 @@ public class BlobTransactionDenialTest extends LineaPluginTestBase {
             VALUE,
             DATA,
             BigInteger.ONE,
-            versionedHashes);
+            List.of(versionedHash));
     byte[] signedMessage = TransactionEncoder.signMessage(rawTransaction, credentials);
     String hexValue = Numeric.toHexString(signedMessage);
     return web3j.ethSendRawTransaction(hexValue).send();
