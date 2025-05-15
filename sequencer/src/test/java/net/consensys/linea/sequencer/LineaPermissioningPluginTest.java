@@ -41,12 +41,19 @@ public class LineaPermissioningPluginTest {
   @Mock private ServiceManager serviceManager;
   @Mock private PermissioningService permissioningService;
   @Mock private Transaction transaction;
+  @Mock private LineaPermissioningConfiguration lineaPermissioningConfiguration;
 
   private LineaPermissioningPlugin plugin;
 
   @BeforeEach
   public void setUp() {
-    plugin = new LineaPermissioningPlugin();
+    plugin =
+        new LineaPermissioningPlugin() {
+          @Override
+          public LineaPermissioningConfiguration permissioningConfiguration() {
+            return lineaPermissioningConfiguration;
+          }
+        };
     when(serviceManager.getService(PermissioningService.class))
         .thenReturn(Optional.of(permissioningService));
   }
@@ -87,6 +94,7 @@ public class LineaPermissioningPluginTest {
   @Test
   public void shouldRejectBlobTransactionsByDefault() {
     // Arrange
+    when(lineaPermissioningConfiguration.blobTxEnabled()).thenReturn(false);
     plugin.doRegister(serviceManager);
     plugin.doStart();
 
@@ -98,15 +106,16 @@ public class LineaPermissioningPluginTest {
 
     // Act - BLOB transaction
     when(transaction.getType()).thenReturn(TransactionType.BLOB);
-    boolean blobResult = provider.isPermitted(transaction);
+    boolean result = provider.isPermitted(transaction);
 
     // Assert
-    assertThat(blobResult).isFalse();
+    assertThat(result).isFalse();
   }
 
   @Test
-  public void shouldRejectEIP7702Transactions() {
+  public void shouldPermitEIP7702Transactions() {
     // Arrange
+    when(lineaPermissioningConfiguration.blobTxEnabled()).thenReturn(false);
     plugin.doRegister(serviceManager);
     plugin.doStart();
 
@@ -116,17 +125,18 @@ public class LineaPermissioningPluginTest {
     verify(permissioningService).registerTransactionPermissioningProvider(providerCaptor.capture());
     TransactionPermissioningProvider provider = providerCaptor.getValue();
 
-    // Act - BLOB transaction
+    // Act - EIP7702 transaction
     when(transaction.getType()).thenReturn(TransactionType.DELEGATE_CODE);
-    boolean blobResult = provider.isPermitted(transaction);
+    boolean result = provider.isPermitted(transaction);
 
     // Assert
-    assertThat(blobResult).isFalse();
+    assertThat(result).isTrue();
   }
 
   @Test
   public void shouldPermitLegacyTransactions() {
     // Arrange
+    when(lineaPermissioningConfiguration.blobTxEnabled()).thenReturn(false);
     plugin.doRegister(serviceManager);
     plugin.doStart();
 
@@ -147,6 +157,7 @@ public class LineaPermissioningPluginTest {
   @Test
   public void shouldPermitAccessListTransactions() {
     // Arrange
+    when(lineaPermissioningConfiguration.blobTxEnabled()).thenReturn(false);
     plugin.doRegister(serviceManager);
     plugin.doStart();
 
@@ -165,8 +176,9 @@ public class LineaPermissioningPluginTest {
   }
 
   @Test
-  public void shouldPermitEIP1559ransactions() {
+  public void shouldPermitEIP1559Transactions() {
     // Arrange
+    when(lineaPermissioningConfiguration.blobTxEnabled()).thenReturn(false);
     plugin.doRegister(serviceManager);
     plugin.doStart();
 
@@ -183,19 +195,13 @@ public class LineaPermissioningPluginTest {
     // Assert
     assertThat(result).isTrue();
   }
-  
+
   @Test
   public void shouldPermitBlobTransactionsWhenEnabled() {
     // Arrange
-    LineaPermissioningPlugin blobEnabledPlugin = new LineaPermissioningPlugin() {
-      @Override
-      public LineaPermissioningConfiguration permissioningConfiguration() {
-        boolean blobTxEnabled = true;
-        return new LineaPermissioningConfiguration(blobTxEnabled);
-      }
-    };
-    blobEnabledPlugin.doRegister(serviceManager);
-    blobEnabledPlugin.doStart();
+    when(lineaPermissioningConfiguration.blobTxEnabled()).thenReturn(true);
+    plugin.doRegister(serviceManager);
+    plugin.doStart();
 
     // Get TransactionPermissioningProvider instance
     ArgumentCaptor<TransactionPermissioningProvider> providerCaptor =
@@ -210,6 +216,4 @@ public class LineaPermissioningPluginTest {
     // Assert
     assertThat(result).isTrue();
   }
-
-  // TODO: Discuss if we should permit or block DELEGATE_CODE or EIP7702 tx
 }

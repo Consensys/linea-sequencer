@@ -25,6 +25,8 @@ import net.consensys.linea.bundles.LineaLimitedBundlePool;
 import net.consensys.linea.compress.LibCompress;
 import net.consensys.linea.config.LineaBundleCliOptions;
 import net.consensys.linea.config.LineaBundleConfiguration;
+import net.consensys.linea.config.LineaPermissioningCliOptions;
+import net.consensys.linea.config.LineaPermissioningConfiguration;
 import net.consensys.linea.config.LineaProfitabilityCliOptions;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaRejectedTxReportingCliOptions;
@@ -103,7 +105,8 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
     configMap.put(
         LineaBundleCliOptions.CONFIG_KEY, LineaBundleCliOptions.create().asPluginConfig());
     configMap.put(
-        LineaPermissioningCliOptions.CONFIG_KEY, new LineaPermissioningCliOptions().create().asPluginConfig());
+        LineaPermissioningCliOptions.CONFIG_KEY,
+        LineaPermissioningCliOptions.create().asPluginConfig());
     return configMap;
   }
 

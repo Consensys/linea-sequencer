@@ -57,20 +57,12 @@ public class LineaPermissioningPlugin extends AbstractLineaRequiredPlugin {
   @Override
   public void doStart() {
     LineaPermissioningConfiguration config = permissioningConfiguration();
-    log.info("Linea Permissioning Plugin starting with blobTxEnabled={}", config.getBlobTxEnabled());
-    
+    log.info("Linea Permissioning Plugin starting with blobTxEnabled={}", config.blobTxEnabled());
+
     permissioningService.registerTransactionPermissioningProvider(
         (tx) -> {
-          if (tx.getType() == TransactionType.FRONTIER
-              || tx.getType() == TransactionType.ACCESS_LIST
-              || tx.getType() == TransactionType.EIP1559) {
-            return true;
-          }
-          // Check if BLOB transactions are enabled via configuration
-          if (tx.getType() == TransactionType.BLOB && config.getBlobTxEnabled()) {
-            return true;
-          }
-          return false;
+          if (tx.getType() == TransactionType.BLOB && !config.blobTxEnabled()) return false;
+          return true;
         });
   }
 

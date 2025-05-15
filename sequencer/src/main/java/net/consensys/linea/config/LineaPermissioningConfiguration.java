@@ -17,11 +17,7 @@ package net.consensys.linea.config;
 import lombok.Builder;
 import net.consensys.linea.plugins.LineaOptionsConfiguration;
 
-/**
- * The Linea permissioning configuration.
- */
+/** The Linea permissioning configuration. */
 @Builder(toBuilder = true)
-public record LineaPermissioningConfiguration(
-        boolean blobTxEnabled
-    )
+public record LineaPermissioningConfiguration(boolean blobTxEnabled)
     implements LineaOptionsConfiguration {}

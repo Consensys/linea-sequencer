@@ -14,18 +14,12 @@
  */
 package net.consensys.linea.config;
 
-import java.time.Duration;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.function.Function;
-
-import net.consensys.linea.config.LineaTransactionPoolValidatorCliOptions;
-import net.consensys.linea.plugins.LineaOptionsPluginConfiguration;
-import org.hyperledger.besu.plugin.services.BesuConfiguration;
+import com.google.common.base.MoreObjects;
+import net.consensys.linea.plugins.LineaCliOptions;
+import picocli.CommandLine;
 
 /** CLI options specific to the Linea Permissioning Plugin. */
-public class LineaPermissioningCliOptions implements LineaOptionsPluginConfiguration {
+public class LineaPermissioningCliOptions implements LineaCliOptions {
   public static final String CONFIG_KEY = "permissioning-config";
 
   public static final String BLOB_TX_ENABLED = "--plugin-linea-blob-tx-enabled";
@@ -36,8 +30,7 @@ public class LineaPermissioningCliOptions implements LineaOptionsPluginConfigura
       arity = "0..1",
       hidden = true,
       paramLabel = "<BOOLEAN>",
-      description =
-          "Enable blob transactions? (default: ${DEFAULT-VALUE})")
+      description = "Enable blob transactions? (default: ${DEFAULT-VALUE})")
   private boolean blobTxEnabled = DEFAULT_BLOB_TX_ENABLED;
 
   public LineaPermissioningCliOptions() {}
@@ -59,7 +52,7 @@ public class LineaPermissioningCliOptions implements LineaOptionsPluginConfigura
    */
   public static LineaPermissioningCliOptions fromConfig(
       final LineaPermissioningConfiguration config) {
-    final LineaTransactionPoolValidatorCliOptions options = create();
+    final LineaPermissioningCliOptions options = create();
     options.blobTxEnabled = config.blobTxEnabled();
     return options;
   }
@@ -71,15 +64,11 @@ public class LineaPermissioningCliOptions implements LineaOptionsPluginConfigura
    */
   @Override
   public LineaPermissioningConfiguration toDomainObject() {
-    return new LineaPermissioningConfiguration(
-            blobTxEnabled
-        );
+    return new LineaPermissioningConfiguration(blobTxEnabled);
   }
 
   @Override
   public String toString() {
-    return MoreObjects.toStringHelper(this)
-        .add(BLOB_TX_ENABLED, blobTxEnabled)
-        .toString();
+    return MoreObjects.toStringHelper(this).add(BLOB_TX_ENABLED, blobTxEnabled).toString();
   }
 }
