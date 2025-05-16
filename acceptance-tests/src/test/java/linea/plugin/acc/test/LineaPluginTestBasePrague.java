@@ -69,7 +69,6 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
-
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
@@ -204,11 +203,8 @@ public abstract class LineaPluginTestBasePrague extends AcceptanceTestBase {
     return besu.create(nodeConfBuilder.build());
   }
 
-  // Preferably the GenesisConfigurationFactory.createCliqueGenesisConfig function from Besu would
-  // have an override that allows flexible genesis template file path, but this does not exist at
-  // the time of writing.
-  // So regrettably we have hoisted the logic out of
-  // GenesisConfigurationFactory.createCliqueGenesisConfig function to enable flexible file path.
+  // Ideally GenesisConfigurationFactory.createCliqueGenesisConfig would support a custom template
+  // path. So we have resorted to inlining its logic here to allow a flexible file path.
   private String provideGenesisConfig(
       final Collection<? extends RunnableNode> validators, final CliqueOptions cliqueOptions) {
     // Target state
