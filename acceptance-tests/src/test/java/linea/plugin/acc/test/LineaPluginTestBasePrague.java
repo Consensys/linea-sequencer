@@ -180,6 +180,7 @@ public abstract class LineaPluginTestBasePrague extends AcceptanceTestBase {
             .inProcessRpcConfiguration(node.createInProcessRpcConfiguration(extraRpcApis))
             .devMode(false)
             .jsonRpcTxPool()
+            .engineRpcEnabled(true)
             .genesisConfigProvider(
                 validators -> Optional.of(provideGenesisConfig(validators, cliqueOptions)))
             .extraCLIOptions(extraCliOptions)

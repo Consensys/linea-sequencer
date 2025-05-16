@@ -29,7 +29,7 @@ import org.web3j.tx.gas.DefaultGasProvider;
  * Tests that verify the LineaPermissioningPlugin correctly rejects BLOB transactions while allowing
  * other transaction types.
  */
-public class ExampleTest extends LineaPluginTestBase {
+public class ExampleTest extends LineaPluginTestBasePrague {
 
   private static final BigInteger GAS_PRICE = DefaultGasProvider.GAS_PRICE;
   private static final BigInteger GAS_LIMIT = DefaultGasProvider.GAS_LIMIT;
@@ -58,7 +58,8 @@ public class ExampleTest extends LineaPluginTestBase {
         txManager
             .sendTransaction(GAS_PRICE, GAS_LIMIT, recipient, DATA, VALUE)
             .getTransactionHash();
-
+    buildNewBlock();
+    
     // Assert
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(txHash));
   }
