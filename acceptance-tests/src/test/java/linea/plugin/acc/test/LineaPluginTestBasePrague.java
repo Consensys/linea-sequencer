@@ -15,13 +15,12 @@
 
 /*
  * This file initializes a Besu node configured for the Prague fork and makes it available to acceptance tests.
+ * We take code from the PragueAcceptanceTestHelper in the Besu codebase to help us emulate Engine API calls to the Besu node.
  *
  * We intend to replace the LineaPluginTestBase class via the strangler pattern—
  * i.e., we will gradually replace references to LineaPluginTestBase with
  * LineaPluginTestBasePrague in test classes, one by one.
  */
-
-// Step 1 - Use custom clique.json.tpl filepath rather than a hardcoded path
 
 package linea.plugin.acc.test;
 
@@ -48,7 +47,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import linea.plugin.acc.test.tests.web3j.generated.AcceptanceTestToken;
 import linea.plugin.acc.test.tests.web3j.generated.EcAdd;
@@ -62,6 +63,13 @@ import linea.plugin.acc.test.tests.web3j.generated.RevertExample;
 import linea.plugin.acc.test.tests.web3j.generated.SimpleStorage;
 import linea.plugin.acc.test.utils.MemoryAppender;
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.Call;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
@@ -74,6 +82,7 @@ import org.hyperledger.besu.ethereum.eth.transactions.TransactionPoolConfigurati
 import org.hyperledger.besu.metrics.prometheus.MetricsConfiguration;
 import org.hyperledger.besu.plugin.services.metrics.MetricCategory;
 import org.hyperledger.besu.tests.acceptance.dsl.AcceptanceTestBase;
+import org.hyperledger.besu.tests.acceptance.dsl.WaitUtils;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Account;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Accounts;
 import org.hyperledger.besu.tests.acceptance.dsl.condition.txpool.TxPoolConditions;
@@ -91,6 +100,7 @@ import org.web3j.crypto.RawTransaction;
 import org.web3j.crypto.TransactionEncoder;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.RemoteCall;
+import org.web3j.protocol.core.methods.response.EthBlock;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 import org.web3j.protocol.exceptions.TransactionException;
 import org.web3j.tx.RawTransactionManager;
@@ -110,7 +120,17 @@ public abstract class LineaPluginTestBasePrague extends AcceptanceTestBase {
       new CliqueOptions(BLOCK_PERIOD_SECONDS, CliqueOptions.DEFAULT.epochLength(), false);
   protected static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
   protected BesuNode minerNode;
+
   private final String GENESIS_FILE_TEMPLATE_PATH = "/clique/clique-prague.json.tpl";
+  private long blockTimeStamp = 0;
+  private final OkHttpClient httpClient;
+  private final ObjectMapper mapper;
+
+  protected LineaPluginTestBasePrague() {
+    super();
+    httpClient = new OkHttpClient();
+    mapper = new ObjectMapper();
+  }
 
   @BeforeEach
   public void setup() throws Exception {
@@ -184,8 +204,11 @@ public abstract class LineaPluginTestBasePrague extends AcceptanceTestBase {
     return besu.create(nodeConfBuilder.build());
   }
 
-  // Preferably the GenesisConfigurationFactory.createCliqueGenesisConfig function from Besu would have an override that allows flexible genesis template file path, but this does not exist at the time of writing.
-  // So regrettably we have hoisted the logic out of GenesisConfigurationFactory.createCliqueGenesisConfig function to enable flexible file path. 
+  // Preferably the GenesisConfigurationFactory.createCliqueGenesisConfig function from Besu would
+  // have an override that allows flexible genesis template file path, but this does not exist at
+  // the time of writing.
+  // So regrettably we have hoisted the logic out of
+  // GenesisConfigurationFactory.createCliqueGenesisConfig function to enable flexible file path.
   private String provideGenesisConfig(
       final Collection<? extends RunnableNode> validators, final CliqueOptions cliqueOptions) {
     // Target state
@@ -201,7 +224,7 @@ public abstract class LineaPluginTestBasePrague extends AcceptanceTestBase {
         validators.stream().map(RunnableNode::getAddress).collect(Collectors.toList());
     final String extraDataString = CliqueExtraData.createGenesisExtraDataString(addresses);
     final String genesis = hydratedGenesisTemplate.replaceAll("%extraData%", extraDataString);
-    
+
     return maybeCustomGenesisExtraData()
         .map(ed -> setGenesisCustomExtraData(genesis, ed))
         .orElse(genesis);
@@ -600,5 +623,149 @@ public abstract class LineaPluginTestBasePrague extends AcceptanceTestBase {
             DefaultGasProvider.GAS_PRICE.multiply(BigInteger.TEN).add(BigInteger.ONE));
 
     return TransactionEncoder.signMessage(ecRecoverCall, sender.web3jCredentialsOrThrow());
+  }
+
+  // =============================================
+  // Code from PragueAcceptanceTestHelper in Besu
+  // =============================================
+
+  protected void buildNewBlock() throws IOException {
+    final EthBlock.Block block = minerNode.execute(ethTransactions.block());
+
+    blockTimeStamp += 1;
+    final Call buildBlockRequest =
+        createEngineCall(createForkChoiceRequest(block.getHash(), blockTimeStamp));
+
+    final String payloadId;
+    try (final Response buildBlockResponse = buildBlockRequest.execute()) {
+      payloadId =
+          mapper
+              .readTree(buildBlockResponse.body().string())
+              .get("result")
+              .get("payloadId")
+              .asText();
+
+      assertThat(payloadId).isNotEmpty();
+    }
+
+    WaitUtils.sleep(500);
+
+    final Call getPayloadRequest = createEngineCall(createGetPayloadRequest(payloadId));
+
+    final ObjectNode executionPayload;
+    final ArrayNode executionRequests;
+    final String newBlockHash;
+    final String parentBeaconBlockRoot;
+    try (final Response getPayloadResponse = getPayloadRequest.execute()) {
+      assertThat(getPayloadResponse.code()).isEqualTo(200);
+
+      JsonNode result = mapper.readTree(getPayloadResponse.body().string()).get("result");
+      executionPayload = (ObjectNode) result.get("executionPayload");
+      executionRequests = (ArrayNode) result.get("executionRequests");
+
+      newBlockHash = executionPayload.get("blockHash").asText();
+      parentBeaconBlockRoot = executionPayload.remove("parentBeaconBlockRoot").asText();
+
+      assertThat(newBlockHash).isNotEmpty();
+    }
+
+    final Call newPayloadRequest =
+        createEngineCall(
+            createNewPayloadRequest(
+                executionPayload.toString(), parentBeaconBlockRoot, executionRequests.toString()));
+    try (final Response newPayloadResponse = newPayloadRequest.execute()) {
+      assertThat(newPayloadResponse.code()).isEqualTo(200);
+
+      final String responseStatus =
+          mapper.readTree(newPayloadResponse.body().string()).get("result").get("status").asText();
+      assertThat(responseStatus).isEqualTo("VALID");
+    }
+
+    final Call moveChainAheadRequest = createEngineCall(createForkChoiceRequest(newBlockHash));
+
+    try (final Response moveChainAheadResponse = moveChainAheadRequest.execute()) {
+      assertThat(moveChainAheadResponse.code()).isEqualTo(200);
+    }
+  }
+
+  private Call createEngineCall(final String request) {
+    return httpClient.newCall(
+        new Request.Builder()
+            .url(minerNode.engineRpcUrl().get())
+            .post(RequestBody.create(request, MediaType.parse("application/json; charset=utf-8")))
+            .build());
+  }
+
+  private String createForkChoiceRequest(final String blockHash) {
+    return createForkChoiceRequest(blockHash, null);
+  }
+
+  private String createForkChoiceRequest(final String parentBlockHash, final Long timeStamp) {
+    final Optional<Long> maybeTimeStamp = Optional.ofNullable(timeStamp);
+
+    String forkChoiceRequest =
+        "{"
+            + "  \"jsonrpc\": \"2.0\","
+            + "  \"method\": \"engine_forkchoiceUpdatedV3\","
+            + "  \"params\": ["
+            + "    {"
+            + "      \"headBlockHash\": \""
+            + parentBlockHash
+            + "\","
+            + "      \"safeBlockHash\": \""
+            + parentBlockHash
+            + "\","
+            + "      \"finalizedBlockHash\": \""
+            + parentBlockHash
+            + "\""
+            + "    }";
+
+    if (maybeTimeStamp.isPresent()) {
+      forkChoiceRequest +=
+          "    ,{"
+              + "      \"timestamp\": \""
+              + Long.toHexString(maybeTimeStamp.get())
+              + "\","
+              + "      \"prevRandao\": \"0x0000000000000000000000000000000000000000000000000000000000000000\","
+              + "      \"suggestedFeeRecipient\": \"0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b\","
+              + "      \"withdrawals\": [],"
+              + "      \"parentBeaconBlockRoot\": \"0x0000000000000000000000000000000000000000000000000000000000000000\""
+              + "    }";
+    }
+
+    forkChoiceRequest += "  ]," + "  \"id\": 67" + "}";
+
+    return forkChoiceRequest;
+  }
+
+  private String createGetPayloadRequest(final String payloadId) {
+    return "{"
+        + "  \"jsonrpc\": \"2.0\","
+        + "  \"method\": \"engine_getPayloadV4\","
+        + "  \"params\": [\""
+        + payloadId
+        + "\"],"
+        + "  \"id\": 67"
+        + "}";
+  }
+
+  private String createNewPayloadRequest(
+      final String executionPayload,
+      final String parentBeaconBlockRoot,
+      final String executionRequests) {
+    return "{"
+        + "  \"jsonrpc\": \"2.0\","
+        + "  \"method\": \"engine_newPayloadV4\","
+        + "  \"params\": ["
+        + executionPayload
+        + ",[],"
+        + "\""
+        + parentBeaconBlockRoot
+        + "\""
+        + ","
+        + executionRequests
+        + "],"
+        + "  \"id\": 67"
+        + "}";
   }
 }
