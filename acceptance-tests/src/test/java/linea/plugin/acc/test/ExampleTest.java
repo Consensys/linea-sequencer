@@ -58,8 +58,9 @@ public class ExampleTest extends LineaPluginTestBasePrague {
         txManager
             .sendTransaction(GAS_PRICE, GAS_LIMIT, recipient, DATA, VALUE)
             .getTransactionHash();
-    buildNewBlock();
-    
+
+    this.engineApiService.buildNewBlock();
+
     // Assert
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(txHash));
   }
