@@ -78,13 +78,14 @@ public class EngineAPIService {
    * 
    * 3. Send engine_getPayload(payloadId) request to Besu node
    * 4. Besu node responds with executionPayload
-   * Get the proposed block from the Besu Node
+   * Get the proposed block from the Besu node
    * 
    * 5. Send engine_newPayload request to Besu node
-   * Validate the proposed block
+   * Validate the proposed block. Then store the validated block for future reference.
    * 
-   * 6. Send engine_newPayload request to Besu node
-   * Validate the proposed block
+   * 6. Send engine_forkchoiceUpdated(EngineForkchoiceUpdatedParameter) request to Besu node
+   * Add new block to head of the Besu node blockchain
+   * If 'engine_newPayload' was not called prior, then this step will fail to find a validated block.
    */
   public void buildNewBlock() throws IOException {
     final EthBlock.Block block = node.execute(ethTransactions.block());
