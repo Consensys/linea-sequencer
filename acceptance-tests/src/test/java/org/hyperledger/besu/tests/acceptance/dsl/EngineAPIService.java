@@ -146,39 +146,37 @@ public class EngineAPIService {
   private String createForkChoiceRequest(final String parentBlockHash, final Long timeStamp) {
     final Optional<Long> maybeTimeStamp = Optional.ofNullable(timeStamp);
 
-    String forkChoiceRequest =
-        "{"
-            + "  \"jsonrpc\": \"2.0\","
-            + "  \"method\": \"engine_forkchoiceUpdatedV3\","
-            + "  \"params\": ["
-            + "    {"
-            + "      \"headBlockHash\": \""
-            + parentBlockHash
-            + "\","
-            + "      \"safeBlockHash\": \""
-            + parentBlockHash
-            + "\","
-            + "      \"finalizedBlockHash\": \""
-            + parentBlockHash
-            + "\""
-            + "    }";
+    ObjectNode request = mapper.createObjectNode();
+    request.put("jsonrpc", "2.0");
+    request.put("method", "engine_forkchoiceUpdatedV3");
 
+    // Construct the first param - EngineForkchoiceUpdatedParameter
+    ArrayNode params = mapper.createArrayNode();
+    ObjectNode forkchoiceState = mapper.createObjectNode();
+    forkchoiceState.put("headBlockHash", parentBlockHash);
+    forkchoiceState.put("safeBlockHash", parentBlockHash);
+    forkchoiceState.put("finalizedBlockHash", parentBlockHash);
+    params.add(forkchoiceState);
+
+    // Optionally construct the second param - EnginePayloadAttributesParameter
     if (maybeTimeStamp.isPresent()) {
-      forkChoiceRequest +=
-          "    ,{"
-              + "      \"timestamp\": \""
-              + maybeTimeStamp.get()
-              + "\","
-              + "      \"prevRandao\": \"0x0000000000000000000000000000000000000000000000000000000000000000\","
-              + "      \"suggestedFeeRecipient\": \"0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b\","
-              + "      \"withdrawals\": [],"
-              + "      \"parentBeaconBlockRoot\": \"0x0000000000000000000000000000000000000000000000000000000000000000\""
-              + "    }";
+      ObjectNode payloadAttributes = mapper.createObjectNode();
+      payloadAttributes.put("timestamp", "0x" + Long.toHexString(timeStamp));
+      payloadAttributes.put("prevRandao", "0x0000000000000000000000000000000000000000000000000000000000000000");
+      payloadAttributes.put("suggestedFeeRecipient", "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b");
+      payloadAttributes.set("withdrawals", mapper.createArrayNode());
+      payloadAttributes.put("parentBeaconBlockRoot", "0x0000000000000000000000000000000000000000000000000000000000000000");
+      params.add(payloadAttributes);
     }
 
-    forkChoiceRequest += "  ]," + "  \"id\": 67" + "}";
+    request.set("params", params);
+    request.put("id", 67);
 
-    return forkChoiceRequest;
+    try {
+      return mapper.writeValueAsString(request);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to build engine_forkchoiceUpdatedV3 request", e);
+    }
   }
 
   private String createGetPayloadRequest(final String payloadId) {
