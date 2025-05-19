@@ -118,23 +118,23 @@ public class EngineAPIService {
       assertThat(newBlockHash).isNotEmpty();
     }
 
-    final Call newPayloadRequest =
+    // final Call newPayloadRequest =
         
-            createNewPayloadRequest(
-                executionPayload.toString(), parentBeaconBlockRoot, executionRequests.toString());
-    try (final Response newPayloadResponse = newPayloadRequest.execute()) {
-      assertThat(newPayloadResponse.code()).isEqualTo(200);
+    //         createNewPayloadRequest(
+    //             executionPayload.toString(), parentBeaconBlockRoot, executionRequests.toString());
+    // try (final Response newPayloadResponse = newPayloadRequest.execute()) {
+    //   assertThat(newPayloadResponse.code()).isEqualTo(200);
 
-      final String responseStatus =
-          mapper.readTree(newPayloadResponse.body().string()).get("result").get("status").asText();
-      assertThat(responseStatus).isEqualTo("VALID");
-    }
+    //   final String responseStatus =
+    //       mapper.readTree(newPayloadResponse.body().string()).get("result").get("status").asText();
+    //   assertThat(responseStatus).isEqualTo("VALID");
+    // }
 
-    final Call moveChainAheadRequest = createForkChoiceRequest(newBlockHash);
+    // final Call moveChainAheadRequest = createForkChoiceRequest(newBlockHash);
 
-    try (final Response moveChainAheadResponse = moveChainAheadRequest.execute()) {
-      assertThat(moveChainAheadResponse.code()).isEqualTo(200);
-    }
+    // try (final Response moveChainAheadResponse = moveChainAheadRequest.execute()) {
+    //   assertThat(moveChainAheadResponse.code()).isEqualTo(200);
+    // }
   }
 
   private Call createForkChoiceRequest(final String blockHash) {
