@@ -172,11 +172,13 @@ public class EngineAPIService {
     request.set("params", params);
     request.put("id", 67);
 
+    String requestString;
     try {
-      return mapper.writeValueAsString(request);
+      requestString = mapper.writeValueAsString(request);
     } catch (Exception e) {
       throw new RuntimeException("Failed to build engine_forkchoiceUpdatedV3 request", e);
     }
+    return requestString;
   }
 
   private String createGetPayloadRequest(final String payloadId) {
@@ -188,11 +190,13 @@ public class EngineAPIService {
     request.set("params", params);
     request.put("id", 67);
 
+    String requestString;
     try {
-      return mapper.writeValueAsString(request);
+      requestString = mapper.writeValueAsString(request);
     } catch (Exception e) {
       throw new RuntimeException("Failed to serialize engine_getPayloadV4 request", e);
     }
+    return requestString;
   }
 
   private String createNewPayloadRequest(
@@ -222,10 +226,12 @@ public class EngineAPIService {
     request.set("params", params);
     request.put("id", 67);
 
+    String requestString;
     try {
-      return mapper.writeValueAsString(request);
+      requestString = mapper.writeValueAsString(request);
     } catch (Exception e) {
       throw new RuntimeException("Failed to serialize engine_newPayloadV4 request", e);
     }
+    return requestString;
   }
 }
