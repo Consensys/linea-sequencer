@@ -15,7 +15,6 @@
 
 /*
  * This file initializes a Besu node configured for the Prague fork and makes it available to acceptance tests.
- * We take code from the PragueAcceptanceTestHelper in the Besu codebase to help us emulate Engine API calls to the Besu node.
  *
  * We intend to replace the LineaPluginTestBase class via the strangler pattern—
  * i.e., we will gradually replace references to LineaPluginTestBase with
@@ -45,7 +44,7 @@ import org.junit.jupiter.api.BeforeEach;
 public abstract class LineaPluginTestBasePrague extends LineaPluginTestBase {
   protected EngineAPIService engineApiService;
   private final String GENESIS_FILE_TEMPLATE_PATH = "/clique/clique-prague.json.tpl";
-
+  private final long STARTING_BLOCK_TIMESTAMP = 1670496243;
   @BeforeEach
   @Override
   public void setup() throws Exception {
@@ -58,7 +57,7 @@ public abstract class LineaPluginTestBasePrague extends LineaPluginTestBase {
             .noLocalPriority(true)
             .build());
     cluster.start(minerNode);
-    this.engineApiService = new EngineAPIService(minerNode, ethTransactions, 1670496243);
+    this.engineApiService = new EngineAPIService(minerNode, ethTransactions, STARTING_BLOCK_TIMESTAMP);
   }
 
   // Ideally GenesisConfigurationFactory.createCliqueGenesisConfig would support a custom template
