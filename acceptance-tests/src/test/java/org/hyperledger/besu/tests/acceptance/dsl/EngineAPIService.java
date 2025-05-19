@@ -47,8 +47,6 @@ import org.web3j.protocol.core.methods.response.EthBlock;
 // We use this class to emulate Engine API calls to the Besu Node, so that we can run tests for
 // post-merge EVM forks
 public class EngineAPIService {
-  // "timestamp": "0x6391BFF3"
-  //   private long blockTimeStamp = 1670496243;
   private long blockTimestamp;
   private final OkHttpClient httpClient;
   private final ObjectMapper mapper;
@@ -64,6 +62,16 @@ public class EngineAPIService {
     this.blockTimestamp = startingBlocktimestamp;
   }
 
+  /*
+   * See https://hackmd.io/@danielrachi/engine_api
+   *
+   * The flow to build a block with the Engine API is as follows:
+   * 1. Send engine_forkchoiceUpdated(EngineForkchoiceUpdatedParameter, EnginePayloadAttributesParameter) request to Besu node
+   * 2. Besu node responds with payloadId
+   *
+   * 3. Send engine_getPayload(payloadId) request to Besu node
+   * 4. Besu node responds with executionPayload
+   */
   public void buildNewBlock() throws IOException {
     final EthBlock.Block block = node.execute(ethTransactions.block());
 
@@ -174,14 +182,19 @@ public class EngineAPIService {
   }
 
   private String createGetPayloadRequest(final String payloadId) {
-    return "{"
-        + "  \"jsonrpc\": \"2.0\","
-        + "  \"method\": \"engine_getPayloadV4\","
-        + "  \"params\": [\""
-        + payloadId
-        + "\"],"
-        + "  \"id\": 67"
-        + "}";
+    ObjectNode request = mapper.createObjectNode();
+    request.put("jsonrpc", "2.0");
+    request.put("method", "engine_getPayloadV4");
+    ArrayNode params = mapper.createArrayNode();
+    params.add(payloadId);
+    request.set("params", params);
+    request.put("id", 67);
+
+    try {
+      return mapper.writeValueAsString(request);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to engine_newPayloadV4 request", e);
+    }
   }
 
   private String createNewPayloadRequest(

@@ -137,8 +137,7 @@ public abstract class LineaPluginTestBase extends AcceptanceTestBase {
       final CliqueOptions cliqueOptions,
       final List<String> extraCliOptions,
       final Set<String> extraRpcApis,
-      final boolean isEngineRpcEnabled
-      )
+      final boolean isEngineRpcEnabled)
       throws IOException {
     final NodeConfigurationFactory node = new NodeConfigurationFactory();
 
