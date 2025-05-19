@@ -39,6 +39,8 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+
+import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.tests.acceptance.dsl.node.BesuNode;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.eth.EthTransactions;
 import org.web3j.protocol.core.methods.response.EthBlock;
@@ -52,6 +54,10 @@ public class EngineAPIService {
   private final ObjectMapper mapper;
   private final BesuNode node;
   private final EthTransactions ethTransactions;
+
+  private static String JSONRPC_VERSION = "2.0";
+  private static long JSONRPC_REQUEST_ID = 67;
+  private static String SUGGESTED_BLOCK_FEE_RECIPIENT = "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b";
 
   public EngineAPIService(
       BesuNode node, EthTransactions ethTransactions, long startingBlocktimestamp) {
@@ -77,7 +83,7 @@ public class EngineAPIService {
 
     this.blockTimestamp += 1;
     final Call buildBlockRequest =
-        createEngineCall(createForkChoiceRequest(block.getHash(), this.blockTimestamp));
+        createForkChoiceRequest(block.getHash(), this.blockTimestamp);
 
     final String payloadId;
     try (final Response buildBlockResponse = buildBlockRequest.execute()) {
@@ -93,7 +99,7 @@ public class EngineAPIService {
 
     WaitUtils.sleep(500);
 
-    final Call getPayloadRequest = createEngineCall(createGetPayloadRequest(payloadId));
+    final Call getPayloadRequest = createGetPayloadRequest(payloadId);
 
     final ObjectNode executionPayload;
     final ArrayNode executionRequests;
@@ -113,9 +119,9 @@ public class EngineAPIService {
     }
 
     final Call newPayloadRequest =
-        createEngineCall(
+        
             createNewPayloadRequest(
-                executionPayload.toString(), parentBeaconBlockRoot, executionRequests.toString()));
+                executionPayload.toString(), parentBeaconBlockRoot, executionRequests.toString());
     try (final Response newPayloadResponse = newPayloadRequest.execute()) {
       assertThat(newPayloadResponse.code()).isEqualTo(200);
 
@@ -124,30 +130,22 @@ public class EngineAPIService {
       assertThat(responseStatus).isEqualTo("VALID");
     }
 
-    final Call moveChainAheadRequest = createEngineCall(createForkChoiceRequest(newBlockHash));
+    final Call moveChainAheadRequest = createForkChoiceRequest(newBlockHash);
 
     try (final Response moveChainAheadResponse = moveChainAheadRequest.execute()) {
       assertThat(moveChainAheadResponse.code()).isEqualTo(200);
     }
   }
 
-  private Call createEngineCall(final String request) {
-    return httpClient.newCall(
-        new Request.Builder()
-            .url(node.engineRpcUrl().get())
-            .post(RequestBody.create(request, MediaType.parse("application/json; charset=utf-8")))
-            .build());
-  }
-
-  private String createForkChoiceRequest(final String blockHash) {
+  private Call createForkChoiceRequest(final String blockHash) {
     return createForkChoiceRequest(blockHash, null);
   }
 
-  private String createForkChoiceRequest(final String parentBlockHash, final Long timeStamp) {
+  private Call createForkChoiceRequest(final String parentBlockHash, final Long timeStamp) {
     final Optional<Long> maybeTimeStamp = Optional.ofNullable(timeStamp);
 
     ObjectNode request = mapper.createObjectNode();
-    request.put("jsonrpc", "2.0");
+    request.put("jsonrpc", JSONRPC_VERSION);
     request.put("method", "engine_forkchoiceUpdatedV3");
 
     // Construct the first param - EngineForkchoiceUpdatedParameter
@@ -161,16 +159,16 @@ public class EngineAPIService {
     // Optionally construct the second param - EnginePayloadAttributesParameter
     if (maybeTimeStamp.isPresent()) {
       ObjectNode payloadAttributes = mapper.createObjectNode();
-      payloadAttributes.put("timestamp", "0x" + Long.toHexString(timeStamp));
-      payloadAttributes.put("prevRandao", "0x0000000000000000000000000000000000000000000000000000000000000000");
-      payloadAttributes.put("suggestedFeeRecipient", "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b");
+      payloadAttributes.put("timestamp", timeStamp);
+      payloadAttributes.put("prevRandao", Hash.ZERO.toString());
+      payloadAttributes.put("suggestedFeeRecipient", SUGGESTED_BLOCK_FEE_RECIPIENT);
       payloadAttributes.set("withdrawals", mapper.createArrayNode());
-      payloadAttributes.put("parentBeaconBlockRoot", "0x0000000000000000000000000000000000000000000000000000000000000000");
+      payloadAttributes.put("parentBeaconBlockRoot", Hash.ZERO.toString());
       params.add(payloadAttributes);
     }
 
     request.set("params", params);
-    request.put("id", 67);
+    request.put("id", JSONRPC_REQUEST_ID);
 
     String requestString;
     try {
@@ -178,17 +176,17 @@ public class EngineAPIService {
     } catch (Exception e) {
       throw new RuntimeException("Failed to build engine_forkchoiceUpdatedV3 request", e);
     }
-    return requestString;
+    return createEngineCall(requestString);
   }
 
-  private String createGetPayloadRequest(final String payloadId) {
+  private Call createGetPayloadRequest(final String payloadId) {
     ObjectNode request = mapper.createObjectNode();
-    request.put("jsonrpc", "2.0");
+    request.put("jsonrpc", JSONRPC_VERSION);
     request.put("method", "engine_getPayloadV4");
     ArrayNode params = mapper.createArrayNode();
     params.add(payloadId);
     request.set("params", params);
-    request.put("id", 67);
+    request.put("id", JSONRPC_REQUEST_ID);
 
     String requestString;
     try {
@@ -196,10 +194,10 @@ public class EngineAPIService {
     } catch (Exception e) {
       throw new RuntimeException("Failed to serialize engine_getPayloadV4 request", e);
     }
-    return requestString;
+    return createEngineCall(requestString);
   }
 
-  private String createNewPayloadRequest(
+  private Call createNewPayloadRequest(
       final String executionPayload,
       final String parentBeaconBlockRoot,
       final String executionRequests) {
@@ -214,7 +212,7 @@ public class EngineAPIService {
     }
 
     ObjectNode request = mapper.createObjectNode();
-    request.put("jsonrpc", "2.0");
+    request.put("jsonrpc", JSONRPC_VERSION);
     request.put("method", "engine_newPayloadV4");
 
     ArrayNode params = mapper.createArrayNode();
@@ -224,7 +222,7 @@ public class EngineAPIService {
     params.add(executionRequestsNode);
     
     request.set("params", params);
-    request.put("id", 67);
+    request.put("id", JSONRPC_REQUEST_ID);
 
     String requestString;
     try {
@@ -232,6 +230,14 @@ public class EngineAPIService {
     } catch (Exception e) {
       throw new RuntimeException("Failed to serialize engine_newPayloadV4 request", e);
     }
-    return requestString;
+    return createEngineCall(requestString);
+  }
+
+  private Call createEngineCall(final String request) {
+    return httpClient.newCall(
+        new Request.Builder()
+            .url(node.engineRpcUrl().get())
+            .post(RequestBody.create(request, MediaType.parse("application/json; charset=utf-8")))
+            .build());
   }
 }
