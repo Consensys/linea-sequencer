@@ -74,9 +74,17 @@ public class EngineAPIService {
    * The flow to build a block with the Engine API is as follows:
    * 1. Send engine_forkchoiceUpdated(EngineForkchoiceUpdatedParameter, EnginePayloadAttributesParameter) request to Besu node
    * 2. Besu node responds with payloadId
-   *
+   * The Besu Node will start building a proposed block
+   * 
    * 3. Send engine_getPayload(payloadId) request to Besu node
    * 4. Besu node responds with executionPayload
+   * Get the proposed block from the Besu Node
+   * 
+   * 5. Send engine_newPayload request to Besu node
+   * Validate the proposed block
+   * 
+   * 6. Send engine_newPayload request to Besu node
+   * Validate the proposed block
    */
   public void buildNewBlock() throws IOException {
     final EthBlock.Block block = node.execute(ethTransactions.block());
@@ -118,23 +126,23 @@ public class EngineAPIService {
       assertThat(newBlockHash).isNotEmpty();
     }
 
-    // final Call newPayloadRequest =
+    final Call newPayloadRequest =
         
-    //         createNewPayloadRequest(
-    //             executionPayload.toString(), parentBeaconBlockRoot, executionRequests.toString());
-    // try (final Response newPayloadResponse = newPayloadRequest.execute()) {
-    //   assertThat(newPayloadResponse.code()).isEqualTo(200);
+            createNewPayloadRequest(
+                executionPayload.toString(), parentBeaconBlockRoot, executionRequests.toString());
+    try (final Response newPayloadResponse = newPayloadRequest.execute()) {
+      assertThat(newPayloadResponse.code()).isEqualTo(200);
 
-    //   final String responseStatus =
-    //       mapper.readTree(newPayloadResponse.body().string()).get("result").get("status").asText();
-    //   assertThat(responseStatus).isEqualTo("VALID");
-    // }
+      final String responseStatus =
+          mapper.readTree(newPayloadResponse.body().string()).get("result").get("status").asText();
+      assertThat(responseStatus).isEqualTo("VALID");
+    }
 
-    // final Call moveChainAheadRequest = createForkChoiceRequest(newBlockHash);
+    final Call moveChainAheadRequest = createForkChoiceRequest(newBlockHash);
 
-    // try (final Response moveChainAheadResponse = moveChainAheadRequest.execute()) {
-    //   assertThat(moveChainAheadResponse.code()).isEqualTo(200);
-    // }
+    try (final Response moveChainAheadResponse = moveChainAheadRequest.execute()) {
+      assertThat(moveChainAheadResponse.code()).isEqualTo(200);
+    }
   }
 
   private Call createForkChoiceRequest(final String blockHash) {
