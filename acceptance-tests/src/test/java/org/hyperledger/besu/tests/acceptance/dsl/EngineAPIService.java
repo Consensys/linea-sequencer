@@ -193,7 +193,7 @@ public class EngineAPIService {
     try {
       return mapper.writeValueAsString(request);
     } catch (Exception e) {
-      throw new RuntimeException("Failed to engine_newPayloadV4 request", e);
+      throw new RuntimeException("Failed to serialize engine_getPayloadV4 request", e);
     }
   }
 
@@ -201,19 +201,33 @@ public class EngineAPIService {
       final String executionPayload,
       final String parentBeaconBlockRoot,
       final String executionRequests) {
-    return "{"
-        + "  \"jsonrpc\": \"2.0\","
-        + "  \"method\": \"engine_newPayloadV4\","
-        + "  \"params\": ["
-        + executionPayload
-        + ",[],"
-        + "\""
-        + parentBeaconBlockRoot
-        + "\""
-        + ","
-        + executionRequests
-        + "],"
-        + "  \"id\": 67"
-        + "}";
+    // Parse executionPayload and executionRequests as JSON nodes
+    ObjectNode executionPayloadNode;
+    ArrayNode executionRequestsNode;
+    try {
+      executionPayloadNode = (ObjectNode) mapper.readTree(executionPayload);
+      executionRequestsNode = (ArrayNode) mapper.readTree(executionRequests);
+    } catch (Exception e) {
+      throw new RuntimeException("Invalid JSON input", e);
+    }
+
+    ObjectNode request = mapper.createObjectNode();
+    request.put("jsonrpc", "2.0");
+    request.put("method", "engine_newPayloadV4");
+
+    ArrayNode params = mapper.createArrayNode();
+    params.add(executionPayloadNode);
+    params.add(mapper.createArrayNode()); // empty withdrawals
+    params.add(parentBeaconBlockRoot);
+    params.add(executionRequestsNode);
+    
+    request.set("params", params);
+    request.put("id", 67);
+
+    try {
+      return mapper.writeValueAsString(request);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to serialize engine_newPayloadV4 request", e);
+    }
   }
 }
