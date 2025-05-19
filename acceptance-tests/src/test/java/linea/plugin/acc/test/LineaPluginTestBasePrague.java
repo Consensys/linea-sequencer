@@ -121,7 +121,8 @@ public abstract class LineaPluginTestBasePrague extends AcceptanceTestBase {
   protected BesuNode minerNode;
 
   private final String GENESIS_FILE_TEMPLATE_PATH = "/clique/clique-prague.json.tpl";
-  private long blockTimeStamp = 0;
+  // "timestamp": "0x6391BFF3"
+  private long blockTimeStamp = 1670496243;
   private final OkHttpClient httpClient;
   private final ObjectMapper mapper;
 
@@ -721,7 +722,7 @@ public abstract class LineaPluginTestBasePrague extends AcceptanceTestBase {
       forkChoiceRequest +=
           "    ,{"
               + "      \"timestamp\": \""
-              + Long.toHexString(maybeTimeStamp.get())
+              + maybeTimeStamp.get()
               + "\","
               + "      \"prevRandao\": \"0x0000000000000000000000000000000000000000000000000000000000000000\","
               + "      \"suggestedFeeRecipient\": \"0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b\","
