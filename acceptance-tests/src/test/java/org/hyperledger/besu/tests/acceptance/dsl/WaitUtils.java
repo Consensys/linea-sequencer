@@ -33,12 +33,4 @@ public class WaitUtils {
         .atMost(timeout, TimeUnit.SECONDS)
         .untilAsserted(condition);
   }
-
-  public static void sleep(final long durationMilliSeconds) {
-    try {
-      Thread.sleep(durationMilliSeconds);
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-  }
 }

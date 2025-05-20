@@ -112,7 +112,7 @@ public class EngineAPIService {
    * 6. Send engine_forkchoiceUpdated(EngineForkchoiceUpdatedParameter) request to Besu node
    * Add validated block to blockchain head.
    */
-  public void buildNewBlock() throws IOException {
+  public void buildNewBlock() throws IOException, InterruptedException {
     final EthBlock.Block block = node.execute(ethTransactions.block());
     this.blockTimestamp += 1;
 
@@ -135,7 +135,7 @@ public class EngineAPIService {
       assertThat(payloadId).isNotEmpty();
     }
 
-    WaitUtils.sleep(500);
+    Thread.sleep(500);
 
     final Call getPayloadRequest = createGetPayloadRequest(payloadId);
 

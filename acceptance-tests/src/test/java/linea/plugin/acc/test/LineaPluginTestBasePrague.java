@@ -81,7 +81,7 @@ public abstract class LineaPluginTestBasePrague extends LineaPluginTestBase {
         .orElse(genesis);
   }
 
-  protected void buildNewBlock() throws IOException {
+  protected void buildNewBlock() throws IOException, InterruptedException {
     this.engineApiService.buildNewBlock();
   }
 }
