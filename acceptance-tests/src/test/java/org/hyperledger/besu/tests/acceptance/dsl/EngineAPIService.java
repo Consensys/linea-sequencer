@@ -120,10 +120,12 @@ public class EngineAPIService {
 
     final String payloadId;
     try (final Response buildBlockResponse = buildBlockRequest.execute()) {
-      // We would like to deserialize directly into Besu native types. However neither
-      // EngineUpdateForkchoiceResult and JsonRpcSuccessResponse classes have a constructor tagged
-      // with @JsonCreator nor a default constructor. We will need to write DTO classes to avoid
-      // manual JSON parsing.
+      // Ideally, we would deserialize directly into Besu native types such as
+      // EngineUpdateForkchoiceResult and JsonRpcSuccessResponse. However, neither class
+      // provides a default constructor or a constructor annotated with @JsonCreator.
+      // As a result, deserializing them would require hefty boilerplate code (custom
+      // deserializers and DTOs). To keep things simple and lightweight, we instead
+      // parse the relevant fields manually from the expected JSON structure.
       payloadId =
           mapper
               .readTree(buildBlockResponse.body().string())
