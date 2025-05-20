@@ -39,12 +39,13 @@ import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.genesis.Gene
 import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.genesis.GenesisConfigurationFactory.CliqueOptions;
 import org.junit.jupiter.api.BeforeEach;
 
-/** Base class for plugin tests. */
+/** Base class for plugin tests on Prague fork. */
 @Slf4j
 public abstract class LineaPluginTestBasePrague extends LineaPluginTestBase {
   protected EngineAPIService engineApiService;
   private final String GENESIS_FILE_TEMPLATE_PATH = "/clique/clique-prague.json.tpl";
   private final long STARTING_BLOCK_TIMESTAMP = 1670496243;
+
   @BeforeEach
   @Override
   public void setup() throws Exception {
@@ -57,11 +58,12 @@ public abstract class LineaPluginTestBasePrague extends LineaPluginTestBase {
             .noLocalPriority(true)
             .build());
     cluster.start(minerNode);
-    this.engineApiService = new EngineAPIService(minerNode, ethTransactions, STARTING_BLOCK_TIMESTAMP);
+    this.engineApiService =
+        new EngineAPIService(minerNode, ethTransactions, STARTING_BLOCK_TIMESTAMP);
   }
 
-  // Ideally GenesisConfigurationFactory.createCliqueGenesisConfig would support a custom template
-  // path. So we have resorted to inlining its logic here to allow a flexible file path.
+  // Ideally GenesisConfigurationFactory.createCliqueGenesisConfig would support a custom genesis file
+  // path. We have resorted to inlining its logic here to allow a flexible genesis file path.
   @Override
   protected String provideGenesisConfig(
       final Collection<? extends RunnableNode> validators, final CliqueOptions cliqueOptions) {

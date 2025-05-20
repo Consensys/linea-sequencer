@@ -13,15 +13,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/*
- * This file initializes a Besu node configured for the Prague fork and makes it available to acceptance tests.
- * We take code from the PragueAcceptanceTestHelper in the Besu codebase to help us emulate Engine API calls to the Besu node.
- *
- * We intend to replace the LineaPluginTestBase class via the strangler pattern—
- * i.e., we will gradually replace references to LineaPluginTestBase with
- * LineaPluginTestBasePrague in test classes, one by one.
- */
-
 package org.hyperledger.besu.tests.acceptance.dsl;
 
 import static org.assertj.core.api.Assertions.*;
@@ -39,15 +30,15 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
-
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.tests.acceptance.dsl.node.BesuNode;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.eth.EthTransactions;
 import org.web3j.protocol.core.methods.response.EthBlock;
 
-// Inspired by PragueAcceptanceTestHelper class in Besu
-// We use this class to emulate Engine API calls to the Besu Node, so that we can run tests for
-// post-merge EVM forks
+/*
+ * Inspired by PragueAcceptanceTestHelper class in Besu codebase. We use this class to
+ * emulate Engine API calls to the Besu Node, so that we can run tests for post-merge EVM forks.
+ */
 public class EngineAPIService {
   private long blockTimestamp;
   private final OkHttpClient httpClient;
@@ -57,7 +48,8 @@ public class EngineAPIService {
 
   private static String JSONRPC_VERSION = "2.0";
   private static long JSONRPC_REQUEST_ID = 67;
-  private static String SUGGESTED_BLOCK_FEE_RECIPIENT = "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b";
+  private static String SUGGESTED_BLOCK_FEE_RECIPIENT =
+      "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b";
 
   public EngineAPIService(
       BesuNode node, EthTransactions ethTransactions, long startingBlocktimestamp) {
@@ -75,24 +67,23 @@ public class EngineAPIService {
    * 1. Send engine_forkchoiceUpdated(EngineForkchoiceUpdatedParameter, EnginePayloadAttributesParameter) request to Besu node
    * 2. Besu node responds with payloadId
    * The Besu Node will start building a proposed block
-   * 
+   *
    * 3. Send engine_getPayload(payloadId) request to Besu node
    * 4. Besu node responds with executionPayload
    * Get the proposed block from the Besu node
-   * 
+   *
    * 5. Send engine_newPayload request to Besu node
    * Validate the proposed block. Then store the validated block for future reference.
-   * 
+   * Unsure why the proposed block is not stored in the previous steps where it was built.
+   *
    * 6. Send engine_forkchoiceUpdated(EngineForkchoiceUpdatedParameter) request to Besu node
-   * Add new block to head of the Besu node blockchain
-   * If 'engine_newPayload' was not called prior, then this step will fail to find a validated block.
+   * Add new block to blockchain head.
    */
   public void buildNewBlock() throws IOException {
     final EthBlock.Block block = node.execute(ethTransactions.block());
 
     this.blockTimestamp += 1;
-    final Call buildBlockRequest =
-        createForkChoiceRequest(block.getHash(), this.blockTimestamp);
+    final Call buildBlockRequest = createForkChoiceRequest(block.getHash(), this.blockTimestamp);
 
     final String payloadId;
     try (final Response buildBlockResponse = buildBlockRequest.execute()) {
@@ -128,9 +119,8 @@ public class EngineAPIService {
     }
 
     final Call newPayloadRequest =
-        
-            createNewPayloadRequest(
-                executionPayload.toString(), parentBeaconBlockRoot, executionRequests.toString());
+        createNewPayloadRequest(
+            executionPayload.toString(), parentBeaconBlockRoot, executionRequests.toString());
     try (final Response newPayloadResponse = newPayloadRequest.execute()) {
       assertThat(newPayloadResponse.code()).isEqualTo(200);
 
@@ -229,7 +219,7 @@ public class EngineAPIService {
     params.add(mapper.createArrayNode()); // empty withdrawals
     params.add(parentBeaconBlockRoot);
     params.add(executionRequestsNode);
-    
+
     request.set("params", params);
     request.put("id", JSONRPC_REQUEST_ID);
 
