@@ -38,7 +38,6 @@ import org.junit.jupiter.api.BeforeEach;
 public abstract class LineaPluginTestBasePrague extends LineaPluginTestBase {
   private EngineAPIService engineApiService;
   private final String GENESIS_FILE_TEMPLATE_PATH = "/clique/clique-prague.json.tpl";
-  private final long STARTING_BLOCK_TIMESTAMP = 0;
 
   @BeforeEach
   @Override
@@ -52,8 +51,7 @@ public abstract class LineaPluginTestBasePrague extends LineaPluginTestBase {
             .noLocalPriority(true)
             .build());
     cluster.start(minerNode);
-    this.engineApiService =
-        new EngineAPIService(minerNode, ethTransactions, STARTING_BLOCK_TIMESTAMP);
+    this.engineApiService = new EngineAPIService(minerNode, ethTransactions);
   }
 
   // Ideally GenesisConfigurationFactory.createCliqueGenesisConfig would support a custom genesis
@@ -81,11 +79,13 @@ public abstract class LineaPluginTestBasePrague extends LineaPluginTestBase {
         .orElse(genesis);
   }
 
+  // No-arg override for simple test cases
   protected void buildNewBlock() throws IOException, InterruptedException {
-    this.engineApiService.buildNewBlock(1);
+    var currentTimestamp = this.minerNode.execute(ethTransactions.block()).getTimestamp();
+    this.engineApiService.buildNewBlock(currentTimestamp.longValue() + 1);
   }
 
-  protected void buildNewBlock(long timestampIncrement) throws IOException, InterruptedException {
-    this.engineApiService.buildNewBlock(timestampIncrement);
+  protected void buildNewBlock(long blockTimestamp) throws IOException, InterruptedException {
+    this.engineApiService.buildNewBlock(blockTimestamp);
   }
 }

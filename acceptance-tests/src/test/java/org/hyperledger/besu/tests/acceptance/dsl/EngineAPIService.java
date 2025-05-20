@@ -40,7 +40,6 @@ import org.web3j.protocol.core.methods.response.EthBlock;
  * emulate Engine API calls to the Besu Node, so that we can run tests for post-merge EVM forks.
  */
 public class EngineAPIService {
-  private long blockTimestamp;
   private final OkHttpClient httpClient;
   private final ObjectMapper mapper;
   private final BesuNode node;
@@ -51,14 +50,11 @@ public class EngineAPIService {
   private static String SUGGESTED_BLOCK_FEE_RECIPIENT =
       "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b";
 
-  public EngineAPIService(
-      BesuNode node, EthTransactions ethTransactions, long startingBlocktimestamp) {
+  public EngineAPIService(BesuNode node, EthTransactions ethTransactions) {
     httpClient = new OkHttpClient();
+    mapper = new ObjectMapper();
     this.node = node;
     this.ethTransactions = ethTransactions;
-    this.blockTimestamp = startingBlocktimestamp;
-
-    mapper = new ObjectMapper();
   }
 
   /*
@@ -80,11 +76,10 @@ public class EngineAPIService {
    * 6. Send engine_forkchoiceUpdated(EngineForkchoiceUpdatedParameter) request to Besu node
    * Add validated block to blockchain head.
    */
-  public void buildNewBlock(long timestampIncrement) throws IOException, InterruptedException {
+  public void buildNewBlock(long blockTimestamp) throws IOException, InterruptedException {
     final EthBlock.Block block = node.execute(ethTransactions.block());
-    this.blockTimestamp += timestampIncrement;
 
-    final Call buildBlockRequest = createForkChoiceRequest(block.getHash(), this.blockTimestamp);
+    final Call buildBlockRequest = createForkChoiceRequest(block.getHash(), blockTimestamp);
 
     final String payloadId;
     try (final Response buildBlockResponse = buildBlockRequest.execute()) {
@@ -142,8 +137,8 @@ public class EngineAPIService {
     return createForkChoiceRequest(blockHash, null);
   }
 
-  private Call createForkChoiceRequest(final String parentBlockHash, final Long timeStamp) {
-    final Optional<Long> maybeTimeStamp = Optional.ofNullable(timeStamp);
+  private Call createForkChoiceRequest(final String parentBlockHash, final Long blockTimestamp) {
+    final Optional<Long> maybeTimeStamp = Optional.ofNullable(blockTimestamp);
 
     // Construct the first param - EngineForkchoiceUpdatedParameter
     ArrayNode params = mapper.createArrayNode();
@@ -156,7 +151,7 @@ public class EngineAPIService {
     // Optionally construct the second param - EnginePayloadAttributesParameter
     if (maybeTimeStamp.isPresent()) {
       ObjectNode payloadAttributes = mapper.createObjectNode();
-      payloadAttributes.put("timestamp", timeStamp);
+      payloadAttributes.put("timestamp", blockTimestamp);
       payloadAttributes.put("prevRandao", Hash.ZERO.toString());
       payloadAttributes.put("suggestedFeeRecipient", SUGGESTED_BLOCK_FEE_RECIPIENT);
       payloadAttributes.set("withdrawals", mapper.createArrayNode());
