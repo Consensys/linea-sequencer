@@ -45,9 +45,9 @@ public class EngineAPIService {
   private final BesuNode node;
   private final EthTransactions ethTransactions;
 
-  private static String JSONRPC_VERSION = "2.0";
-  private static long JSONRPC_REQUEST_ID = 67;
-  private static String SUGGESTED_BLOCK_FEE_RECIPIENT =
+  private static final String JSONRPC_VERSION = "2.0";
+  private static final long JSONRPC_REQUEST_ID = 67;
+  private static final String SUGGESTED_BLOCK_FEE_RECIPIENT =
       "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b";
 
   public EngineAPIService(BesuNode node, EthTransactions ethTransactions) {
