@@ -37,7 +37,7 @@
   "zeroBaseFee": false,
   "baseFeePerGas": "7",
   "nonce": "0x0",
-  "timestamp": "0x6391BFF3",
+  "timestamp": "0x0",
   "extraData": "%extraData%",
   "gasLimit": "0x1C9C380",
   "difficulty": "0x1",

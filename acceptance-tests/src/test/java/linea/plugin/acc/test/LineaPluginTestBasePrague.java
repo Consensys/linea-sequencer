@@ -38,7 +38,7 @@ import org.junit.jupiter.api.BeforeEach;
 public abstract class LineaPluginTestBasePrague extends LineaPluginTestBase {
   private EngineAPIService engineApiService;
   private final String GENESIS_FILE_TEMPLATE_PATH = "/clique/clique-prague.json.tpl";
-  private final long STARTING_BLOCK_TIMESTAMP = 1670496243;
+  private final long STARTING_BLOCK_TIMESTAMP = 0;
 
   @BeforeEach
   @Override
