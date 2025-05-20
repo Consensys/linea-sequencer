@@ -62,7 +62,8 @@ public abstract class LineaPluginTestBasePrague extends LineaPluginTestBase {
         new EngineAPIService(minerNode, ethTransactions, STARTING_BLOCK_TIMESTAMP);
   }
 
-  // Ideally GenesisConfigurationFactory.createCliqueGenesisConfig would support a custom genesis file
+  // Ideally GenesisConfigurationFactory.createCliqueGenesisConfig would support a custom genesis
+  // file
   // path. We have resorted to inlining its logic here to allow a flexible genesis file path.
   @Override
   protected String provideGenesisConfig(

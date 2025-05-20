@@ -143,10 +143,6 @@ public class EngineAPIService {
   private Call createForkChoiceRequest(final String parentBlockHash, final Long timeStamp) {
     final Optional<Long> maybeTimeStamp = Optional.ofNullable(timeStamp);
 
-    ObjectNode request = mapper.createObjectNode();
-    request.put("jsonrpc", JSONRPC_VERSION);
-    request.put("method", "engine_forkchoiceUpdatedV3");
-
     // Construct the first param - EngineForkchoiceUpdatedParameter
     ArrayNode params = mapper.createArrayNode();
     ObjectNode forkchoiceState = mapper.createObjectNode();
@@ -165,35 +161,13 @@ public class EngineAPIService {
       payloadAttributes.put("parentBeaconBlockRoot", Hash.ZERO.toString());
       params.add(payloadAttributes);
     }
-
-    request.set("params", params);
-    request.put("id", JSONRPC_REQUEST_ID);
-
-    String requestString;
-    try {
-      requestString = mapper.writeValueAsString(request);
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to build engine_forkchoiceUpdatedV3 request", e);
-    }
-    return createEngineCall(requestString);
+    return createEngineCall("engine_forkchoiceUpdatedV3", params);
   }
 
   private Call createGetPayloadRequest(final String payloadId) {
-    ObjectNode request = mapper.createObjectNode();
-    request.put("jsonrpc", JSONRPC_VERSION);
-    request.put("method", "engine_getPayloadV4");
     ArrayNode params = mapper.createArrayNode();
     params.add(payloadId);
-    request.set("params", params);
-    request.put("id", JSONRPC_REQUEST_ID);
-
-    String requestString;
-    try {
-      requestString = mapper.writeValueAsString(request);
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to serialize engine_getPayloadV4 request", e);
-    }
-    return createEngineCall(requestString);
+    return createEngineCall("engine_getPayloadV4", params);
   }
 
   private Call createNewPayloadRequest(
@@ -210,16 +184,19 @@ public class EngineAPIService {
       throw new RuntimeException("Invalid JSON input", e);
     }
 
-    ObjectNode request = mapper.createObjectNode();
-    request.put("jsonrpc", JSONRPC_VERSION);
-    request.put("method", "engine_newPayloadV4");
-
     ArrayNode params = mapper.createArrayNode();
     params.add(executionPayloadNode);
     params.add(mapper.createArrayNode()); // empty withdrawals
     params.add(parentBeaconBlockRoot);
     params.add(executionRequestsNode);
 
+    return createEngineCall("engine_newPayloadV4", params);
+  }
+
+  private Call createEngineCall(final String rpcMethod, ArrayNode params) {
+    ObjectNode request = mapper.createObjectNode();
+    request.put("jsonrpc", JSONRPC_VERSION);
+    request.put("method", rpcMethod);
     request.set("params", params);
     request.put("id", JSONRPC_REQUEST_ID);
 
@@ -227,16 +204,16 @@ public class EngineAPIService {
     try {
       requestString = mapper.writeValueAsString(request);
     } catch (Exception e) {
-      throw new RuntimeException("Failed to serialize engine_newPayloadV4 request", e);
+      throw new RuntimeException(
+          "Failed to serialize JSON-RPC request for method " + rpcMethod + ":", e);
     }
-    return createEngineCall(requestString);
-  }
 
-  private Call createEngineCall(final String request) {
     return httpClient.newCall(
         new Request.Builder()
             .url(node.engineRpcUrl().get())
-            .post(RequestBody.create(request, MediaType.parse("application/json; charset=utf-8")))
+            .post(
+                RequestBody.create(
+                    requestString, MediaType.parse("application/json; charset=utf-8")))
             .build());
   }
 }

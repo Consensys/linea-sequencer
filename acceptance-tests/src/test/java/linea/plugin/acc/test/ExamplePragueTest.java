@@ -26,8 +26,8 @@ import org.web3j.tx.TransactionManager;
 import org.web3j.tx.gas.DefaultGasProvider;
 
 /**
- * Example test using Besu node configured for Prague.
- * Note that block building must be triggered explicitly through `this.buildNewBlock()`
+ * Example test using Besu node configured for Prague. Note that block building must be triggered
+ * explicitly through `this.buildNewBlock()`
  */
 public class ExamplePragueTest extends LineaPluginTestBasePrague {
   private static final BigInteger GAS_PRICE = DefaultGasProvider.GAS_PRICE;
