@@ -69,37 +69,29 @@ public class EngineAPIService {
 
     mapper = new ObjectMapper();
 
-    // Ensure correct serialization of custom type used in Besu
+    // Ensure correct serialization of custom types used in Besu
     SimpleModule customTypesModule = new SimpleModule();
-    customTypesModule.addSerializer(
-        Hash.class,
-        new JsonSerializer<Hash>() {
-          @Override
-          public void serialize(Hash value, JsonGenerator gen, SerializerProvider serializers)
-              throws IOException {
-            gen.writeString(value.toHexString());
-          }
-        });
-    customTypesModule.addSerializer(
-        Bytes32.class,
-        new JsonSerializer<Bytes32>() {
-          @Override
-          public void serialize(Bytes32 value, JsonGenerator gen, SerializerProvider serializers)
-              throws IOException {
-            gen.writeString(value.toHexString());
-          }
-        });
-    customTypesModule.addSerializer(
-        Address.class,
-        new JsonSerializer<Address>() {
-          @Override
-          public void serialize(Address value, JsonGenerator gen, SerializerProvider serializers)
-              throws IOException {
-            gen.writeString(value.toHexString());
-          }
-        });
-
+    registerToHexStringSerializer(customTypesModule, Hash.class);
+    registerToHexStringSerializer(customTypesModule, Bytes32.class);
+    registerToHexStringSerializer(customTypesModule, Address.class);
     mapper.registerModule(customTypesModule);
+  }
+
+  private static <T> void registerToHexStringSerializer(SimpleModule module, Class<T> type) {
+    module.addSerializer(
+        type,
+        new JsonSerializer<T>() {
+          @Override
+          public void serialize(T value, JsonGenerator gen, SerializerProvider serializers)
+              throws IOException {
+            try {
+              String hex = (String) value.getClass().getMethod("toHexString").invoke(value);
+              gen.writeString(hex);
+            } catch (Exception e) {
+              throw new RuntimeException("Failed to call toHexString() on " + value.getClass(), e);
+            }
+          }
+        });
   }
 
   /*
@@ -129,6 +121,10 @@ public class EngineAPIService {
 
     final String payloadId;
     try (final Response buildBlockResponse = buildBlockRequest.execute()) {
+      // We would like to deserialize directly into Besu native types. However neither
+      // EngineUpdateForkchoiceResult and JsonRpcSuccessResponse classes have a constructor tagged
+      // with @JsonCreator nor a default constructor. We will need to write DTO classes to avoid
+      // manual JSON parsing.
       payloadId =
           mapper
               .readTree(buildBlockResponse.body().string())
