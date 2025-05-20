@@ -18,10 +18,15 @@ package org.hyperledger.besu.tests.acceptance.dsl;
 import static org.assertj.core.api.Assertions.*;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Optional;
 
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import okhttp3.Call;
@@ -30,7 +35,11 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import org.apache.tuweni.bytes.Bytes32;
+import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
+import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.EngineForkchoiceUpdatedParameter;
+import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.EnginePayloadAttributesParameter;
 import org.hyperledger.besu.tests.acceptance.dsl.node.BesuNode;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.eth.EthTransactions;
 import org.web3j.protocol.core.methods.response.EthBlock;
@@ -54,10 +63,43 @@ public class EngineAPIService {
   public EngineAPIService(
       BesuNode node, EthTransactions ethTransactions, long startingBlocktimestamp) {
     httpClient = new OkHttpClient();
-    mapper = new ObjectMapper();
     this.node = node;
     this.ethTransactions = ethTransactions;
     this.blockTimestamp = startingBlocktimestamp;
+
+    mapper = new ObjectMapper();
+
+    // Ensure correct serialization of custom type used in Besu
+    SimpleModule customTypesModule = new SimpleModule();
+    customTypesModule.addSerializer(
+        Hash.class,
+        new JsonSerializer<Hash>() {
+          @Override
+          public void serialize(Hash value, JsonGenerator gen, SerializerProvider serializers)
+              throws IOException {
+            gen.writeString(value.toHexString());
+          }
+        });
+    customTypesModule.addSerializer(
+        Bytes32.class,
+        new JsonSerializer<Bytes32>() {
+          @Override
+          public void serialize(Bytes32 value, JsonGenerator gen, SerializerProvider serializers)
+              throws IOException {
+            gen.writeString(value.toHexString());
+          }
+        });
+    customTypesModule.addSerializer(
+        Address.class,
+        new JsonSerializer<Address>() {
+          @Override
+          public void serialize(Address value, JsonGenerator gen, SerializerProvider serializers)
+              throws IOException {
+            gen.writeString(value.toHexString());
+          }
+        });
+
+    mapper.registerModule(customTypesModule);
   }
 
   /*
@@ -141,21 +183,23 @@ public class EngineAPIService {
 
     // Construct the first param - EngineForkchoiceUpdatedParameter
     ArrayNode params = mapper.createArrayNode();
-    ObjectNode forkchoiceState = mapper.createObjectNode();
-    forkchoiceState.put("headBlockHash", parentBlockHash);
-    forkchoiceState.put("safeBlockHash", parentBlockHash);
-    forkchoiceState.put("finalizedBlockHash", parentBlockHash);
-    params.add(forkchoiceState);
+    EngineForkchoiceUpdatedParameter engineForkchoiceUpdatedParameter =
+        new EngineForkchoiceUpdatedParameter(
+            Hash.fromHexString(parentBlockHash),
+            Hash.fromHexString(parentBlockHash),
+            Hash.fromHexString(parentBlockHash));
+    params.add(mapper.valueToTree(engineForkchoiceUpdatedParameter));
 
     // Optionally construct the second param - EnginePayloadAttributesParameter
     if (maybeTimeStamp.isPresent()) {
-      ObjectNode payloadAttributes = mapper.createObjectNode();
-      payloadAttributes.put("timestamp", timeStamp);
-      payloadAttributes.put("prevRandao", Hash.ZERO.toString());
-      payloadAttributes.put("suggestedFeeRecipient", SUGGESTED_BLOCK_FEE_RECIPIENT);
-      payloadAttributes.set("withdrawals", mapper.createArrayNode());
-      payloadAttributes.put("parentBeaconBlockRoot", Hash.ZERO.toString());
-      params.add(payloadAttributes);
+      EnginePayloadAttributesParameter payloadAttributes =
+          new EnginePayloadAttributesParameter(
+              String.valueOf(timeStamp),
+              Hash.ZERO.toHexString(),
+              SUGGESTED_BLOCK_FEE_RECIPIENT,
+              Collections.emptyList(),
+              Hash.ZERO.toHexString());
+      params.add(mapper.valueToTree(payloadAttributes));
     }
     return createEngineCall("engine_forkchoiceUpdatedV3", params);
   }
