@@ -15,6 +15,7 @@
 
 package linea.plugin.acc.test;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -35,7 +36,7 @@ import org.junit.jupiter.api.BeforeEach;
 // acceptance tests.
 @Slf4j
 public abstract class LineaPluginTestBasePrague extends LineaPluginTestBase {
-  protected EngineAPIService engineApiService;
+  private EngineAPIService engineApiService;
   private final String GENESIS_FILE_TEMPLATE_PATH = "/clique/clique-prague.json.tpl";
   private final long STARTING_BLOCK_TIMESTAMP = 1670496243;
 
@@ -78,5 +79,9 @@ public abstract class LineaPluginTestBasePrague extends LineaPluginTestBase {
     return maybeCustomGenesisExtraData()
         .map(ed -> setGenesisCustomExtraData(genesis, ed))
         .orElse(genesis);
+  }
+
+  protected void buildNewBlock() throws IOException {
+    this.engineApiService.buildNewBlock();
   }
 }
