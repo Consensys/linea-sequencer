@@ -77,12 +77,12 @@ public class EngineAPIService {
    * Unsure why the proposed block is not stored in the previous steps where it was built.
    *
    * 6. Send engine_forkchoiceUpdated(EngineForkchoiceUpdatedParameter) request to Besu node
-   * Add new block to blockchain head.
+   * Add validated block to blockchain head.
    */
   public void buildNewBlock() throws IOException {
     final EthBlock.Block block = node.execute(ethTransactions.block());
-
     this.blockTimestamp += 1;
+
     final Call buildBlockRequest = createForkChoiceRequest(block.getHash(), this.blockTimestamp);
 
     final String payloadId;
@@ -93,7 +93,6 @@ public class EngineAPIService {
               .get("result")
               .get("payloadId")
               .asText();
-
       assertThat(payloadId).isNotEmpty();
     }
 
@@ -107,23 +106,20 @@ public class EngineAPIService {
     final String parentBeaconBlockRoot;
     try (final Response getPayloadResponse = getPayloadRequest.execute()) {
       assertThat(getPayloadResponse.code()).isEqualTo(200);
-
       JsonNode result = mapper.readTree(getPayloadResponse.body().string()).get("result");
       executionPayload = (ObjectNode) result.get("executionPayload");
       executionRequests = (ArrayNode) result.get("executionRequests");
-
       newBlockHash = executionPayload.get("blockHash").asText();
       parentBeaconBlockRoot = executionPayload.remove("parentBeaconBlockRoot").asText();
-
       assertThat(newBlockHash).isNotEmpty();
     }
 
     final Call newPayloadRequest =
         createNewPayloadRequest(
             executionPayload.toString(), parentBeaconBlockRoot, executionRequests.toString());
+
     try (final Response newPayloadResponse = newPayloadRequest.execute()) {
       assertThat(newPayloadResponse.code()).isEqualTo(200);
-
       final String responseStatus =
           mapper.readTree(newPayloadResponse.body().string()).get("result").get("status").asText();
       assertThat(responseStatus).isEqualTo("VALID");
