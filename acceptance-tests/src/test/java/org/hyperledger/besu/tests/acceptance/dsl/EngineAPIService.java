@@ -208,21 +208,11 @@ public class EngineAPIService {
       final ObjectNode executionPayload,
       final String parentBeaconBlockRoot,
       final ArrayNode executionRequests) {
-    // Parse executionPayload and executionRequests as JSON nodes
-    ObjectNode executionPayloadNode;
-    ArrayNode executionRequestsNode;
-    try {
-      executionPayloadNode = executionPayload;
-      executionRequestsNode = executionRequests;
-    } catch (Exception e) {
-      throw new RuntimeException("Invalid JSON input", e);
-    }
-
     ArrayNode params = mapper.createArrayNode();
-    params.add(executionPayloadNode);
+    params.add(executionPayload);
     params.add(mapper.createArrayNode()); // empty withdrawals
     params.add(parentBeaconBlockRoot);
-    params.add(executionRequestsNode);
+    params.add(executionRequests);
 
     return createEngineCall("engine_newPayloadV4", params);
   }
