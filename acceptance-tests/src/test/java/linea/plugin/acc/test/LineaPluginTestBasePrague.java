@@ -13,14 +13,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/*
- * This file initializes a Besu node configured for the Prague fork and makes it available to acceptance tests.
- *
- * We intend to replace the LineaPluginTestBase class via the strangler pattern—
- * i.e., we will gradually replace references to LineaPluginTestBase with
- * LineaPluginTestBasePrague in test classes, one by one.
- */
-
 package linea.plugin.acc.test;
 
 import java.util.Collection;
@@ -39,7 +31,8 @@ import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.genesis.Gene
 import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.genesis.GenesisConfigurationFactory.CliqueOptions;
 import org.junit.jupiter.api.BeforeEach;
 
-/** Base class for plugin tests on Prague fork. */
+// This file initializes a Besu node configured for the Prague fork and makes it available to
+// acceptance tests.
 @Slf4j
 public abstract class LineaPluginTestBasePrague extends LineaPluginTestBase {
   protected EngineAPIService engineApiService;

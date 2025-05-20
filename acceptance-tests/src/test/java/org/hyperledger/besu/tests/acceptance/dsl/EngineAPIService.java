@@ -68,7 +68,6 @@ public class EngineAPIService {
     this.blockTimestamp = startingBlocktimestamp;
 
     mapper = new ObjectMapper();
-
     // Ensure correct serialization of custom types used in Besu
     SimpleModule customTypesModule = new SimpleModule();
     registerToHexStringSerializer(customTypesModule, Hash.class);
@@ -153,8 +152,7 @@ public class EngineAPIService {
     }
 
     final Call newPayloadRequest =
-        createNewPayloadRequest(
-            executionPayload.toString(), parentBeaconBlockRoot, executionRequests.toString());
+        createNewPayloadRequest(executionPayload, parentBeaconBlockRoot, executionRequests);
 
     try (final Response newPayloadResponse = newPayloadRequest.execute()) {
       assertThat(newPayloadResponse.code()).isEqualTo(200);
@@ -207,15 +205,15 @@ public class EngineAPIService {
   }
 
   private Call createNewPayloadRequest(
-      final String executionPayload,
+      final ObjectNode executionPayload,
       final String parentBeaconBlockRoot,
-      final String executionRequests) {
+      final ArrayNode executionRequests) {
     // Parse executionPayload and executionRequests as JSON nodes
     ObjectNode executionPayloadNode;
     ArrayNode executionRequestsNode;
     try {
-      executionPayloadNode = (ObjectNode) mapper.readTree(executionPayload);
-      executionRequestsNode = (ArrayNode) mapper.readTree(executionRequests);
+      executionPayloadNode = executionPayload;
+      executionRequestsNode = executionRequests;
     } catch (Exception e) {
       throw new RuntimeException("Invalid JSON input", e);
     }
