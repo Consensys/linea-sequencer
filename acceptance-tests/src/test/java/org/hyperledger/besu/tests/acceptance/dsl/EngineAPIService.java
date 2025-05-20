@@ -112,9 +112,9 @@ public class EngineAPIService {
    * 6. Send engine_forkchoiceUpdated(EngineForkchoiceUpdatedParameter) request to Besu node
    * Add validated block to blockchain head.
    */
-  public void buildNewBlock() throws IOException, InterruptedException {
+  public void buildNewBlock(long timestampIncrement) throws IOException, InterruptedException {
     final EthBlock.Block block = node.execute(ethTransactions.block());
-    this.blockTimestamp += 1;
+    this.blockTimestamp += timestampIncrement;
 
     final Call buildBlockRequest = createForkChoiceRequest(block.getHash(), this.blockTimestamp);
 

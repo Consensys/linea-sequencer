@@ -82,6 +82,10 @@ public abstract class LineaPluginTestBasePrague extends LineaPluginTestBase {
   }
 
   protected void buildNewBlock() throws IOException, InterruptedException {
-    this.engineApiService.buildNewBlock();
+    this.engineApiService.buildNewBlock(1);
+  }
+
+  protected void buildNewBlock(long timestampIncrement) throws IOException, InterruptedException {
+    this.engineApiService.buildNewBlock(timestampIncrement);
   }
 }
