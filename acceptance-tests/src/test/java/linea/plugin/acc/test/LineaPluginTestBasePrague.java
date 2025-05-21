@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.hyperledger.besu.consensus.clique.CliqueExtraData;
 import org.hyperledger.besu.datatypes.Address;
@@ -37,6 +39,7 @@ import org.junit.jupiter.api.BeforeEach;
 @Slf4j
 public abstract class LineaPluginTestBasePrague extends LineaPluginTestBase {
   private EngineAPIService engineApiService;
+  private ObjectMapper mapper;
   private final String GENESIS_FILE_TEMPLATE_PATH = "/clique/clique-prague.json.tpl";
 
   @BeforeEach
@@ -51,7 +54,8 @@ public abstract class LineaPluginTestBasePrague extends LineaPluginTestBase {
             .noLocalPriority(true)
             .build());
     cluster.start(minerNode);
-    this.engineApiService = new EngineAPIService(minerNode, ethTransactions);
+    mapper = new ObjectMapper();
+    this.engineApiService = new EngineAPIService(minerNode, ethTransactions, mapper);
   }
 
   // Ideally GenesisConfigurationFactory.createCliqueGenesisConfig would support a custom genesis
@@ -79,13 +83,22 @@ public abstract class LineaPluginTestBasePrague extends LineaPluginTestBase {
         .orElse(genesis);
   }
 
-  // No-arg override for simple test cases
+  // No-arg override for simple test cases, we take sensible defaults from the genesis config
   protected void buildNewBlock() throws IOException, InterruptedException {
-    var currentTimestamp = this.minerNode.execute(ethTransactions.block()).getTimestamp();
-    this.engineApiService.buildNewBlock(currentTimestamp.longValue() + 1);
+    var latestTimestamp = this.minerNode.execute(ethTransactions.block()).getTimestamp();
+    var genesisConfigSerialized = this.minerNode.getGenesisConfig().get();
+    JsonNode genesisConfig = mapper.readTree(genesisConfigSerialized);
+    long defaultSlotTimeSeconds =
+        genesisConfig.path("config").path("clique").path("blockperiodseconds").asLong();
+    this.engineApiService.buildNewBlock(
+        latestTimestamp.longValue() + defaultSlotTimeSeconds, defaultSlotTimeSeconds * 1000);
   }
 
-  protected void buildNewBlock(long blockTimestamp) throws IOException, InterruptedException {
-    this.engineApiService.buildNewBlock(blockTimestamp);
+  // @param blockTimestampSeconds    The Unix timestamp (in seconds) to assign to the new block.
+  // @param blockBuildingTimeMs      The duration (in milliseconds) allocated for the Besu node to
+  // build the block.
+  protected void buildNewBlock(long blockTimestampSeconds, long blockBuildingTimeMs)
+      throws IOException, InterruptedException {
+    this.engineApiService.buildNewBlock(blockTimestampSeconds, blockBuildingTimeMs);
   }
 }

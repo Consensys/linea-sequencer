@@ -50,9 +50,9 @@ public class EngineAPIService {
   private static final String SUGGESTED_BLOCK_FEE_RECIPIENT =
       "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b";
 
-  public EngineAPIService(BesuNode node, EthTransactions ethTransactions) {
+  public EngineAPIService(BesuNode node, EthTransactions ethTransactions, ObjectMapper mapper) {
     httpClient = new OkHttpClient();
-    mapper = new ObjectMapper();
+    this.mapper = mapper;
     this.node = node;
     this.ethTransactions = ethTransactions;
   }
@@ -75,11 +75,16 @@ public class EngineAPIService {
    *
    * 6. Send engine_forkchoiceUpdated(EngineForkchoiceUpdatedParameter) request to Besu node
    * Add validated block to blockchain head.
+   *
+   * @param blockTimestampSeconds    The Unix timestamp (in seconds) to assign to the new block.
+   * @param blockBuildingTimeMs      The duration (in milliseconds) allocated for the Besu node to build the block.
    */
-  public void buildNewBlock(long blockTimestamp) throws IOException, InterruptedException {
-    final EthBlock.Block block = node.execute(ethTransactions.block());
+  public void buildNewBlock(long blockTimestampSeconds, long blockBuildingTimeMs)
+      throws IOException, InterruptedException {
+    final EthBlock.Block latestBlock = node.execute(ethTransactions.block());
 
-    final Call buildBlockRequest = createForkChoiceRequest(block.getHash(), blockTimestamp);
+    final Call buildBlockRequest =
+        createForkChoiceRequest(latestBlock.getHash(), blockTimestampSeconds);
 
     final String payloadId;
     try (final Response buildBlockResponse = buildBlockRequest.execute()) {
@@ -98,7 +103,14 @@ public class EngineAPIService {
       assertThat(payloadId).isNotEmpty();
     }
 
-    Thread.sleep(500);
+    // This is required to give the Besu node time to build the block. As per the Engine API spec,
+    // engine_forkChoice will begin the payload build process and engine_getPayload may stop the
+    // payload build process. Besu node behaviour is to stop the payload build process on
+    // engine_getPayload. So unfortunately we lack a means to inspect a payload in-building without
+    // interrupting it. Hence we must be conservative and wait for the 'SECONDS_PER_SLOT' time,
+    // especially for slower machines running the tests.
+    // See - https://github.com/ethereum/execution-apis/blob/main/src/engine/paris.md
+    Thread.sleep(blockBuildingTimeMs);
 
     final Call getPayloadRequest = createGetPayloadRequest(payloadId);
 
