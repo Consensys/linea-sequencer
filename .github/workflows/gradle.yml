@@ -6,19 +6,10 @@ on:
       - main
   pull_request:
 
-env:
-  CARGO_NET_GIT_FETCH_WITH_CLI: true
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Install Go
-        uses: actions/setup-go@v5
-
-      - name: Set up GCC
-        uses: egor-tensin/setup-gcc@v1
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -42,12 +33,6 @@ jobs:
   acceptanceTest:
     runs-on: ubuntu-latest
     steps:
-      - name: Install Go
-        uses: actions/setup-go@v5
-
-      - name: Set up GCC
-        uses: egor-tensin/setup-gcc@v1
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
