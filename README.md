@@ -1,3 +1,5 @@
+⚠️ The content of this repository has been migrated to the [linea-monorepo](https://github.com/Consensys/linea-monorepo/tree/main/besu-plugins/linea-sequencer)
+
 # Besu Plugins related to tracer and sequencer functionality
 
 This repository hosts the implementation of the sequencer, the component of the Linea stack responsible for ordering transactions and building blocks, as well as executing them. It provides a set of [Besu](https://github.com/hyperledger/besu):Linea plugins. 
